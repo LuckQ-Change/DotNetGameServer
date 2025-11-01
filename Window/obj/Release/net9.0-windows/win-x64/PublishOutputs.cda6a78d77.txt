@@ -1,0 +1,16 @@
+C:\Users\Administrator\Desktop\新建文件夹\dist\Window\Window.exe
+C:\Users\Administrator\Desktop\新建文件夹\dist\Window\Window.dll
+C:\Users\Administrator\Desktop\新建文件夹\dist\Window\Window.deps.json
+C:\Users\Administrator\Desktop\新建文件夹\dist\Window\Window.runtimeconfig.json
+C:\Users\Administrator\Desktop\新建文件夹\dist\Window\Window.pdb
+C:\Users\Administrator\Desktop\新建文件夹\dist\Window\Google.Protobuf.dll
+C:\Users\Administrator\Desktop\新建文件夹\dist\Window\BattleServer.dll
+C:\Users\Administrator\Desktop\新建文件夹\dist\Window\Core.dll
+C:\Users\Administrator\Desktop\新建文件夹\dist\Window\LoginServer.dll
+C:\Users\Administrator\Desktop\新建文件夹\dist\Window\ResourceServer.dll
+C:\Users\Administrator\Desktop\新建文件夹\dist\Window\Shared.dll
+C:\Users\Administrator\Desktop\新建文件夹\dist\Window\Shared.pdb
+C:\Users\Administrator\Desktop\新建文件夹\dist\Window\Core.pdb
+C:\Users\Administrator\Desktop\新建文件夹\dist\Window\LoginServer.pdb
+C:\Users\Administrator\Desktop\新建文件夹\dist\Window\BattleServer.pdb
+C:\Users\Administrator\Desktop\新建文件夹\dist\Window\ResourceServer.pdb

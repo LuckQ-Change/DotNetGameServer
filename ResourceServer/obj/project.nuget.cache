@@ -1,0 +1,10 @@
+{
+  "version": 2,
+  "dgSpecHash": "y0emnYjiI9E=",
+  "success": true,
+  "projectFilePath": "C:\\Users\\Administrator\\Desktop\\新建文件夹\\ResourceServer\\ResourceServer.csproj",
+  "expectedPackageFiles": [
+    "C:\\Users\\Administrator\\.nuget\\packages\\google.protobuf\\3.33.0\\google.protobuf.3.33.0.nupkg.sha512"
+  ],
+  "logs": []
+}

@@ -33,7 +33,7 @@ else {
 }
 $selfContainedValue = if ($sc) { "true" } else { "false" }
 $publishArgs = @(
-    "publish", "$root\Window\Window.csproj",
+    "publish", "$root\src\Window\Window.csproj",
     "-c", $Configuration,
     "-r", $Runtime,
     "--self-contained", $selfContainedValue,

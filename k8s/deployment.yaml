@@ -1,0 +1,72 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: game-server
+  labels:
+    app: game-server
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: game-server
+  template:
+    metadata:
+      labels:
+        app: game-server
+    spec:
+      containers:
+        - name: server
+          image: game-server:latest
+          imagePullPolicy: IfNotPresent
+          env:
+            - name: ASPNETCORE_ENVIRONMENT
+              valueFrom:
+                configMapKeyRef:
+                  name: game-server-config
+                  key: ASPNETCORE_ENVIRONMENT
+            - name: SERVICE
+              valueFrom:
+                configMapKeyRef:
+                  name: game-server-config
+                  key: SERVICE
+            - name: PORT
+              valueFrom:
+                configMapKeyRef:
+                  name: game-server-config
+                  key: PORT
+            - name: DIRECTORY_TOKEN_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: game-server-secret
+                  key: DIRECTORY_TOKEN_SECRET
+          ports:
+            - containerPort: 5500
+          readinessProbe:
+            tcpSocket:
+              port: 5500
+            initialDelaySeconds: 2
+            periodSeconds: 5
+          livenessProbe:
+            tcpSocket:
+              port: 5500
+            initialDelaySeconds: 10
+            periodSeconds: 10
+          resources:
+            limits:
+              cpu: "500m"
+              memory: "256Mi"
+            requests:
+              cpu: "100m"
+              memory: "128Mi"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: game-server
+spec:
+  selector:
+    app: game-server
+  ports:
+    - protocol: TCP
+      port: 5500
+      targetPort: 5500

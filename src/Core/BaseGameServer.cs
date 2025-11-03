@@ -1,0 +1,521 @@
+using System.Collections.Concurrent;
+using System.Net;
+using System.Net.Sockets;
+using System.Diagnostics;
+using System.IO;
+using System.Net.Security;
+using System.Security.Authentication;
+using System.Security.Cryptography.X509Certificates;
+using Microsoft.Extensions.Logging;
+using Core.Telemetry;
+using Core.Logging;
+using Google.Protobuf;
+using Core.Components;
+using DotNetGameServer;
+
+namespace Core;
+
+/// <summary>
+/// 基础游戏服务器类，采用ECS架构
+/// </summary>
+public abstract class BaseGameServer : IServerContext
+{
+    private readonly int _maxMessageSize; // 可配置消息长度上限
+    private readonly int _maxConcurrentConnections; // 可配置连接上限
+    private readonly int _receiveTimeoutMs; // 收发超时（软限制）
+    private readonly int _acceptBackoffMs; // 接受失败退避毫秒
+    private int _currentConnections;
+    private TcpListener? _listener;
+    private CancellationTokenSource? _cts;
+    private Task? _ecsUpdateLoop;
+    private readonly ILogger _logger;
+    private readonly System.Diagnostics.Metrics.Instrument? _connectionsGauge;
+    private readonly ConcurrentDictionary<string, IStrongHandlerInvoker> _typedHandlers = new();
+    private readonly ConcurrentDictionary<Type, IServerComponent> _components = new();
+    // 网络鲁棒性：限速与黑名单
+    private readonly int _maxBytesPerSecond = 1_000_000; // 默认每连接 1MB/s
+    private readonly int _maxMessagesPerSecond = 200;    // 默认每连接 200 条/秒
+    private readonly int _idleTimeoutMs = 120_000;        // 默认空闲 120s 断开
+    private readonly ConcurrentDictionary<string, DateTime> _blacklist = new();
+
+    /// <summary>
+    /// 服务器名称，用于日志前缀与标识。
+    /// </summary>
+    public string ServerName { get; }
+
+    // 基类级默认上下文字段：用于非请求场景（初始化等）。
+    public string AccessToken => string.Empty;
+    public string RemoteAddress => "";
+    public string RequestId => "";
+    public AuthInfo? Auth => null;
+
+    /// <summary>
+    /// 当前监听端口；未启动或已停止时为 <c>null</c>。
+    /// </summary>
+    public int? ListeningPort { get; private set; }
+
+    protected BaseGameServer(string serverName, Action<string> log)
+        : this(serverName, new DelegateLogger(log, serverName))
+    {
+    }
+
+    protected BaseGameServer(string serverName, ILogger logger)
+    {
+        ServerName = serverName;
+        _logger = logger ?? new DelegateLogger(Console.WriteLine, serverName);
+        var settings = Core.Config.SimpleConfigLoader.LoadServerSettings(AppContext.BaseDirectory);
+        _maxMessageSize = Math.Max(1024, settings.MaxMessageSizeBytes);
+        _maxConcurrentConnections = Math.Max(1, settings.MaxConcurrentConnections);
+        _receiveTimeoutMs = Math.Max(0, settings.ReceiveTimeoutMs);
+        _acceptBackoffMs = Math.Max(0, settings.AcceptBackoffMs);
+        _connectionsGauge = CoreTelemetry.CreateConnectionsGauge(() => _currentConnections, ServerName);
+        // 若后续提供配置，可在此覆盖默认值（环境变量或配置）
+        if (int.TryParse(Environment.GetEnvironmentVariable("SERVER_MAX_BPS"), out var bps) && bps > 0)
+            _maxBytesPerSecond = bps;
+        if (int.TryParse(Environment.GetEnvironmentVariable("SERVER_MAX_MSGS"), out var mps) && mps > 0)
+            _maxMessagesPerSecond = mps;
+        if (int.TryParse(Environment.GetEnvironmentVariable("SERVER_IDLE_MS"), out var idle) && idle > 0)
+            _idleTimeoutMs = idle;
+
+        // 集中密钥提供组件：统一加载并缓存鉴权密钥
+        try
+        {
+            AddComponent<ITokenSecretProvider>(new TokenSecretProviderComponent(AppContext.BaseDirectory));
+        }
+        catch { }
+    }
+
+    /// <summary>
+    /// 添加服务器组件并按类型注册，供运行期检索与使用。
+    /// </summary>
+    /// <typeparam name="T">组件接口或具体类型。</typeparam>
+    /// <param name="component">组件实例，必须实现 <see cref="IServerComponent"/>。</param>
+    public void AddComponent<T>(T component) where T : class, IServerComponent
+    {
+        _components[typeof(T)] = component;
+    }
+
+    /// <summary>
+    /// 获取已注册的服务器组件。
+    /// </summary>
+    /// <typeparam name="T">组件接口或具体类型。</typeparam>
+    /// <returns>若找到则返回组件实例，否则返回 <c>null</c>。</returns>
+    public T? GetComponent<T>() where T : class, IServerComponent
+    {
+        return _components.TryGetValue(typeof(T), out var component) ? component as T : null;
+    }
+
+    
+
+    /// <summary>
+    /// 注册强类型消息处理器，采用具体的请求/响应类型进行分发。
+    /// 同时注册短名与全名以兼容不同的 <c>Envelope.type</c> 表示。
+    /// </summary>
+    /// <typeparam name="TReq">请求消息类型。</typeparam>
+    /// <typeparam name="TResp">响应消息类型。</typeparam>
+    /// <param name="handler">强类型消息处理器。</param>
+    public void RegisterStrongMessageHandler<TReq, TResp>(IStrongMessageHandler<TReq, TResp> handler)
+        where TReq : class, IMessage<TReq>, new()
+        where TResp : class, IMessage<TResp>, new()
+    {
+        var invoker = new StrongHandlerInvoker<TReq, TResp>(handler);
+        // 同时注册短名与全名，兼容现有 Envelope.type 用法
+        var reqName = new TReq().Descriptor.Name;
+        var reqFullName = new TReq().Descriptor.FullName;
+        _typedHandlers[reqName] = invoker;
+        _typedHandlers[reqFullName] = invoker;
+    }
+
+    /// <summary>
+    /// 启动服务器监听并初始化所有已注册组件。
+    /// </summary>
+    /// <param name="port">监听端口。</param>
+    public async Task StartAsync(int port)
+    {
+        if (_listener != null) return;
+
+        // 逐个初始化组件，确保依赖就绪
+        foreach (var component in _components.Values)
+        {
+            await component.InitializeAsync();
+        }
+
+        _cts = new CancellationTokenSource();
+        _listener = new TcpListener(IPAddress.Any, port);
+        _listener.Start();
+        ListeningPort = port;
+        Log($"服务器已启动，端口 {port}");
+        
+        // 接受连接循环（异步）
+        _ = Task.Run(() => AcceptLoop(_cts.Token));
+        // 周期驱动 ECS 系统更新（异步）
+        _ecsUpdateLoop = Task.Run(() => EcsUpdateLoop(_cts.Token));
+    }
+
+    /// <summary>
+    /// 停止服务器监听并销毁所有组件。
+    /// </summary>
+    public async Task StopAsync()
+    {
+        try { _cts?.Cancel(); } catch { }
+        try { _listener?.Stop(); } catch { }
+        _listener = null;
+        ListeningPort = null;
+
+        // 逐个销毁组件，释放资源
+        foreach (var component in _components.Values)
+        {
+            await component.DestroyAsync();
+        }
+
+        Log("服务器已停止");
+    }
+
+    /// <summary>
+    /// 写入一条日志，自动加上服务器名称前缀。
+    /// </summary>
+    /// <param name="message">日志消息。</param>
+    public void Log(string message)
+    {
+        _logger.LogInformation("[{Server}] {Message}", ServerName, message);
+    }
+
+    private async Task AcceptLoop(CancellationToken token)
+    {
+        var currentBackoffMs = _acceptBackoffMs;
+        while (!token.IsCancellationRequested)
+        {
+            try
+            {
+                var client = await _listener!.AcceptTcpClientAsync(token);
+                // 黑名单：立即拒绝
+                var remoteEp = client.Client.RemoteEndPoint?.ToString() ?? "未知";
+                if (IsBlacklisted(remoteEp))
+                {
+                    try
+                    {
+                        Log($"拒绝黑名单连接: {remoteEp}");
+                        client.Close();
+                    }
+                    catch { }
+                    // 成功接受一次连接，重置退避
+                    currentBackoffMs = _acceptBackoffMs;
+                    continue;
+                }
+                var connCount = System.Threading.Volatile.Read(ref _currentConnections);
+                // 连接数限制：超过并发上限直接拒绝
+                if (connCount >= _maxConcurrentConnections)
+                {
+                    try
+                    {
+                        Log($"接受到连接但已达上限 {_maxConcurrentConnections}，拒绝 {client.Client.RemoteEndPoint}");
+                        client.Close();
+                    }
+                    catch { }
+                    continue;
+                }
+                // 异步处理客户端生命周期
+                _ = Task.Run(() => HandleClient(client, token));
+                // 成功接受连接后重置退避
+                currentBackoffMs = _acceptBackoffMs;
+            }
+            catch (OperationCanceledException)
+            {
+                break;
+            }
+            catch (Exception ex)
+            {
+                Log($"接受连接异常: {ex.Message}，将稍后重试");
+                try
+                {
+                    await Task.Delay(TimeSpan.FromMilliseconds(currentBackoffMs), token);
+                    // 指数退避，上限 10s
+                    currentBackoffMs = Math.Min(currentBackoffMs <= 0 ? _acceptBackoffMs : currentBackoffMs * 2, 10_000);
+                }
+                catch (OperationCanceledException)
+                {
+                    break;
+                }
+            }
+        }
+    }
+
+    /// <summary>
+    /// 处理单个客户端连接的消息读写与分发。
+    /// </summary>
+    /// <param name="client">TCP 客户端。</param>
+    /// <param name="token">取消令牌。</param>
+    private async Task HandleClient(TcpClient client, CancellationToken token)
+    {
+        var remote = client.Client.RemoteEndPoint?.ToString() ?? "未知";
+        Log($"客户端连接: {remote}");
+        
+        using (client)
+        {
+            System.Threading.Interlocked.Increment(ref _currentConnections);
+            var stream = client.GetStream();
+            try
+            {
+                client.ReceiveTimeout = _idleTimeoutMs; // 使用空闲超时驱动断开
+                client.SendTimeout = _receiveTimeoutMs;
+            }
+            catch { }
+            // 每连接滑动限速：100ms 子桶近似 1s 滑窗
+            const int BucketCount = 10;
+            const int BucketMs = 100;
+            int currentBucketIndex = 0;
+            long bucketWindowStartTicks = Stopwatch.GetTimestamp();
+            int[] messageBuckets = new int[BucketCount];
+            int[] byteBuckets = new int[BucketCount];
+
+            void AdvanceBucketsIfNeeded()
+            {
+                var elapsedMs = (Stopwatch.GetTimestamp() - bucketWindowStartTicks) * 1000.0 / Stopwatch.Frequency;
+                if (elapsedMs >= BucketMs)
+                {
+                    var steps = (int)(elapsedMs / BucketMs);
+                    for (var i = 0; i < Math.Min(steps, BucketCount); i++)
+                    {
+                        currentBucketIndex = (currentBucketIndex + 1) % BucketCount;
+                        messageBuckets[currentBucketIndex] = 0;
+                        byteBuckets[currentBucketIndex] = 0;
+                    }
+                    bucketWindowStartTicks = Stopwatch.GetTimestamp();
+                }
+            }
+
+            int AddBytesAndGetRate(int bytes)
+            {
+                AdvanceBucketsIfNeeded();
+                byteBuckets[currentBucketIndex] += bytes;
+                var sum = 0;
+                for (var i = 0; i < BucketCount; i++) sum += byteBuckets[i];
+                return sum;
+            }
+
+            int AddMessagesAndGetRate(int inc)
+            {
+                AdvanceBucketsIfNeeded();
+                messageBuckets[currentBucketIndex] += inc;
+                var sum = 0;
+                for (var i = 0; i < BucketCount; i++) sum += messageBuckets[i];
+                return sum;
+            }
+            int badPacketCount = 0;
+            const int BlacklistThreshold = 3;
+            try
+            {
+                while (!token.IsCancellationRequested)
+                {
+                    var lenBuf = new byte[4];
+                    var read = await ReadExactAsync(stream, lenBuf, 0, 4, token, _receiveTimeoutMs);
+                    if (read == 0) break;
+                    var bps = AddBytesAndGetRate(read);
+                    if (bps > _maxBytesPerSecond)
+                    {
+                        Log($"限速超限(字节): {remote} {bps}B/s > {_maxBytesPerSecond}B/s，断开");
+                        AddToBlacklist(remote, TimeSpan.FromMinutes(2), "bytes_rate_limit_exceeded");
+                        break;
+                    }
+                    var length = BitConverter.ToInt32(lenBuf, 0);
+                    // 长度校验：防止过大或非法负载
+                    if (length <= 0 || length > _maxMessageSize)
+                    {
+                        Log($"非法或过大消息长度: {length}，断开连接");
+                        badPacketCount++;
+                        if (badPacketCount >= BlacklistThreshold)
+                        {
+                            AddToBlacklist(remote, TimeSpan.FromMinutes(5), "bad_packet_length");
+                        }
+                        break;
+                    }
+                    var buf = new byte[length];
+                    await ReadExactAsync(stream, buf, 0, length, token, _receiveTimeoutMs);
+                    bps = AddBytesAndGetRate(length);
+                    if (bps > _maxBytesPerSecond)
+                    {
+                        Log($"限速超限(字节): {remote} {bps}B/s > {_maxBytesPerSecond}B/s，断开");
+                        AddToBlacklist(remote, TimeSpan.FromMinutes(2), "bytes_rate_limit_exceeded");
+                        break;
+                    }
+
+                    Envelope envelope;
+                    try
+                    {
+                        envelope = Envelope.Parser.ParseFrom(buf);
+                    }
+                    catch (Google.Protobuf.InvalidProtocolBufferException ipbe)
+                    {
+                        Log($"协议解析异常(Envelope): {ipbe.Message}，断开");
+                        badPacketCount++;
+                        if (badPacketCount >= BlacklistThreshold)
+                        {
+                            AddToBlacklist(remote, TimeSpan.FromMinutes(5), "protocol_parse_error");
+                        }
+                        break;
+                    }
+                    var incomingReqId = string.IsNullOrWhiteSpace(envelope.RequestId) ? Guid.NewGuid().ToString("N") : envelope.RequestId;
+                    var reqContext = new RequestServerContext(this, envelope.Token ?? string.Empty, remote, incomingReqId);
+                    
+                    // 频率限流：按消息条数
+                    var mps = AddMessagesAndGetRate(1);
+                    if (mps > _maxMessagesPerSecond)
+                    {
+                        Log($"限速超限(频率): {remote} {mps}/s > {_maxMessagesPerSecond}/s，断开");
+                        AddToBlacklist(remote, TimeSpan.FromMinutes(2), "message_rate_limit_exceeded");
+                        break;
+                    }
+
+                    // 优先强类型：按 Envelope.type 查找具体请求类型
+                    if (_typedHandlers.TryGetValue(envelope.Type, out var strong))
+                    {
+                        var result = await strong.Invoke(envelope.Payload, reqContext);
+                        if (result != null)
+                        {
+                            // 写回响应信封（类型与载荷）
+                            await WriteEnvelopeAsync(stream, result.Value.responseType, result.Value.payload, envelope.RequestId, result.Value.errorCode, result.Value.errorMessage, token, _receiveTimeoutMs);
+                        }
+                    }
+                    else
+                    {
+                        Log($"未知消息类型: {envelope.Type}");
+                    }
+                }
+            }
+            catch (OperationCanceledException)
+            {
+                Log($"客户端请求被取消: {remote}");
+            }
+            catch (IOException ioex)
+            {
+                Log($"客户端网络IO异常: {remote} {ioex.Message}");
+            }
+            catch (SocketException sex)
+            {
+                Log($"客户端套接字异常: {remote} {sex.Message}");
+            }
+            catch (Exception ex)
+            {
+                Log($"客户端异常: {ex.Message}");
+            }
+            
+            Log($"客户端断开: {remote}");
+            System.Threading.Interlocked.Decrement(ref _currentConnections);
+        }
+    }
+
+    /// <summary>
+    /// ECS 更新驱动循环：固定间隔调用世界更新。
+    /// </summary>
+    /// <param name="token">取消令牌。</param>
+    private async Task EcsUpdateLoop(CancellationToken token)
+    {
+        // 每秒驱动一次ECS系统更新
+        var interval = TimeSpan.FromSeconds(1);
+        while (!token.IsCancellationRequested)
+        {
+            try
+            {
+                var ecs = GetComponent<Core.Ecs.EcsWorldComponent>();
+                if (ecs != null)
+                {
+                    await ecs.World.UpdateAsync(interval);
+                }
+            }
+            catch (Exception ex)
+            {
+                Log($"ECS 更新异常: {ex.Message}");
+            }
+            await Task.Delay(interval, token);
+        }
+    }
+
+    
+
+    /// <summary>
+    /// 从网络流精确读取指定长度的字节；若对端关闭则返回已读取长度。
+    /// </summary>
+    private static async Task<int> ReadExactAsync(Stream stream, byte[] buffer, int offset, int count, CancellationToken token, int timeoutMs)
+    {
+        var total = 0;
+        while (total < count)
+        {
+            using var cts = CancellationTokenSource.CreateLinkedTokenSource(token);
+            if (timeoutMs > 0) cts.CancelAfter(timeoutMs);
+            var n = await stream.ReadAsync(buffer.AsMemory(offset + total, count - total), cts.Token);
+            if (n == 0) return total;
+            total += n;
+        }
+        return total;
+    }
+
+    /// <summary>
+    /// 将响应类型与载荷封装为信封并写入网络流。
+    /// </summary>
+    private static async Task WriteEnvelopeAsync(Stream stream, string type, byte[] payload, string? requestId, int errorCode, string? errorMessage, CancellationToken token, int timeoutMs)
+    {
+        var env = new Envelope { Type = type, Payload = ByteString.CopyFrom(payload) };
+        if (!string.IsNullOrWhiteSpace(requestId)) env.RequestId = requestId;
+        // 服务器不再回写协议版本字段，简化并避免客户端版本依赖
+        env.ErrorCode = errorCode;
+        if (!string.IsNullOrWhiteSpace(errorMessage)) env.ErrorMessage = errorMessage;
+        var bytes = env.ToByteArray();
+        var lenBuf = BitConverter.GetBytes(bytes.Length);
+        using var cts = CancellationTokenSource.CreateLinkedTokenSource(token);
+        if (timeoutMs > 0) cts.CancelAfter(timeoutMs);
+        await stream.WriteAsync(lenBuf.AsMemory(0, 4), cts.Token);
+        await stream.WriteAsync(bytes.AsMemory(), cts.Token);
+        await stream.FlushAsync(cts.Token);
+    }
+
+    private bool IsBlacklisted(string remote)
+    {
+        // 允许 remote 为 "IP:port"；按原样匹配并清理过期项
+        if (_blacklist.TryGetValue(remote, out var until))
+        {
+            if (DateTime.UtcNow < until) return true;
+            _blacklist.TryRemove(remote, out _);
+        }
+        return false;
+    }
+
+    private void AddToBlacklist(string remote, TimeSpan duration, string reason)
+    {
+        _blacklist[remote] = DateTime.UtcNow.Add(duration);
+        Log($"加入黑名单: {remote} 原因={reason} 时长={duration}");
+    }
+}
+
+internal sealed class RequestServerContext : IServerContext
+{
+    private readonly BaseGameServer _server;
+    private readonly string _token;
+    private readonly string _remote;
+    private AuthInfo? _auth;
+    private readonly string _requestId;
+
+    public RequestServerContext(BaseGameServer server, string token, string remote, string requestId)
+    {
+        _server = server;
+        _token = token ?? string.Empty;
+        _remote = remote ?? string.Empty;
+        _requestId = string.IsNullOrWhiteSpace(requestId) ? Guid.NewGuid().ToString("N") : requestId;
+    }
+
+    public string ServerName => _server.ServerName;
+    public string AccessToken => _token;
+    public string RemoteAddress => _remote;
+    public string RequestId => _requestId;
+    public AuthInfo? Auth => _auth;
+
+    public void Log(string message) => _server.Log(message);
+    public T? GetComponent<T>() where T : class, IServerComponent => _server.GetComponent<T>();
+
+    /// <summary>
+    /// 内部：设置鉴权后的身份信息。
+    /// </summary>
+    internal void SetAuth(AuthInfo info)
+    {
+        _auth = info;
+    }
+}

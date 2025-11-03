@@ -1,0 +1,32 @@
+syntax = "proto3";
+package DotNetGameServer;
+
+// 七日签到相关消息（演示用，无持久化表结构）
+message DayReward {
+  int32 day = 1;          // 第几天（1-7）
+  string reward_id = 2;   // 奖励ID（演示用）
+  int32 amount = 3;       // 数量
+  bool claimed = 4;       // 是否已领取
+}
+
+message QuerySignInStatusRequest {
+  string user_id = 1;     // 用户ID（演示用，直接字符串）
+}
+
+message QuerySignInStatusResponse {
+  bool success = 1;
+  string message = 2;
+  repeated DayReward rewards = 3; // 七天奖励状态
+  int32 current_day = 4;          // 当前周期的第几天（1-7）
+}
+
+message ClaimSignInRewardRequest {
+  string user_id = 1;     // 用户ID
+  int32 day = 2;          // 要领取的天数（1-7）
+}
+
+message ClaimSignInRewardResponse {
+  bool success = 1;
+  string message = 2;
+  DayReward reward = 3;   // 领取结果（成功时返回）
+}

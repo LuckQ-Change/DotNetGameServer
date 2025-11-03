@@ -1,0 +1,17 @@
+syntax = "proto3";
+package DotNetGameServer;
+
+// 通用消息封装
+message Envelope {
+  string type = 1;
+  bytes payload = 2;
+  // 统一鉴权令牌（可选）：客户端->服务端随消息携带
+  string token = 3;
+  // 请求幂等：客户端生成的请求ID，用于重试去重与日志关联
+  string request_id = 4;
+  // 协议版本：客户端声明的语义版本或构建版本
+  string version = 5;
+  // 错误编码与消息：服务端在响应时填充（成功为0/空）
+  int32 error_code = 6;
+  string error_message = 7;
+}

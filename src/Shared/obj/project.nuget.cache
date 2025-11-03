@@ -1,8 +1,8 @@
 {
   "version": 2,
-  "dgSpecHash": "pNeVvTooOuI=",
+  "dgSpecHash": "hM9nzAnwbYo=",
   "success": true,
-  "projectFilePath": "D:\\Study and Job\\NewServerGame\\DotNetGameServer\\src\\Shared\\Shared.csproj",
+  "projectFilePath": "d:\\Study and Job\\NewServerGame\\DotNetGameServer\\src\\Shared\\Shared.csproj",
   "expectedPackageFiles": [
     "C:\\Users\\33502\\.nuget\\packages\\google.protobuf\\3.25.1\\google.protobuf.3.25.1.nupkg.sha512",
     "C:\\Users\\33502\\.nuget\\packages\\grpc.core.api\\2.59.0\\grpc.core.api.2.59.0.nupkg.sha512",

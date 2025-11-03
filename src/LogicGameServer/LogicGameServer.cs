@@ -1,43 +1,36 @@
 using Core;
-using DotNetGameServer;
-using LogicServer.SignIn.Components;
-using LogicServer.SignIn.Handlers;
+using Core.Components;
 using Core.Ecs;
-using Core.Db;
+using DotNetGameServer;
+using LogicServer.SignIn.Handlers;
+using Microsoft.Extensions.Logging;
+using System.Threading.Tasks;
 
 namespace LogicServer;
 
 public class LogicGameServer : BaseGameServer
 {
-    private readonly GameDbContext _dbContext;
-
-    public LogicGameServer(GameDbContext dbContext)
+    public LogicGameServer(ILogger<LogicGameServer> logger) : base("Logic", logger)
     {
-        _dbContext = dbContext;
     }
 
-    public override void Start()
+    public override async Task StartAsync(int port)
     {
+        // Register message handlers
         RegisterStrongMessageHandler<QuerySignInStatusRequest, QuerySignInStatusResponse>(new QuerySignInStatusMessageHandler());
         RegisterStrongMessageHandler<ClaimSignInRewardRequest, ClaimSignInRewardResponse>(new ClaimSignInRewardMessageHandler());
-        // 注册 ECS 世界组件
-        AddComponent<EcsWorldComponent>(new EcsWorldComponent());
-        AddComponent<Core.Components.HeartbeatClientComponent>(
-            new Core.Components.HeartbeatClientComponent(
-                message => Log(message),
-                type: "logic",
-                portProvider: () => ListeningPort,
-                playerCountProvider: null,
-                statusProvider: () => "online",
-                baseDir: AppContext.BaseDirectory
-            )
-        );
-    }
 
-    /// <summary>
-    /// 工厂方法：创建 <see cref="LogicGameServer"/> 实例。
-    /// </summary>
-    /// <param name="log">日志输出委托。</param>
-    /// <returns>逻辑服务器实例。</returns>
-    public static LogicGameServer Create(Action<string> log) => new LogicGameServer(log);
+        // Add essential components
+        AddComponent(new EcsWorldComponent());
+        AddComponent(new HeartbeatClientComponent(
+            message => Log(message),
+            type: "logic",
+            portProvider: () => ListeningPort,
+            playerCountProvider: () => 0, // Replace with actual player count if available
+            statusProvider: () => "online",
+            baseDir: AppContext.BaseDirectory
+        ));
+
+        await base.StartAsync(port);
+    }
 }

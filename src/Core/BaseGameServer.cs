@@ -1,6 +1,9 @@
 using System.Collections.Concurrent;
 using System.Net;
 using System.Net.Sockets;
+using DotNetGameServer;
+using Google.Protobuf;
+using Microsoft.Extensions.DependencyInjection;
 using System.Diagnostics;
 using System.IO;
 using System.Net.Security;
@@ -132,7 +135,7 @@ public abstract class BaseGameServer : IServerContext
     /// 启动服务器监听并初始化所有已注册组件。
     /// </summary>
     /// <param name="port">监听端口。</param>
-    public async Task StartAsync(int port)
+    public virtual async Task StartAsync(int port)
     {
         if (_listener != null) return;
 
@@ -207,6 +210,11 @@ public abstract class BaseGameServer : IServerContext
     public void Log(string message)
     {
         _logger.LogInformation("[{Server}] {Message}", ServerName, message);
+    }
+
+    public void Log(string message, LogLevel level)
+    {
+        _logger.Log(level, "[{Server}] {Message}", ServerName, message);
     }
 
     private async Task AcceptLoop(CancellationToken token)
@@ -538,6 +546,8 @@ internal sealed class RequestServerContext : IServerContext
     public AuthInfo? Auth => _auth;
 
     public void Log(string message) => _server.Log(message);
+
+    public void Log(string message, LogLevel level) => _server.Log(message, level);
     public T? GetComponent<T>() where T : class, IServerComponent => _server.GetComponent<T>();
 
     /// <summary>

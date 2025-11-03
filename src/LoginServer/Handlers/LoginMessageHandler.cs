@@ -1,70 +1,66 @@
 using Core;
-using DotNetGameServer;
-using Google.Protobuf;
 using Core.Components;
 using Core.Config;
+using DotNetGameServer;
+using LoginServer.Components;
+using Microsoft.Extensions.Logging;
 using Shared;
+using System;
+using System.Threading.Tasks;
 
-namespace LoginServer;
+namespace LoginServer.Handlers; // Updated namespace
 
 /// <summary>
-/// 登录请求消息处理器
+/// Handles login requests.
 /// </summary>
 public class LoginMessageHandler : IStrongMessageHandler<LoginRequest, LoginResponse>
 {
-    // 强类型处理实现
+    private readonly IUserAuthComponent _authComponent;
+
+    public LoginMessageHandler(IUserAuthComponent authComponent)
+    {
+        _authComponent = authComponent;
+    }
+
     public async Task<LoginResponse?> HandleAsync(LoginRequest request, IServerContext context)
     {
-        // 获取用户验证组件
-        var authComponent = context.GetComponent<IUserAuthComponent>();
+        var authResult = await _authComponent.AuthenticateAsync(request.Username, request.Password);
 
-        bool success;
-        string message;
+        context.Log($"Handling login request for user: '{request.Username}', Result: {authResult.Success}");
+
         string? token = null;
         long expire = 0;
 
-        if (authComponent != null)
+        if (authResult.Success)
         {
-            var result = await authComponent.AuthenticateAsync(request.Username, request.Password);
-            success = result.Success;
-            message = result.Message;
-        }
-        else
-        {
-            // 默认验证逻辑
-            success = request.Username == "admin" && request.Password == "123456";
-            message = success ? "登录成功" : "用户名或密码错误";
-        }
-
-        context.Log($"处理登录请求(强类型): {request.Username}, 结果={success}");
-
-        // 登录成功则签发令牌（供客户端后续放入 Envelope.token）
-        if (success)
-        {
+            // On successful login, issue a token
             try
             {
                 var hb = context.GetComponent<HeartbeatClientComponent>();
                 var serverId = hb?.TryGetCurrentServerId();
                 var secretProvider = context.GetComponent<ITokenSecretProvider>();
+                // Fallback to loading secret from config if not available in context
                 var secret = secretProvider?.GetSecret() ?? SimpleConfigLoader.LoadDirectoryTokenSecret(AppContext.BaseDirectory) ?? "dev-secret";
+
                 if (!string.IsNullOrWhiteSpace(serverId))
                 {
-                    expire = DateTimeOffset.UtcNow.ToUnixTimeSeconds() + 3600; // 1小时有效
-                    var sig = TokenSigner.ComputeSignature(serverId!, expire, request.Username, serverId!, secret);
-                    token = TokenSigner.ComposeSigned(serverId!, expire, sig);
+                    expire = DateTimeOffset.UtcNow.ToUnixTimeSeconds() + 3600; // Token valid for 1 hour
+                    var sig = TokenSigner.ComputeSignature(serverId, expire, request.Username, serverId, secret);
+                    token = TokenSigner.ComposeSigned(serverId, expire, sig);
                 }
             }
-            catch { }
+            catch (Exception ex)
+            {
+                context.Log($"Error during token generation: {ex.Message}", LogLevel.Error);
+            }
         }
 
-        var response = new LoginResponse
+        return new LoginResponse
         {
-            Success = success,
-            Message = message,
+            Success = authResult.Success,
+            Message = authResult.Message,
             Token = token ?? string.Empty,
             ExpireAt = expire
         };
-
-        return response;
     }
 }

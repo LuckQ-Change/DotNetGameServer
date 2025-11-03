@@ -9,234 +9,209 @@ using pb = global::Google.Protobuf;
 using pbc = global::Google.Protobuf.Collections;
 using pbr = global::Google.Protobuf.Reflection;
 using scg = global::System.Collections.Generic;
-namespace DotNetGameServer
-{
+namespace DotNetGameServer {
 
-    /// <summary>Holder for reflection information generated from Protos/resource.proto</summary>
-    public static partial class ResourceReflection
-    {
+  /// <summary>Holder for reflection information generated from Protos/resource.proto</summary>
+  public static partial class ResourceReflection {
 
-        #region Descriptor
-        /// <summary>File descriptor for Protos/resource.proto</summary>
-        public static pbr::FileDescriptor Descriptor
-        {
-            get { return descriptor; }
-        }
-        private static pbr::FileDescriptor descriptor;
+    #region Descriptor
+    /// <summary>File descriptor for Protos/resource.proto</summary>
+    public static pbr::FileDescriptor Descriptor {
+      get { return descriptor; }
+    }
+    private static pbr::FileDescriptor descriptor;
 
-        static ResourceReflection()
-        {
-            byte[] descriptorData = global::System.Convert.FromBase64String(
-                string.Concat(
-                  "ChVQcm90b3MvcmVzb3VyY2UucHJvdG8SEERvdE5ldEdhbWVTZXJ2ZXIiSwoS",
-                  "UmVzb3VyY2VCdW5kbGVJbmZvEgwKBG5hbWUYASABKAkSDAoEaGFzaBgCIAEo",
-                  "CRIMCgRzaXplGAMgASgFEgsKA3VybBgEIAEoCSI/ChNRdWVyeVZlcnNpb25S",
-                  "ZXF1ZXN0EhYKDmNsaWVudF92ZXJzaW9uGAEgASgJEhAKCHBsYXRmb3JtGAIg",
-                  "ASgJIn8KFFF1ZXJ5VmVyc2lvblJlc3BvbnNlEhgKEHVwZGF0ZV9hdmFpbGFi",
-                  "bGUYASABKAgSFgoObGF0ZXN0X3ZlcnNpb24YAiABKAkSNQoHYnVuZGxlcxgD",
-                  "IAMoCzIkLkRvdE5ldEdhbWVTZXJ2ZXIuUmVzb3VyY2VCdW5kbGVJbmZvIjEK",
-                  "EEdldEJ1bmRsZVJlcXVlc3QSDAoEbmFtZRgBIAEoCRIPCgd2ZXJzaW9uGAIg",
-                  "ASgJImIKEUdldEJ1bmRsZVJlc3BvbnNlEg8KB3N1Y2Nlc3MYASABKAgSDwoH",
-                  "bWVzc2FnZRgCIAEoCRIPCgdjb250ZW50GAMgASgMEgwKBGhhc2gYBCABKAkS",
-                  "DAoEc2l6ZRgFIAEoBTLGAQoPUmVzb3VyY2VTZXJ2aWNlEl0KDFF1ZXJ5VmVy",
-                  "c2lvbhIlLkRvdE5ldEdhbWVTZXJ2ZXIuUXVlcnlWZXJzaW9uUmVxdWVzdBom",
-                  "LkRvdE5ldEdhbWVTZXJ2ZXIuUXVlcnlWZXJzaW9uUmVzcG9uc2USVAoJR2V0",
-                  "QnVuZGxlEiIuRG90TmV0R2FtZVNlcnZlci5HZXRCdW5kbGVSZXF1ZXN0GiMu",
-                  "RG90TmV0R2FtZVNlcnZlci5HZXRCdW5kbGVSZXNwb25zZWIGcHJvdG8z"));
-            descriptor = pbr::FileDescriptor.FromGeneratedCode(descriptorData,
-                new pbr::FileDescriptor[] { },
-                new pbr::GeneratedClrTypeInfo(null, null, new pbr::GeneratedClrTypeInfo[] {
+    static ResourceReflection() {
+      byte[] descriptorData = global::System.Convert.FromBase64String(
+          string.Concat(
+            "ChVQcm90b3MvcmVzb3VyY2UucHJvdG8SEERvdE5ldEdhbWVTZXJ2ZXIiSwoS",
+            "UmVzb3VyY2VCdW5kbGVJbmZvEgwKBG5hbWUYASABKAkSDAoEaGFzaBgCIAEo",
+            "CRIMCgRzaXplGAMgASgFEgsKA3VybBgEIAEoCSI/ChNRdWVyeVZlcnNpb25S",
+            "ZXF1ZXN0EhYKDmNsaWVudF92ZXJzaW9uGAEgASgJEhAKCHBsYXRmb3JtGAIg",
+            "ASgJIn8KFFF1ZXJ5VmVyc2lvblJlc3BvbnNlEhgKEHVwZGF0ZV9hdmFpbGFi",
+            "bGUYASABKAgSFgoObGF0ZXN0X3ZlcnNpb24YAiABKAkSNQoHYnVuZGxlcxgD",
+            "IAMoCzIkLkRvdE5ldEdhbWVTZXJ2ZXIuUmVzb3VyY2VCdW5kbGVJbmZvIjEK",
+            "EEdldEJ1bmRsZVJlcXVlc3QSDAoEbmFtZRgBIAEoCRIPCgd2ZXJzaW9uGAIg",
+            "ASgJImIKEUdldEJ1bmRsZVJlc3BvbnNlEg8KB3N1Y2Nlc3MYASABKAgSDwoH",
+            "bWVzc2FnZRgCIAEoCRIPCgdjb250ZW50GAMgASgMEgwKBGhhc2gYBCABKAkS",
+            "DAoEc2l6ZRgFIAEoBTLGAQoPUmVzb3VyY2VTZXJ2aWNlEl0KDFF1ZXJ5VmVy",
+            "c2lvbhIlLkRvdE5ldEdhbWVTZXJ2ZXIuUXVlcnlWZXJzaW9uUmVxdWVzdBom",
+            "LkRvdE5ldEdhbWVTZXJ2ZXIuUXVlcnlWZXJzaW9uUmVzcG9uc2USVAoJR2V0",
+            "QnVuZGxlEiIuRG90TmV0R2FtZVNlcnZlci5HZXRCdW5kbGVSZXF1ZXN0GiMu",
+            "RG90TmV0R2FtZVNlcnZlci5HZXRCdW5kbGVSZXNwb25zZWIGcHJvdG8z"));
+      descriptor = pbr::FileDescriptor.FromGeneratedCode(descriptorData,
+          new pbr::FileDescriptor[] { },
+          new pbr::GeneratedClrTypeInfo(null, null, new pbr::GeneratedClrTypeInfo[] {
             new pbr::GeneratedClrTypeInfo(typeof(global::DotNetGameServer.ResourceBundleInfo), global::DotNetGameServer.ResourceBundleInfo.Parser, new[]{ "Name", "Hash", "Size", "Url" }, null, null, null, null),
             new pbr::GeneratedClrTypeInfo(typeof(global::DotNetGameServer.QueryVersionRequest), global::DotNetGameServer.QueryVersionRequest.Parser, new[]{ "ClientVersion", "Platform" }, null, null, null, null),
             new pbr::GeneratedClrTypeInfo(typeof(global::DotNetGameServer.QueryVersionResponse), global::DotNetGameServer.QueryVersionResponse.Parser, new[]{ "UpdateAvailable", "LatestVersion", "Bundles" }, null, null, null, null),
             new pbr::GeneratedClrTypeInfo(typeof(global::DotNetGameServer.GetBundleRequest), global::DotNetGameServer.GetBundleRequest.Parser, new[]{ "Name", "Version" }, null, null, null, null),
             new pbr::GeneratedClrTypeInfo(typeof(global::DotNetGameServer.GetBundleResponse), global::DotNetGameServer.GetBundleResponse.Parser, new[]{ "Success", "Message", "Content", "Hash", "Size" }, null, null, null, null)
-                }));
-        }
-        #endregion
-
+          }));
     }
-    #region Messages
+    #endregion
+
+  }
+  #region Messages
+  /// <summary>
+  /// 资源与热更相关消息
+  /// </summary>
+  [global::System.Diagnostics.DebuggerDisplayAttribute("{ToString(),nq}")]
+  public sealed partial class ResourceBundleInfo : pb::IMessage<ResourceBundleInfo>
+  #if !GOOGLE_PROTOBUF_REFSTRUCT_COMPATIBILITY_MODE
+      , pb::IBufferMessage
+  #endif
+  {
+    private static readonly pb::MessageParser<ResourceBundleInfo> _parser = new pb::MessageParser<ResourceBundleInfo>(() => new ResourceBundleInfo());
+    private pb::UnknownFieldSet _unknownFields;
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public static pb::MessageParser<ResourceBundleInfo> Parser { get { return _parser; } }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public static pbr::MessageDescriptor Descriptor {
+      get { return global::DotNetGameServer.ResourceReflection.Descriptor.MessageTypes[0]; }
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    pbr::MessageDescriptor pb::IMessage.Descriptor {
+      get { return Descriptor; }
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public ResourceBundleInfo() {
+      OnConstruction();
+    }
+
+    partial void OnConstruction();
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public ResourceBundleInfo(ResourceBundleInfo other) : this() {
+      name_ = other.name_;
+      hash_ = other.hash_;
+      size_ = other.size_;
+      url_ = other.url_;
+      _unknownFields = pb::UnknownFieldSet.Clone(other._unknownFields);
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public ResourceBundleInfo Clone() {
+      return new ResourceBundleInfo(this);
+    }
+
+    /// <summary>Field number for the "name" field.</summary>
+    public const int NameFieldNumber = 1;
+    private string name_ = "";
     /// <summary>
-    /// 资源与热更相关消息
+    /// AB 名称
     /// </summary>
-    [global::System.Diagnostics.DebuggerDisplayAttribute("{ToString(),nq}")]
-    public sealed partial class ResourceBundleInfo : pb::IMessage<ResourceBundleInfo>
-#if !GOOGLE_PROTOBUF_REFSTRUCT_COMPATIBILITY_MODE
-        , pb::IBufferMessage
-#endif
-    {
-        private static readonly pb::MessageParser<ResourceBundleInfo> _parser = new pb::MessageParser<ResourceBundleInfo>(() => new ResourceBundleInfo());
-        private pb::UnknownFieldSet _unknownFields;
-        [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
-        [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
-        public static pb::MessageParser<ResourceBundleInfo> Parser { get { return _parser; } }
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public string Name {
+      get { return name_; }
+      set {
+        name_ = pb::ProtoPreconditions.CheckNotNull(value, "value");
+      }
+    }
 
-        [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
-        [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
-        public static pbr::MessageDescriptor Descriptor
-        {
-            get { return global::DotNetGameServer.ResourceReflection.Descriptor.MessageTypes[0]; }
-        }
+    /// <summary>Field number for the "hash" field.</summary>
+    public const int HashFieldNumber = 2;
+    private string hash_ = "";
+    /// <summary>
+    /// 文件哈希
+    /// </summary>
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public string Hash {
+      get { return hash_; }
+      set {
+        hash_ = pb::ProtoPreconditions.CheckNotNull(value, "value");
+      }
+    }
 
-        [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
-        [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
-        pbr::MessageDescriptor pb::IMessage.Descriptor
-        {
-            get { return Descriptor; }
-        }
+    /// <summary>Field number for the "size" field.</summary>
+    public const int SizeFieldNumber = 3;
+    private int size_;
+    /// <summary>
+    /// 字节大小
+    /// </summary>
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public int Size {
+      get { return size_; }
+      set {
+        size_ = value;
+      }
+    }
 
-        [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
-        [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
-        public ResourceBundleInfo()
-        {
-            OnConstruction();
-        }
+    /// <summary>Field number for the "url" field.</summary>
+    public const int UrlFieldNumber = 4;
+    private string url_ = "";
+    /// <summary>
+    /// 下载地址（可选，用于HTTP下载）
+    /// </summary>
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public string Url {
+      get { return url_; }
+      set {
+        url_ = pb::ProtoPreconditions.CheckNotNull(value, "value");
+      }
+    }
 
-        partial void OnConstruction();
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public override bool Equals(object other) {
+      return Equals(other as ResourceBundleInfo);
+    }
 
-        [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
-        [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
-        public ResourceBundleInfo(ResourceBundleInfo other) : this()
-        {
-            name_ = other.name_;
-            hash_ = other.hash_;
-            size_ = other.size_;
-            url_ = other.url_;
-            _unknownFields = pb::UnknownFieldSet.Clone(other._unknownFields);
-        }
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public bool Equals(ResourceBundleInfo other) {
+      if (ReferenceEquals(other, null)) {
+        return false;
+      }
+      if (ReferenceEquals(other, this)) {
+        return true;
+      }
+      if (Name != other.Name) return false;
+      if (Hash != other.Hash) return false;
+      if (Size != other.Size) return false;
+      if (Url != other.Url) return false;
+      return Equals(_unknownFields, other._unknownFields);
+    }
 
-        [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
-        [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
-        public ResourceBundleInfo Clone()
-        {
-            return new ResourceBundleInfo(this);
-        }
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public override int GetHashCode() {
+      int hash = 1;
+      if (Name.Length != 0) hash ^= Name.GetHashCode();
+      if (Hash.Length != 0) hash ^= Hash.GetHashCode();
+      if (Size != 0) hash ^= Size.GetHashCode();
+      if (Url.Length != 0) hash ^= Url.GetHashCode();
+      if (_unknownFields != null) {
+        hash ^= _unknownFields.GetHashCode();
+      }
+      return hash;
+    }
 
-        /// <summary>Field number for the "name" field.</summary>
-        public const int NameFieldNumber = 1;
-        private string name_ = "";
-        /// <summary>
-        /// AB 名称
-        /// </summary>
-        [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
-        [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
-        public string Name
-        {
-            get { return name_; }
-            set
-            {
-                name_ = pb::ProtoPreconditions.CheckNotNull(value, "value");
-            }
-        }
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public override string ToString() {
+      return pb::JsonFormatter.ToDiagnosticString(this);
+    }
 
-        /// <summary>Field number for the "hash" field.</summary>
-        public const int HashFieldNumber = 2;
-        private string hash_ = "";
-        /// <summary>
-        /// 文件哈希
-        /// </summary>
-        [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
-        [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
-        public string Hash
-        {
-            get { return hash_; }
-            set
-            {
-                hash_ = pb::ProtoPreconditions.CheckNotNull(value, "value");
-            }
-        }
-
-        /// <summary>Field number for the "size" field.</summary>
-        public const int SizeFieldNumber = 3;
-        private int size_;
-        /// <summary>
-        /// 字节大小
-        /// </summary>
-        [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
-        [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
-        public int Size
-        {
-            get { return size_; }
-            set
-            {
-                size_ = value;
-            }
-        }
-
-        /// <summary>Field number for the "url" field.</summary>
-        public const int UrlFieldNumber = 4;
-        private string url_ = "";
-        /// <summary>
-        /// 下载地址（可选，用于HTTP下载）
-        /// </summary>
-        [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
-        [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
-        public string Url
-        {
-            get { return url_; }
-            set
-            {
-                url_ = pb::ProtoPreconditions.CheckNotNull(value, "value");
-            }
-        }
-
-        [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
-        [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
-        public override bool Equals(object other)
-        {
-            return Equals(other as ResourceBundleInfo);
-        }
-
-        [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
-        [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
-        public bool Equals(ResourceBundleInfo other)
-        {
-            if (ReferenceEquals(other, null))
-            {
-                return false;
-            }
-            if (ReferenceEquals(other, this))
-            {
-                return true;
-            }
-            if (Name != other.Name) return false;
-            if (Hash != other.Hash) return false;
-            if (Size != other.Size) return false;
-            if (Url != other.Url) return false;
-            return Equals(_unknownFields, other._unknownFields);
-        }
-
-        [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
-        [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
-        public override int GetHashCode()
-        {
-            int hash = 1;
-            if (Name.Length != 0) hash ^= Name.GetHashCode();
-            if (Hash.Length != 0) hash ^= Hash.GetHashCode();
-            if (Size != 0) hash ^= Size.GetHashCode();
-            if (Url.Length != 0) hash ^= Url.GetHashCode();
-            if (_unknownFields != null)
-            {
-                hash ^= _unknownFields.GetHashCode();
-            }
-            return hash;
-        }
-
-        [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
-        [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
-        public override string ToString()
-        {
-            return pb::JsonFormatter.ToDiagnosticString(this);
-        }
-
-        [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
-        [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
-        public void WriteTo(pb::CodedOutputStream output)
-        {
-#if !GOOGLE_PROTOBUF_REFSTRUCT_COMPATIBILITY_MODE
-            output.WriteRawMessage(this);
-#else
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public void WriteTo(pb::CodedOutputStream output) {
+    #if !GOOGLE_PROTOBUF_REFSTRUCT_COMPATIBILITY_MODE
+      output.WriteRawMessage(this);
+    #else
       if (Name.Length != 0) {
         output.WriteRawTag(10);
         output.WriteString(Name);
@@ -256,103 +231,84 @@ namespace DotNetGameServer
       if (_unknownFields != null) {
         _unknownFields.WriteTo(output);
       }
-#endif
-        }
+    #endif
+    }
 
-#if !GOOGLE_PROTOBUF_REFSTRUCT_COMPATIBILITY_MODE
-        [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
-        [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
-        void pb::IBufferMessage.InternalWriteTo(ref pb::WriteContext output)
-        {
-            if (Name.Length != 0)
-            {
-                output.WriteRawTag(10);
-                output.WriteString(Name);
-            }
-            if (Hash.Length != 0)
-            {
-                output.WriteRawTag(18);
-                output.WriteString(Hash);
-            }
-            if (Size != 0)
-            {
-                output.WriteRawTag(24);
-                output.WriteInt32(Size);
-            }
-            if (Url.Length != 0)
-            {
-                output.WriteRawTag(34);
-                output.WriteString(Url);
-            }
-            if (_unknownFields != null)
-            {
-                _unknownFields.WriteTo(ref output);
-            }
-        }
-#endif
+    #if !GOOGLE_PROTOBUF_REFSTRUCT_COMPATIBILITY_MODE
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    void pb::IBufferMessage.InternalWriteTo(ref pb::WriteContext output) {
+      if (Name.Length != 0) {
+        output.WriteRawTag(10);
+        output.WriteString(Name);
+      }
+      if (Hash.Length != 0) {
+        output.WriteRawTag(18);
+        output.WriteString(Hash);
+      }
+      if (Size != 0) {
+        output.WriteRawTag(24);
+        output.WriteInt32(Size);
+      }
+      if (Url.Length != 0) {
+        output.WriteRawTag(34);
+        output.WriteString(Url);
+      }
+      if (_unknownFields != null) {
+        _unknownFields.WriteTo(ref output);
+      }
+    }
+    #endif
 
-        [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
-        [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
-        public int CalculateSize()
-        {
-            int size = 0;
-            if (Name.Length != 0)
-            {
-                size += 1 + pb::CodedOutputStream.ComputeStringSize(Name);
-            }
-            if (Hash.Length != 0)
-            {
-                size += 1 + pb::CodedOutputStream.ComputeStringSize(Hash);
-            }
-            if (Size != 0)
-            {
-                size += 1 + pb::CodedOutputStream.ComputeInt32Size(Size);
-            }
-            if (Url.Length != 0)
-            {
-                size += 1 + pb::CodedOutputStream.ComputeStringSize(Url);
-            }
-            if (_unknownFields != null)
-            {
-                size += _unknownFields.CalculateSize();
-            }
-            return size;
-        }
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public int CalculateSize() {
+      int size = 0;
+      if (Name.Length != 0) {
+        size += 1 + pb::CodedOutputStream.ComputeStringSize(Name);
+      }
+      if (Hash.Length != 0) {
+        size += 1 + pb::CodedOutputStream.ComputeStringSize(Hash);
+      }
+      if (Size != 0) {
+        size += 1 + pb::CodedOutputStream.ComputeInt32Size(Size);
+      }
+      if (Url.Length != 0) {
+        size += 1 + pb::CodedOutputStream.ComputeStringSize(Url);
+      }
+      if (_unknownFields != null) {
+        size += _unknownFields.CalculateSize();
+      }
+      return size;
+    }
 
-        [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
-        [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
-        public void MergeFrom(ResourceBundleInfo other)
-        {
-            if (other == null)
-            {
-                return;
-            }
-            if (other.Name.Length != 0)
-            {
-                Name = other.Name;
-            }
-            if (other.Hash.Length != 0)
-            {
-                Hash = other.Hash;
-            }
-            if (other.Size != 0)
-            {
-                Size = other.Size;
-            }
-            if (other.Url.Length != 0)
-            {
-                Url = other.Url;
-            }
-            _unknownFields = pb::UnknownFieldSet.MergeFrom(_unknownFields, other._unknownFields);
-        }
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public void MergeFrom(ResourceBundleInfo other) {
+      if (other == null) {
+        return;
+      }
+      if (other.Name.Length != 0) {
+        Name = other.Name;
+      }
+      if (other.Hash.Length != 0) {
+        Hash = other.Hash;
+      }
+      if (other.Size != 0) {
+        Size = other.Size;
+      }
+      if (other.Url.Length != 0) {
+        Url = other.Url;
+      }
+      _unknownFields = pb::UnknownFieldSet.MergeFrom(_unknownFields, other._unknownFields);
+    }
 
-        [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
-        [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
-        public void MergeFrom(pb::CodedInputStream input)
-        {
-#if !GOOGLE_PROTOBUF_REFSTRUCT_COMPATIBILITY_MODE
-            input.ReadRawMessage(this);
-#else
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public void MergeFrom(pb::CodedInputStream input) {
+    #if !GOOGLE_PROTOBUF_REFSTRUCT_COMPATIBILITY_MODE
+      input.ReadRawMessage(this);
+    #else
       uint tag;
       while ((tag = input.ReadTag()) != 0) {
         switch(tag) {
@@ -377,186 +333,162 @@ namespace DotNetGameServer
           }
         }
       }
-#endif
-        }
-
-#if !GOOGLE_PROTOBUF_REFSTRUCT_COMPATIBILITY_MODE
-        [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
-        [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
-        void pb::IBufferMessage.InternalMergeFrom(ref pb::ParseContext input)
-        {
-            uint tag;
-            while ((tag = input.ReadTag()) != 0)
-            {
-                switch (tag)
-                {
-                    default:
-                        _unknownFields = pb::UnknownFieldSet.MergeFieldFrom(_unknownFields, ref input);
-                        break;
-                    case 10:
-                        {
-                            Name = input.ReadString();
-                            break;
-                        }
-                    case 18:
-                        {
-                            Hash = input.ReadString();
-                            break;
-                        }
-                    case 24:
-                        {
-                            Size = input.ReadInt32();
-                            break;
-                        }
-                    case 34:
-                        {
-                            Url = input.ReadString();
-                            break;
-                        }
-                }
-            }
-        }
-#endif
-
+    #endif
     }
 
-    [global::System.Diagnostics.DebuggerDisplayAttribute("{ToString(),nq}")]
-    public sealed partial class QueryVersionRequest : pb::IMessage<QueryVersionRequest>
-#if !GOOGLE_PROTOBUF_REFSTRUCT_COMPATIBILITY_MODE
-        , pb::IBufferMessage
-#endif
-    {
-        private static readonly pb::MessageParser<QueryVersionRequest> _parser = new pb::MessageParser<QueryVersionRequest>(() => new QueryVersionRequest());
-        private pb::UnknownFieldSet _unknownFields;
-        [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
-        [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
-        public static pb::MessageParser<QueryVersionRequest> Parser { get { return _parser; } }
-
-        [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
-        [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
-        public static pbr::MessageDescriptor Descriptor
-        {
-            get { return global::DotNetGameServer.ResourceReflection.Descriptor.MessageTypes[1]; }
+    #if !GOOGLE_PROTOBUF_REFSTRUCT_COMPATIBILITY_MODE
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    void pb::IBufferMessage.InternalMergeFrom(ref pb::ParseContext input) {
+      uint tag;
+      while ((tag = input.ReadTag()) != 0) {
+        switch(tag) {
+          default:
+            _unknownFields = pb::UnknownFieldSet.MergeFieldFrom(_unknownFields, ref input);
+            break;
+          case 10: {
+            Name = input.ReadString();
+            break;
+          }
+          case 18: {
+            Hash = input.ReadString();
+            break;
+          }
+          case 24: {
+            Size = input.ReadInt32();
+            break;
+          }
+          case 34: {
+            Url = input.ReadString();
+            break;
+          }
         }
+      }
+    }
+    #endif
 
-        [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
-        [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
-        pbr::MessageDescriptor pb::IMessage.Descriptor
-        {
-            get { return Descriptor; }
-        }
+  }
 
-        [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
-        [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
-        public QueryVersionRequest()
-        {
-            OnConstruction();
-        }
+  [global::System.Diagnostics.DebuggerDisplayAttribute("{ToString(),nq}")]
+  public sealed partial class QueryVersionRequest : pb::IMessage<QueryVersionRequest>
+  #if !GOOGLE_PROTOBUF_REFSTRUCT_COMPATIBILITY_MODE
+      , pb::IBufferMessage
+  #endif
+  {
+    private static readonly pb::MessageParser<QueryVersionRequest> _parser = new pb::MessageParser<QueryVersionRequest>(() => new QueryVersionRequest());
+    private pb::UnknownFieldSet _unknownFields;
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public static pb::MessageParser<QueryVersionRequest> Parser { get { return _parser; } }
 
-        partial void OnConstruction();
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public static pbr::MessageDescriptor Descriptor {
+      get { return global::DotNetGameServer.ResourceReflection.Descriptor.MessageTypes[1]; }
+    }
 
-        [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
-        [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
-        public QueryVersionRequest(QueryVersionRequest other) : this()
-        {
-            clientVersion_ = other.clientVersion_;
-            platform_ = other.platform_;
-            _unknownFields = pb::UnknownFieldSet.Clone(other._unknownFields);
-        }
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    pbr::MessageDescriptor pb::IMessage.Descriptor {
+      get { return Descriptor; }
+    }
 
-        [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
-        [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
-        public QueryVersionRequest Clone()
-        {
-            return new QueryVersionRequest(this);
-        }
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public QueryVersionRequest() {
+      OnConstruction();
+    }
 
-        /// <summary>Field number for the "client_version" field.</summary>
-        public const int ClientVersionFieldNumber = 1;
-        private string clientVersion_ = "";
-        /// <summary>
-        /// 客户端当前版本
-        /// </summary>
-        [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
-        [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
-        public string ClientVersion
-        {
-            get { return clientVersion_; }
-            set
-            {
-                clientVersion_ = pb::ProtoPreconditions.CheckNotNull(value, "value");
-            }
-        }
+    partial void OnConstruction();
 
-        /// <summary>Field number for the "platform" field.</summary>
-        public const int PlatformFieldNumber = 2;
-        private string platform_ = "";
-        /// <summary>
-        /// 平台，如 win/ios/android
-        /// </summary>
-        [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
-        [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
-        public string Platform
-        {
-            get { return platform_; }
-            set
-            {
-                platform_ = pb::ProtoPreconditions.CheckNotNull(value, "value");
-            }
-        }
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public QueryVersionRequest(QueryVersionRequest other) : this() {
+      clientVersion_ = other.clientVersion_;
+      platform_ = other.platform_;
+      _unknownFields = pb::UnknownFieldSet.Clone(other._unknownFields);
+    }
 
-        [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
-        [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
-        public override bool Equals(object other)
-        {
-            return Equals(other as QueryVersionRequest);
-        }
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public QueryVersionRequest Clone() {
+      return new QueryVersionRequest(this);
+    }
 
-        [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
-        [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
-        public bool Equals(QueryVersionRequest other)
-        {
-            if (ReferenceEquals(other, null))
-            {
-                return false;
-            }
-            if (ReferenceEquals(other, this))
-            {
-                return true;
-            }
-            if (ClientVersion != other.ClientVersion) return false;
-            if (Platform != other.Platform) return false;
-            return Equals(_unknownFields, other._unknownFields);
-        }
+    /// <summary>Field number for the "client_version" field.</summary>
+    public const int ClientVersionFieldNumber = 1;
+    private string clientVersion_ = "";
+    /// <summary>
+    /// 客户端当前版本
+    /// </summary>
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public string ClientVersion {
+      get { return clientVersion_; }
+      set {
+        clientVersion_ = pb::ProtoPreconditions.CheckNotNull(value, "value");
+      }
+    }
 
-        [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
-        [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
-        public override int GetHashCode()
-        {
-            int hash = 1;
-            if (ClientVersion.Length != 0) hash ^= ClientVersion.GetHashCode();
-            if (Platform.Length != 0) hash ^= Platform.GetHashCode();
-            if (_unknownFields != null)
-            {
-                hash ^= _unknownFields.GetHashCode();
-            }
-            return hash;
-        }
+    /// <summary>Field number for the "platform" field.</summary>
+    public const int PlatformFieldNumber = 2;
+    private string platform_ = "";
+    /// <summary>
+    /// 平台，如 win/ios/android
+    /// </summary>
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public string Platform {
+      get { return platform_; }
+      set {
+        platform_ = pb::ProtoPreconditions.CheckNotNull(value, "value");
+      }
+    }
 
-        [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
-        [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
-        public override string ToString()
-        {
-            return pb::JsonFormatter.ToDiagnosticString(this);
-        }
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public override bool Equals(object other) {
+      return Equals(other as QueryVersionRequest);
+    }
 
-        [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
-        [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
-        public void WriteTo(pb::CodedOutputStream output)
-        {
-#if !GOOGLE_PROTOBUF_REFSTRUCT_COMPATIBILITY_MODE
-            output.WriteRawMessage(this);
-#else
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public bool Equals(QueryVersionRequest other) {
+      if (ReferenceEquals(other, null)) {
+        return false;
+      }
+      if (ReferenceEquals(other, this)) {
+        return true;
+      }
+      if (ClientVersion != other.ClientVersion) return false;
+      if (Platform != other.Platform) return false;
+      return Equals(_unknownFields, other._unknownFields);
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public override int GetHashCode() {
+      int hash = 1;
+      if (ClientVersion.Length != 0) hash ^= ClientVersion.GetHashCode();
+      if (Platform.Length != 0) hash ^= Platform.GetHashCode();
+      if (_unknownFields != null) {
+        hash ^= _unknownFields.GetHashCode();
+      }
+      return hash;
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public override string ToString() {
+      return pb::JsonFormatter.ToDiagnosticString(this);
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public void WriteTo(pb::CodedOutputStream output) {
+    #if !GOOGLE_PROTOBUF_REFSTRUCT_COMPATIBILITY_MODE
+      output.WriteRawMessage(this);
+    #else
       if (ClientVersion.Length != 0) {
         output.WriteRawTag(10);
         output.WriteString(ClientVersion);
@@ -568,77 +500,64 @@ namespace DotNetGameServer
       if (_unknownFields != null) {
         _unknownFields.WriteTo(output);
       }
-#endif
-        }
+    #endif
+    }
 
-#if !GOOGLE_PROTOBUF_REFSTRUCT_COMPATIBILITY_MODE
-        [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
-        [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
-        void pb::IBufferMessage.InternalWriteTo(ref pb::WriteContext output)
-        {
-            if (ClientVersion.Length != 0)
-            {
-                output.WriteRawTag(10);
-                output.WriteString(ClientVersion);
-            }
-            if (Platform.Length != 0)
-            {
-                output.WriteRawTag(18);
-                output.WriteString(Platform);
-            }
-            if (_unknownFields != null)
-            {
-                _unknownFields.WriteTo(ref output);
-            }
-        }
-#endif
+    #if !GOOGLE_PROTOBUF_REFSTRUCT_COMPATIBILITY_MODE
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    void pb::IBufferMessage.InternalWriteTo(ref pb::WriteContext output) {
+      if (ClientVersion.Length != 0) {
+        output.WriteRawTag(10);
+        output.WriteString(ClientVersion);
+      }
+      if (Platform.Length != 0) {
+        output.WriteRawTag(18);
+        output.WriteString(Platform);
+      }
+      if (_unknownFields != null) {
+        _unknownFields.WriteTo(ref output);
+      }
+    }
+    #endif
 
-        [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
-        [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
-        public int CalculateSize()
-        {
-            int size = 0;
-            if (ClientVersion.Length != 0)
-            {
-                size += 1 + pb::CodedOutputStream.ComputeStringSize(ClientVersion);
-            }
-            if (Platform.Length != 0)
-            {
-                size += 1 + pb::CodedOutputStream.ComputeStringSize(Platform);
-            }
-            if (_unknownFields != null)
-            {
-                size += _unknownFields.CalculateSize();
-            }
-            return size;
-        }
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public int CalculateSize() {
+      int size = 0;
+      if (ClientVersion.Length != 0) {
+        size += 1 + pb::CodedOutputStream.ComputeStringSize(ClientVersion);
+      }
+      if (Platform.Length != 0) {
+        size += 1 + pb::CodedOutputStream.ComputeStringSize(Platform);
+      }
+      if (_unknownFields != null) {
+        size += _unknownFields.CalculateSize();
+      }
+      return size;
+    }
 
-        [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
-        [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
-        public void MergeFrom(QueryVersionRequest other)
-        {
-            if (other == null)
-            {
-                return;
-            }
-            if (other.ClientVersion.Length != 0)
-            {
-                ClientVersion = other.ClientVersion;
-            }
-            if (other.Platform.Length != 0)
-            {
-                Platform = other.Platform;
-            }
-            _unknownFields = pb::UnknownFieldSet.MergeFrom(_unknownFields, other._unknownFields);
-        }
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public void MergeFrom(QueryVersionRequest other) {
+      if (other == null) {
+        return;
+      }
+      if (other.ClientVersion.Length != 0) {
+        ClientVersion = other.ClientVersion;
+      }
+      if (other.Platform.Length != 0) {
+        Platform = other.Platform;
+      }
+      _unknownFields = pb::UnknownFieldSet.MergeFrom(_unknownFields, other._unknownFields);
+    }
 
-        [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
-        [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
-        public void MergeFrom(pb::CodedInputStream input)
-        {
-#if !GOOGLE_PROTOBUF_REFSTRUCT_COMPATIBILITY_MODE
-            input.ReadRawMessage(this);
-#else
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public void MergeFrom(pb::CodedInputStream input) {
+    #if !GOOGLE_PROTOBUF_REFSTRUCT_COMPATIBILITY_MODE
+      input.ReadRawMessage(this);
+    #else
       uint tag;
       while ((tag = input.ReadTag()) != 0) {
         switch(tag) {
@@ -655,194 +574,171 @@ namespace DotNetGameServer
           }
         }
       }
-#endif
-        }
-
-#if !GOOGLE_PROTOBUF_REFSTRUCT_COMPATIBILITY_MODE
-        [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
-        [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
-        void pb::IBufferMessage.InternalMergeFrom(ref pb::ParseContext input)
-        {
-            uint tag;
-            while ((tag = input.ReadTag()) != 0)
-            {
-                switch (tag)
-                {
-                    default:
-                        _unknownFields = pb::UnknownFieldSet.MergeFieldFrom(_unknownFields, ref input);
-                        break;
-                    case 10:
-                        {
-                            ClientVersion = input.ReadString();
-                            break;
-                        }
-                    case 18:
-                        {
-                            Platform = input.ReadString();
-                            break;
-                        }
-                }
-            }
-        }
-#endif
-
+    #endif
     }
 
-    [global::System.Diagnostics.DebuggerDisplayAttribute("{ToString(),nq}")]
-    public sealed partial class QueryVersionResponse : pb::IMessage<QueryVersionResponse>
-#if !GOOGLE_PROTOBUF_REFSTRUCT_COMPATIBILITY_MODE
-        , pb::IBufferMessage
-#endif
-    {
-        private static readonly pb::MessageParser<QueryVersionResponse> _parser = new pb::MessageParser<QueryVersionResponse>(() => new QueryVersionResponse());
-        private pb::UnknownFieldSet _unknownFields;
-        [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
-        [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
-        public static pb::MessageParser<QueryVersionResponse> Parser { get { return _parser; } }
-
-        [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
-        [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
-        public static pbr::MessageDescriptor Descriptor
-        {
-            get { return global::DotNetGameServer.ResourceReflection.Descriptor.MessageTypes[2]; }
+    #if !GOOGLE_PROTOBUF_REFSTRUCT_COMPATIBILITY_MODE
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    void pb::IBufferMessage.InternalMergeFrom(ref pb::ParseContext input) {
+      uint tag;
+      while ((tag = input.ReadTag()) != 0) {
+        switch(tag) {
+          default:
+            _unknownFields = pb::UnknownFieldSet.MergeFieldFrom(_unknownFields, ref input);
+            break;
+          case 10: {
+            ClientVersion = input.ReadString();
+            break;
+          }
+          case 18: {
+            Platform = input.ReadString();
+            break;
+          }
         }
+      }
+    }
+    #endif
 
-        [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
-        [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
-        pbr::MessageDescriptor pb::IMessage.Descriptor
-        {
-            get { return Descriptor; }
-        }
+  }
 
-        [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
-        [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
-        public QueryVersionResponse()
-        {
-            OnConstruction();
-        }
+  [global::System.Diagnostics.DebuggerDisplayAttribute("{ToString(),nq}")]
+  public sealed partial class QueryVersionResponse : pb::IMessage<QueryVersionResponse>
+  #if !GOOGLE_PROTOBUF_REFSTRUCT_COMPATIBILITY_MODE
+      , pb::IBufferMessage
+  #endif
+  {
+    private static readonly pb::MessageParser<QueryVersionResponse> _parser = new pb::MessageParser<QueryVersionResponse>(() => new QueryVersionResponse());
+    private pb::UnknownFieldSet _unknownFields;
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public static pb::MessageParser<QueryVersionResponse> Parser { get { return _parser; } }
 
-        partial void OnConstruction();
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public static pbr::MessageDescriptor Descriptor {
+      get { return global::DotNetGameServer.ResourceReflection.Descriptor.MessageTypes[2]; }
+    }
 
-        [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
-        [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
-        public QueryVersionResponse(QueryVersionResponse other) : this()
-        {
-            updateAvailable_ = other.updateAvailable_;
-            latestVersion_ = other.latestVersion_;
-            bundles_ = other.bundles_.Clone();
-            _unknownFields = pb::UnknownFieldSet.Clone(other._unknownFields);
-        }
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    pbr::MessageDescriptor pb::IMessage.Descriptor {
+      get { return Descriptor; }
+    }
 
-        [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
-        [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
-        public QueryVersionResponse Clone()
-        {
-            return new QueryVersionResponse(this);
-        }
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public QueryVersionResponse() {
+      OnConstruction();
+    }
 
-        /// <summary>Field number for the "update_available" field.</summary>
-        public const int UpdateAvailableFieldNumber = 1;
-        private bool updateAvailable_;
-        /// <summary>
-        /// 是否有更新
-        /// </summary>
-        [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
-        [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
-        public bool UpdateAvailable
-        {
-            get { return updateAvailable_; }
-            set
-            {
-                updateAvailable_ = value;
-            }
-        }
+    partial void OnConstruction();
 
-        /// <summary>Field number for the "latest_version" field.</summary>
-        public const int LatestVersionFieldNumber = 2;
-        private string latestVersion_ = "";
-        /// <summary>
-        /// 最新版本号
-        /// </summary>
-        [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
-        [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
-        public string LatestVersion
-        {
-            get { return latestVersion_; }
-            set
-            {
-                latestVersion_ = pb::ProtoPreconditions.CheckNotNull(value, "value");
-            }
-        }
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public QueryVersionResponse(QueryVersionResponse other) : this() {
+      updateAvailable_ = other.updateAvailable_;
+      latestVersion_ = other.latestVersion_;
+      bundles_ = other.bundles_.Clone();
+      _unknownFields = pb::UnknownFieldSet.Clone(other._unknownFields);
+    }
 
-        /// <summary>Field number for the "bundles" field.</summary>
-        public const int BundlesFieldNumber = 3;
-        private static readonly pb::FieldCodec<global::DotNetGameServer.ResourceBundleInfo> _repeated_bundles_codec
-            = pb::FieldCodec.ForMessage(26, global::DotNetGameServer.ResourceBundleInfo.Parser);
-        private readonly pbc::RepeatedField<global::DotNetGameServer.ResourceBundleInfo> bundles_ = new pbc::RepeatedField<global::DotNetGameServer.ResourceBundleInfo>();
-        /// <summary>
-        /// 需要更新的 AB 列表
-        /// </summary>
-        [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
-        [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
-        public pbc::RepeatedField<global::DotNetGameServer.ResourceBundleInfo> Bundles
-        {
-            get { return bundles_; }
-        }
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public QueryVersionResponse Clone() {
+      return new QueryVersionResponse(this);
+    }
 
-        [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
-        [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
-        public override bool Equals(object other)
-        {
-            return Equals(other as QueryVersionResponse);
-        }
+    /// <summary>Field number for the "update_available" field.</summary>
+    public const int UpdateAvailableFieldNumber = 1;
+    private bool updateAvailable_;
+    /// <summary>
+    /// 是否有更新
+    /// </summary>
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public bool UpdateAvailable {
+      get { return updateAvailable_; }
+      set {
+        updateAvailable_ = value;
+      }
+    }
 
-        [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
-        [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
-        public bool Equals(QueryVersionResponse other)
-        {
-            if (ReferenceEquals(other, null))
-            {
-                return false;
-            }
-            if (ReferenceEquals(other, this))
-            {
-                return true;
-            }
-            if (UpdateAvailable != other.UpdateAvailable) return false;
-            if (LatestVersion != other.LatestVersion) return false;
-            if (!bundles_.Equals(other.bundles_)) return false;
-            return Equals(_unknownFields, other._unknownFields);
-        }
+    /// <summary>Field number for the "latest_version" field.</summary>
+    public const int LatestVersionFieldNumber = 2;
+    private string latestVersion_ = "";
+    /// <summary>
+    /// 最新版本号
+    /// </summary>
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public string LatestVersion {
+      get { return latestVersion_; }
+      set {
+        latestVersion_ = pb::ProtoPreconditions.CheckNotNull(value, "value");
+      }
+    }
 
-        [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
-        [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
-        public override int GetHashCode()
-        {
-            int hash = 1;
-            if (UpdateAvailable != false) hash ^= UpdateAvailable.GetHashCode();
-            if (LatestVersion.Length != 0) hash ^= LatestVersion.GetHashCode();
-            hash ^= bundles_.GetHashCode();
-            if (_unknownFields != null)
-            {
-                hash ^= _unknownFields.GetHashCode();
-            }
-            return hash;
-        }
+    /// <summary>Field number for the "bundles" field.</summary>
+    public const int BundlesFieldNumber = 3;
+    private static readonly pb::FieldCodec<global::DotNetGameServer.ResourceBundleInfo> _repeated_bundles_codec
+        = pb::FieldCodec.ForMessage(26, global::DotNetGameServer.ResourceBundleInfo.Parser);
+    private readonly pbc::RepeatedField<global::DotNetGameServer.ResourceBundleInfo> bundles_ = new pbc::RepeatedField<global::DotNetGameServer.ResourceBundleInfo>();
+    /// <summary>
+    /// 需要更新的 AB 列表
+    /// </summary>
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public pbc::RepeatedField<global::DotNetGameServer.ResourceBundleInfo> Bundles {
+      get { return bundles_; }
+    }
 
-        [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
-        [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
-        public override string ToString()
-        {
-            return pb::JsonFormatter.ToDiagnosticString(this);
-        }
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public override bool Equals(object other) {
+      return Equals(other as QueryVersionResponse);
+    }
 
-        [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
-        [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
-        public void WriteTo(pb::CodedOutputStream output)
-        {
-#if !GOOGLE_PROTOBUF_REFSTRUCT_COMPATIBILITY_MODE
-            output.WriteRawMessage(this);
-#else
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public bool Equals(QueryVersionResponse other) {
+      if (ReferenceEquals(other, null)) {
+        return false;
+      }
+      if (ReferenceEquals(other, this)) {
+        return true;
+      }
+      if (UpdateAvailable != other.UpdateAvailable) return false;
+      if (LatestVersion != other.LatestVersion) return false;
+      if(!bundles_.Equals(other.bundles_)) return false;
+      return Equals(_unknownFields, other._unknownFields);
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public override int GetHashCode() {
+      int hash = 1;
+      if (UpdateAvailable != false) hash ^= UpdateAvailable.GetHashCode();
+      if (LatestVersion.Length != 0) hash ^= LatestVersion.GetHashCode();
+      hash ^= bundles_.GetHashCode();
+      if (_unknownFields != null) {
+        hash ^= _unknownFields.GetHashCode();
+      }
+      return hash;
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public override string ToString() {
+      return pb::JsonFormatter.ToDiagnosticString(this);
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public void WriteTo(pb::CodedOutputStream output) {
+    #if !GOOGLE_PROTOBUF_REFSTRUCT_COMPATIBILITY_MODE
+      output.WriteRawMessage(this);
+    #else
       if (UpdateAvailable != false) {
         output.WriteRawTag(8);
         output.WriteBool(UpdateAvailable);
@@ -855,80 +751,67 @@ namespace DotNetGameServer
       if (_unknownFields != null) {
         _unknownFields.WriteTo(output);
       }
-#endif
-        }
+    #endif
+    }
 
-#if !GOOGLE_PROTOBUF_REFSTRUCT_COMPATIBILITY_MODE
-        [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
-        [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
-        void pb::IBufferMessage.InternalWriteTo(ref pb::WriteContext output)
-        {
-            if (UpdateAvailable != false)
-            {
-                output.WriteRawTag(8);
-                output.WriteBool(UpdateAvailable);
-            }
-            if (LatestVersion.Length != 0)
-            {
-                output.WriteRawTag(18);
-                output.WriteString(LatestVersion);
-            }
-            bundles_.WriteTo(ref output, _repeated_bundles_codec);
-            if (_unknownFields != null)
-            {
-                _unknownFields.WriteTo(ref output);
-            }
-        }
-#endif
+    #if !GOOGLE_PROTOBUF_REFSTRUCT_COMPATIBILITY_MODE
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    void pb::IBufferMessage.InternalWriteTo(ref pb::WriteContext output) {
+      if (UpdateAvailable != false) {
+        output.WriteRawTag(8);
+        output.WriteBool(UpdateAvailable);
+      }
+      if (LatestVersion.Length != 0) {
+        output.WriteRawTag(18);
+        output.WriteString(LatestVersion);
+      }
+      bundles_.WriteTo(ref output, _repeated_bundles_codec);
+      if (_unknownFields != null) {
+        _unknownFields.WriteTo(ref output);
+      }
+    }
+    #endif
 
-        [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
-        [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
-        public int CalculateSize()
-        {
-            int size = 0;
-            if (UpdateAvailable != false)
-            {
-                size += 1 + 1;
-            }
-            if (LatestVersion.Length != 0)
-            {
-                size += 1 + pb::CodedOutputStream.ComputeStringSize(LatestVersion);
-            }
-            size += bundles_.CalculateSize(_repeated_bundles_codec);
-            if (_unknownFields != null)
-            {
-                size += _unknownFields.CalculateSize();
-            }
-            return size;
-        }
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public int CalculateSize() {
+      int size = 0;
+      if (UpdateAvailable != false) {
+        size += 1 + 1;
+      }
+      if (LatestVersion.Length != 0) {
+        size += 1 + pb::CodedOutputStream.ComputeStringSize(LatestVersion);
+      }
+      size += bundles_.CalculateSize(_repeated_bundles_codec);
+      if (_unknownFields != null) {
+        size += _unknownFields.CalculateSize();
+      }
+      return size;
+    }
 
-        [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
-        [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
-        public void MergeFrom(QueryVersionResponse other)
-        {
-            if (other == null)
-            {
-                return;
-            }
-            if (other.UpdateAvailable != false)
-            {
-                UpdateAvailable = other.UpdateAvailable;
-            }
-            if (other.LatestVersion.Length != 0)
-            {
-                LatestVersion = other.LatestVersion;
-            }
-            bundles_.Add(other.bundles_);
-            _unknownFields = pb::UnknownFieldSet.MergeFrom(_unknownFields, other._unknownFields);
-        }
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public void MergeFrom(QueryVersionResponse other) {
+      if (other == null) {
+        return;
+      }
+      if (other.UpdateAvailable != false) {
+        UpdateAvailable = other.UpdateAvailable;
+      }
+      if (other.LatestVersion.Length != 0) {
+        LatestVersion = other.LatestVersion;
+      }
+      bundles_.Add(other.bundles_);
+      _unknownFields = pb::UnknownFieldSet.MergeFrom(_unknownFields, other._unknownFields);
+    }
 
-        [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
-        [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
-        public void MergeFrom(pb::CodedInputStream input)
-        {
-#if !GOOGLE_PROTOBUF_REFSTRUCT_COMPATIBILITY_MODE
-            input.ReadRawMessage(this);
-#else
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public void MergeFrom(pb::CodedInputStream input) {
+    #if !GOOGLE_PROTOBUF_REFSTRUCT_COMPATIBILITY_MODE
+      input.ReadRawMessage(this);
+    #else
       uint tag;
       while ((tag = input.ReadTag()) != 0) {
         switch(tag) {
@@ -949,181 +832,158 @@ namespace DotNetGameServer
           }
         }
       }
-#endif
-        }
-
-#if !GOOGLE_PROTOBUF_REFSTRUCT_COMPATIBILITY_MODE
-        [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
-        [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
-        void pb::IBufferMessage.InternalMergeFrom(ref pb::ParseContext input)
-        {
-            uint tag;
-            while ((tag = input.ReadTag()) != 0)
-            {
-                switch (tag)
-                {
-                    default:
-                        _unknownFields = pb::UnknownFieldSet.MergeFieldFrom(_unknownFields, ref input);
-                        break;
-                    case 8:
-                        {
-                            UpdateAvailable = input.ReadBool();
-                            break;
-                        }
-                    case 18:
-                        {
-                            LatestVersion = input.ReadString();
-                            break;
-                        }
-                    case 26:
-                        {
-                            bundles_.AddEntriesFrom(ref input, _repeated_bundles_codec);
-                            break;
-                        }
-                }
-            }
-        }
-#endif
-
+    #endif
     }
 
-    [global::System.Diagnostics.DebuggerDisplayAttribute("{ToString(),nq}")]
-    public sealed partial class GetBundleRequest : pb::IMessage<GetBundleRequest>
-#if !GOOGLE_PROTOBUF_REFSTRUCT_COMPATIBILITY_MODE
-        , pb::IBufferMessage
-#endif
-    {
-        private static readonly pb::MessageParser<GetBundleRequest> _parser = new pb::MessageParser<GetBundleRequest>(() => new GetBundleRequest());
-        private pb::UnknownFieldSet _unknownFields;
-        [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
-        [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
-        public static pb::MessageParser<GetBundleRequest> Parser { get { return _parser; } }
-
-        [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
-        [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
-        public static pbr::MessageDescriptor Descriptor
-        {
-            get { return global::DotNetGameServer.ResourceReflection.Descriptor.MessageTypes[3]; }
+    #if !GOOGLE_PROTOBUF_REFSTRUCT_COMPATIBILITY_MODE
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    void pb::IBufferMessage.InternalMergeFrom(ref pb::ParseContext input) {
+      uint tag;
+      while ((tag = input.ReadTag()) != 0) {
+        switch(tag) {
+          default:
+            _unknownFields = pb::UnknownFieldSet.MergeFieldFrom(_unknownFields, ref input);
+            break;
+          case 8: {
+            UpdateAvailable = input.ReadBool();
+            break;
+          }
+          case 18: {
+            LatestVersion = input.ReadString();
+            break;
+          }
+          case 26: {
+            bundles_.AddEntriesFrom(ref input, _repeated_bundles_codec);
+            break;
+          }
         }
+      }
+    }
+    #endif
 
-        [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
-        [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
-        pbr::MessageDescriptor pb::IMessage.Descriptor
-        {
-            get { return Descriptor; }
-        }
+  }
 
-        [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
-        [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
-        public GetBundleRequest()
-        {
-            OnConstruction();
-        }
+  [global::System.Diagnostics.DebuggerDisplayAttribute("{ToString(),nq}")]
+  public sealed partial class GetBundleRequest : pb::IMessage<GetBundleRequest>
+  #if !GOOGLE_PROTOBUF_REFSTRUCT_COMPATIBILITY_MODE
+      , pb::IBufferMessage
+  #endif
+  {
+    private static readonly pb::MessageParser<GetBundleRequest> _parser = new pb::MessageParser<GetBundleRequest>(() => new GetBundleRequest());
+    private pb::UnknownFieldSet _unknownFields;
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public static pb::MessageParser<GetBundleRequest> Parser { get { return _parser; } }
 
-        partial void OnConstruction();
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public static pbr::MessageDescriptor Descriptor {
+      get { return global::DotNetGameServer.ResourceReflection.Descriptor.MessageTypes[3]; }
+    }
 
-        [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
-        [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
-        public GetBundleRequest(GetBundleRequest other) : this()
-        {
-            name_ = other.name_;
-            version_ = other.version_;
-            _unknownFields = pb::UnknownFieldSet.Clone(other._unknownFields);
-        }
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    pbr::MessageDescriptor pb::IMessage.Descriptor {
+      get { return Descriptor; }
+    }
 
-        [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
-        [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
-        public GetBundleRequest Clone()
-        {
-            return new GetBundleRequest(this);
-        }
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public GetBundleRequest() {
+      OnConstruction();
+    }
 
-        /// <summary>Field number for the "name" field.</summary>
-        public const int NameFieldNumber = 1;
-        private string name_ = "";
-        /// <summary>
-        /// AB 名称
-        /// </summary>
-        [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
-        [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
-        public string Name
-        {
-            get { return name_; }
-            set
-            {
-                name_ = pb::ProtoPreconditions.CheckNotNull(value, "value");
-            }
-        }
+    partial void OnConstruction();
 
-        /// <summary>Field number for the "version" field.</summary>
-        public const int VersionFieldNumber = 2;
-        private string version_ = "";
-        /// <summary>
-        /// 目标版本
-        /// </summary>
-        [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
-        [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
-        public string Version
-        {
-            get { return version_; }
-            set
-            {
-                version_ = pb::ProtoPreconditions.CheckNotNull(value, "value");
-            }
-        }
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public GetBundleRequest(GetBundleRequest other) : this() {
+      name_ = other.name_;
+      version_ = other.version_;
+      _unknownFields = pb::UnknownFieldSet.Clone(other._unknownFields);
+    }
 
-        [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
-        [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
-        public override bool Equals(object other)
-        {
-            return Equals(other as GetBundleRequest);
-        }
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public GetBundleRequest Clone() {
+      return new GetBundleRequest(this);
+    }
 
-        [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
-        [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
-        public bool Equals(GetBundleRequest other)
-        {
-            if (ReferenceEquals(other, null))
-            {
-                return false;
-            }
-            if (ReferenceEquals(other, this))
-            {
-                return true;
-            }
-            if (Name != other.Name) return false;
-            if (Version != other.Version) return false;
-            return Equals(_unknownFields, other._unknownFields);
-        }
+    /// <summary>Field number for the "name" field.</summary>
+    public const int NameFieldNumber = 1;
+    private string name_ = "";
+    /// <summary>
+    /// AB 名称
+    /// </summary>
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public string Name {
+      get { return name_; }
+      set {
+        name_ = pb::ProtoPreconditions.CheckNotNull(value, "value");
+      }
+    }
 
-        [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
-        [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
-        public override int GetHashCode()
-        {
-            int hash = 1;
-            if (Name.Length != 0) hash ^= Name.GetHashCode();
-            if (Version.Length != 0) hash ^= Version.GetHashCode();
-            if (_unknownFields != null)
-            {
-                hash ^= _unknownFields.GetHashCode();
-            }
-            return hash;
-        }
+    /// <summary>Field number for the "version" field.</summary>
+    public const int VersionFieldNumber = 2;
+    private string version_ = "";
+    /// <summary>
+    /// 目标版本
+    /// </summary>
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public string Version {
+      get { return version_; }
+      set {
+        version_ = pb::ProtoPreconditions.CheckNotNull(value, "value");
+      }
+    }
 
-        [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
-        [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
-        public override string ToString()
-        {
-            return pb::JsonFormatter.ToDiagnosticString(this);
-        }
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public override bool Equals(object other) {
+      return Equals(other as GetBundleRequest);
+    }
 
-        [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
-        [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
-        public void WriteTo(pb::CodedOutputStream output)
-        {
-#if !GOOGLE_PROTOBUF_REFSTRUCT_COMPATIBILITY_MODE
-            output.WriteRawMessage(this);
-#else
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public bool Equals(GetBundleRequest other) {
+      if (ReferenceEquals(other, null)) {
+        return false;
+      }
+      if (ReferenceEquals(other, this)) {
+        return true;
+      }
+      if (Name != other.Name) return false;
+      if (Version != other.Version) return false;
+      return Equals(_unknownFields, other._unknownFields);
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public override int GetHashCode() {
+      int hash = 1;
+      if (Name.Length != 0) hash ^= Name.GetHashCode();
+      if (Version.Length != 0) hash ^= Version.GetHashCode();
+      if (_unknownFields != null) {
+        hash ^= _unknownFields.GetHashCode();
+      }
+      return hash;
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public override string ToString() {
+      return pb::JsonFormatter.ToDiagnosticString(this);
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public void WriteTo(pb::CodedOutputStream output) {
+    #if !GOOGLE_PROTOBUF_REFSTRUCT_COMPATIBILITY_MODE
+      output.WriteRawMessage(this);
+    #else
       if (Name.Length != 0) {
         output.WriteRawTag(10);
         output.WriteString(Name);
@@ -1135,77 +995,64 @@ namespace DotNetGameServer
       if (_unknownFields != null) {
         _unknownFields.WriteTo(output);
       }
-#endif
-        }
+    #endif
+    }
 
-#if !GOOGLE_PROTOBUF_REFSTRUCT_COMPATIBILITY_MODE
-        [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
-        [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
-        void pb::IBufferMessage.InternalWriteTo(ref pb::WriteContext output)
-        {
-            if (Name.Length != 0)
-            {
-                output.WriteRawTag(10);
-                output.WriteString(Name);
-            }
-            if (Version.Length != 0)
-            {
-                output.WriteRawTag(18);
-                output.WriteString(Version);
-            }
-            if (_unknownFields != null)
-            {
-                _unknownFields.WriteTo(ref output);
-            }
-        }
-#endif
+    #if !GOOGLE_PROTOBUF_REFSTRUCT_COMPATIBILITY_MODE
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    void pb::IBufferMessage.InternalWriteTo(ref pb::WriteContext output) {
+      if (Name.Length != 0) {
+        output.WriteRawTag(10);
+        output.WriteString(Name);
+      }
+      if (Version.Length != 0) {
+        output.WriteRawTag(18);
+        output.WriteString(Version);
+      }
+      if (_unknownFields != null) {
+        _unknownFields.WriteTo(ref output);
+      }
+    }
+    #endif
 
-        [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
-        [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
-        public int CalculateSize()
-        {
-            int size = 0;
-            if (Name.Length != 0)
-            {
-                size += 1 + pb::CodedOutputStream.ComputeStringSize(Name);
-            }
-            if (Version.Length != 0)
-            {
-                size += 1 + pb::CodedOutputStream.ComputeStringSize(Version);
-            }
-            if (_unknownFields != null)
-            {
-                size += _unknownFields.CalculateSize();
-            }
-            return size;
-        }
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public int CalculateSize() {
+      int size = 0;
+      if (Name.Length != 0) {
+        size += 1 + pb::CodedOutputStream.ComputeStringSize(Name);
+      }
+      if (Version.Length != 0) {
+        size += 1 + pb::CodedOutputStream.ComputeStringSize(Version);
+      }
+      if (_unknownFields != null) {
+        size += _unknownFields.CalculateSize();
+      }
+      return size;
+    }
 
-        [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
-        [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
-        public void MergeFrom(GetBundleRequest other)
-        {
-            if (other == null)
-            {
-                return;
-            }
-            if (other.Name.Length != 0)
-            {
-                Name = other.Name;
-            }
-            if (other.Version.Length != 0)
-            {
-                Version = other.Version;
-            }
-            _unknownFields = pb::UnknownFieldSet.MergeFrom(_unknownFields, other._unknownFields);
-        }
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public void MergeFrom(GetBundleRequest other) {
+      if (other == null) {
+        return;
+      }
+      if (other.Name.Length != 0) {
+        Name = other.Name;
+      }
+      if (other.Version.Length != 0) {
+        Version = other.Version;
+      }
+      _unknownFields = pb::UnknownFieldSet.MergeFrom(_unknownFields, other._unknownFields);
+    }
 
-        [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
-        [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
-        public void MergeFrom(pb::CodedInputStream input)
-        {
-#if !GOOGLE_PROTOBUF_REFSTRUCT_COMPATIBILITY_MODE
-            input.ReadRawMessage(this);
-#else
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public void MergeFrom(pb::CodedInputStream input) {
+    #if !GOOGLE_PROTOBUF_REFSTRUCT_COMPATIBILITY_MODE
+      input.ReadRawMessage(this);
+    #else
       uint tag;
       while ((tag = input.ReadTag()) != 0) {
         switch(tag) {
@@ -1222,224 +1069,196 @@ namespace DotNetGameServer
           }
         }
       }
-#endif
-        }
-
-#if !GOOGLE_PROTOBUF_REFSTRUCT_COMPATIBILITY_MODE
-        [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
-        [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
-        void pb::IBufferMessage.InternalMergeFrom(ref pb::ParseContext input)
-        {
-            uint tag;
-            while ((tag = input.ReadTag()) != 0)
-            {
-                switch (tag)
-                {
-                    default:
-                        _unknownFields = pb::UnknownFieldSet.MergeFieldFrom(_unknownFields, ref input);
-                        break;
-                    case 10:
-                        {
-                            Name = input.ReadString();
-                            break;
-                        }
-                    case 18:
-                        {
-                            Version = input.ReadString();
-                            break;
-                        }
-                }
-            }
-        }
-#endif
-
+    #endif
     }
 
-    [global::System.Diagnostics.DebuggerDisplayAttribute("{ToString(),nq}")]
-    public sealed partial class GetBundleResponse : pb::IMessage<GetBundleResponse>
-#if !GOOGLE_PROTOBUF_REFSTRUCT_COMPATIBILITY_MODE
-        , pb::IBufferMessage
-#endif
-    {
-        private static readonly pb::MessageParser<GetBundleResponse> _parser = new pb::MessageParser<GetBundleResponse>(() => new GetBundleResponse());
-        private pb::UnknownFieldSet _unknownFields;
-        [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
-        [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
-        public static pb::MessageParser<GetBundleResponse> Parser { get { return _parser; } }
-
-        [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
-        [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
-        public static pbr::MessageDescriptor Descriptor
-        {
-            get { return global::DotNetGameServer.ResourceReflection.Descriptor.MessageTypes[4]; }
+    #if !GOOGLE_PROTOBUF_REFSTRUCT_COMPATIBILITY_MODE
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    void pb::IBufferMessage.InternalMergeFrom(ref pb::ParseContext input) {
+      uint tag;
+      while ((tag = input.ReadTag()) != 0) {
+        switch(tag) {
+          default:
+            _unknownFields = pb::UnknownFieldSet.MergeFieldFrom(_unknownFields, ref input);
+            break;
+          case 10: {
+            Name = input.ReadString();
+            break;
+          }
+          case 18: {
+            Version = input.ReadString();
+            break;
+          }
         }
+      }
+    }
+    #endif
 
-        [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
-        [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
-        pbr::MessageDescriptor pb::IMessage.Descriptor
-        {
-            get { return Descriptor; }
-        }
+  }
 
-        [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
-        [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
-        public GetBundleResponse()
-        {
-            OnConstruction();
-        }
+  [global::System.Diagnostics.DebuggerDisplayAttribute("{ToString(),nq}")]
+  public sealed partial class GetBundleResponse : pb::IMessage<GetBundleResponse>
+  #if !GOOGLE_PROTOBUF_REFSTRUCT_COMPATIBILITY_MODE
+      , pb::IBufferMessage
+  #endif
+  {
+    private static readonly pb::MessageParser<GetBundleResponse> _parser = new pb::MessageParser<GetBundleResponse>(() => new GetBundleResponse());
+    private pb::UnknownFieldSet _unknownFields;
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public static pb::MessageParser<GetBundleResponse> Parser { get { return _parser; } }
 
-        partial void OnConstruction();
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public static pbr::MessageDescriptor Descriptor {
+      get { return global::DotNetGameServer.ResourceReflection.Descriptor.MessageTypes[4]; }
+    }
 
-        [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
-        [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
-        public GetBundleResponse(GetBundleResponse other) : this()
-        {
-            success_ = other.success_;
-            message_ = other.message_;
-            content_ = other.content_;
-            hash_ = other.hash_;
-            size_ = other.size_;
-            _unknownFields = pb::UnknownFieldSet.Clone(other._unknownFields);
-        }
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    pbr::MessageDescriptor pb::IMessage.Descriptor {
+      get { return Descriptor; }
+    }
 
-        [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
-        [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
-        public GetBundleResponse Clone()
-        {
-            return new GetBundleResponse(this);
-        }
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public GetBundleResponse() {
+      OnConstruction();
+    }
 
-        /// <summary>Field number for the "success" field.</summary>
-        public const int SuccessFieldNumber = 1;
-        private bool success_;
-        [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
-        [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
-        public bool Success
-        {
-            get { return success_; }
-            set
-            {
-                success_ = value;
-            }
-        }
+    partial void OnConstruction();
 
-        /// <summary>Field number for the "message" field.</summary>
-        public const int MessageFieldNumber = 2;
-        private string message_ = "";
-        [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
-        [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
-        public string Message
-        {
-            get { return message_; }
-            set
-            {
-                message_ = pb::ProtoPreconditions.CheckNotNull(value, "value");
-            }
-        }
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public GetBundleResponse(GetBundleResponse other) : this() {
+      success_ = other.success_;
+      message_ = other.message_;
+      content_ = other.content_;
+      hash_ = other.hash_;
+      size_ = other.size_;
+      _unknownFields = pb::UnknownFieldSet.Clone(other._unknownFields);
+    }
 
-        /// <summary>Field number for the "content" field.</summary>
-        public const int ContentFieldNumber = 3;
-        private pb::ByteString content_ = pb::ByteString.Empty;
-        /// <summary>
-        /// 文件内容（演示用途，实际可改为分片/HTTP）
-        /// </summary>
-        [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
-        [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
-        public pb::ByteString Content
-        {
-            get { return content_; }
-            set
-            {
-                content_ = pb::ProtoPreconditions.CheckNotNull(value, "value");
-            }
-        }
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public GetBundleResponse Clone() {
+      return new GetBundleResponse(this);
+    }
 
-        /// <summary>Field number for the "hash" field.</summary>
-        public const int HashFieldNumber = 4;
-        private string hash_ = "";
-        [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
-        [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
-        public string Hash
-        {
-            get { return hash_; }
-            set
-            {
-                hash_ = pb::ProtoPreconditions.CheckNotNull(value, "value");
-            }
-        }
+    /// <summary>Field number for the "success" field.</summary>
+    public const int SuccessFieldNumber = 1;
+    private bool success_;
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public bool Success {
+      get { return success_; }
+      set {
+        success_ = value;
+      }
+    }
 
-        /// <summary>Field number for the "size" field.</summary>
-        public const int SizeFieldNumber = 5;
-        private int size_;
-        [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
-        [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
-        public int Size
-        {
-            get { return size_; }
-            set
-            {
-                size_ = value;
-            }
-        }
+    /// <summary>Field number for the "message" field.</summary>
+    public const int MessageFieldNumber = 2;
+    private string message_ = "";
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public string Message {
+      get { return message_; }
+      set {
+        message_ = pb::ProtoPreconditions.CheckNotNull(value, "value");
+      }
+    }
 
-        [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
-        [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
-        public override bool Equals(object other)
-        {
-            return Equals(other as GetBundleResponse);
-        }
+    /// <summary>Field number for the "content" field.</summary>
+    public const int ContentFieldNumber = 3;
+    private pb::ByteString content_ = pb::ByteString.Empty;
+    /// <summary>
+    /// 文件内容（演示用途，实际可改为分片/HTTP）
+    /// </summary>
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public pb::ByteString Content {
+      get { return content_; }
+      set {
+        content_ = pb::ProtoPreconditions.CheckNotNull(value, "value");
+      }
+    }
 
-        [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
-        [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
-        public bool Equals(GetBundleResponse other)
-        {
-            if (ReferenceEquals(other, null))
-            {
-                return false;
-            }
-            if (ReferenceEquals(other, this))
-            {
-                return true;
-            }
-            if (Success != other.Success) return false;
-            if (Message != other.Message) return false;
-            if (Content != other.Content) return false;
-            if (Hash != other.Hash) return false;
-            if (Size != other.Size) return false;
-            return Equals(_unknownFields, other._unknownFields);
-        }
+    /// <summary>Field number for the "hash" field.</summary>
+    public const int HashFieldNumber = 4;
+    private string hash_ = "";
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public string Hash {
+      get { return hash_; }
+      set {
+        hash_ = pb::ProtoPreconditions.CheckNotNull(value, "value");
+      }
+    }
 
-        [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
-        [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
-        public override int GetHashCode()
-        {
-            int hash = 1;
-            if (Success != false) hash ^= Success.GetHashCode();
-            if (Message.Length != 0) hash ^= Message.GetHashCode();
-            if (Content.Length != 0) hash ^= Content.GetHashCode();
-            if (Hash.Length != 0) hash ^= Hash.GetHashCode();
-            if (Size != 0) hash ^= Size.GetHashCode();
-            if (_unknownFields != null)
-            {
-                hash ^= _unknownFields.GetHashCode();
-            }
-            return hash;
-        }
+    /// <summary>Field number for the "size" field.</summary>
+    public const int SizeFieldNumber = 5;
+    private int size_;
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public int Size {
+      get { return size_; }
+      set {
+        size_ = value;
+      }
+    }
 
-        [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
-        [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
-        public override string ToString()
-        {
-            return pb::JsonFormatter.ToDiagnosticString(this);
-        }
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public override bool Equals(object other) {
+      return Equals(other as GetBundleResponse);
+    }
 
-        [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
-        [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
-        public void WriteTo(pb::CodedOutputStream output)
-        {
-#if !GOOGLE_PROTOBUF_REFSTRUCT_COMPATIBILITY_MODE
-            output.WriteRawMessage(this);
-#else
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public bool Equals(GetBundleResponse other) {
+      if (ReferenceEquals(other, null)) {
+        return false;
+      }
+      if (ReferenceEquals(other, this)) {
+        return true;
+      }
+      if (Success != other.Success) return false;
+      if (Message != other.Message) return false;
+      if (Content != other.Content) return false;
+      if (Hash != other.Hash) return false;
+      if (Size != other.Size) return false;
+      return Equals(_unknownFields, other._unknownFields);
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public override int GetHashCode() {
+      int hash = 1;
+      if (Success != false) hash ^= Success.GetHashCode();
+      if (Message.Length != 0) hash ^= Message.GetHashCode();
+      if (Content.Length != 0) hash ^= Content.GetHashCode();
+      if (Hash.Length != 0) hash ^= Hash.GetHashCode();
+      if (Size != 0) hash ^= Size.GetHashCode();
+      if (_unknownFields != null) {
+        hash ^= _unknownFields.GetHashCode();
+      }
+      return hash;
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public override string ToString() {
+      return pb::JsonFormatter.ToDiagnosticString(this);
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public void WriteTo(pb::CodedOutputStream output) {
+    #if !GOOGLE_PROTOBUF_REFSTRUCT_COMPATIBILITY_MODE
+      output.WriteRawMessage(this);
+    #else
       if (Success != false) {
         output.WriteRawTag(8);
         output.WriteBool(Success);
@@ -1463,116 +1282,94 @@ namespace DotNetGameServer
       if (_unknownFields != null) {
         _unknownFields.WriteTo(output);
       }
-#endif
-        }
+    #endif
+    }
 
-#if !GOOGLE_PROTOBUF_REFSTRUCT_COMPATIBILITY_MODE
-        [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
-        [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
-        void pb::IBufferMessage.InternalWriteTo(ref pb::WriteContext output)
-        {
-            if (Success != false)
-            {
-                output.WriteRawTag(8);
-                output.WriteBool(Success);
-            }
-            if (Message.Length != 0)
-            {
-                output.WriteRawTag(18);
-                output.WriteString(Message);
-            }
-            if (Content.Length != 0)
-            {
-                output.WriteRawTag(26);
-                output.WriteBytes(Content);
-            }
-            if (Hash.Length != 0)
-            {
-                output.WriteRawTag(34);
-                output.WriteString(Hash);
-            }
-            if (Size != 0)
-            {
-                output.WriteRawTag(40);
-                output.WriteInt32(Size);
-            }
-            if (_unknownFields != null)
-            {
-                _unknownFields.WriteTo(ref output);
-            }
-        }
-#endif
+    #if !GOOGLE_PROTOBUF_REFSTRUCT_COMPATIBILITY_MODE
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    void pb::IBufferMessage.InternalWriteTo(ref pb::WriteContext output) {
+      if (Success != false) {
+        output.WriteRawTag(8);
+        output.WriteBool(Success);
+      }
+      if (Message.Length != 0) {
+        output.WriteRawTag(18);
+        output.WriteString(Message);
+      }
+      if (Content.Length != 0) {
+        output.WriteRawTag(26);
+        output.WriteBytes(Content);
+      }
+      if (Hash.Length != 0) {
+        output.WriteRawTag(34);
+        output.WriteString(Hash);
+      }
+      if (Size != 0) {
+        output.WriteRawTag(40);
+        output.WriteInt32(Size);
+      }
+      if (_unknownFields != null) {
+        _unknownFields.WriteTo(ref output);
+      }
+    }
+    #endif
 
-        [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
-        [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
-        public int CalculateSize()
-        {
-            int size = 0;
-            if (Success != false)
-            {
-                size += 1 + 1;
-            }
-            if (Message.Length != 0)
-            {
-                size += 1 + pb::CodedOutputStream.ComputeStringSize(Message);
-            }
-            if (Content.Length != 0)
-            {
-                size += 1 + pb::CodedOutputStream.ComputeBytesSize(Content);
-            }
-            if (Hash.Length != 0)
-            {
-                size += 1 + pb::CodedOutputStream.ComputeStringSize(Hash);
-            }
-            if (Size != 0)
-            {
-                size += 1 + pb::CodedOutputStream.ComputeInt32Size(Size);
-            }
-            if (_unknownFields != null)
-            {
-                size += _unknownFields.CalculateSize();
-            }
-            return size;
-        }
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public int CalculateSize() {
+      int size = 0;
+      if (Success != false) {
+        size += 1 + 1;
+      }
+      if (Message.Length != 0) {
+        size += 1 + pb::CodedOutputStream.ComputeStringSize(Message);
+      }
+      if (Content.Length != 0) {
+        size += 1 + pb::CodedOutputStream.ComputeBytesSize(Content);
+      }
+      if (Hash.Length != 0) {
+        size += 1 + pb::CodedOutputStream.ComputeStringSize(Hash);
+      }
+      if (Size != 0) {
+        size += 1 + pb::CodedOutputStream.ComputeInt32Size(Size);
+      }
+      if (_unknownFields != null) {
+        size += _unknownFields.CalculateSize();
+      }
+      return size;
+    }
 
-        [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
-        [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
-        public void MergeFrom(GetBundleResponse other)
-        {
-            if (other == null)
-            {
-                return;
-            }
-            if (other.Success != false)
-            {
-                Success = other.Success;
-            }
-            if (other.Message.Length != 0)
-            {
-                Message = other.Message;
-            }
-            if (other.Content.Length != 0)
-            {
-                Content = other.Content;
-            }
-            if (other.Hash.Length != 0)
-            {
-                Hash = other.Hash;
-            }
-            if (other.Size != 0)
-            {
-                Size = other.Size;
-            }
-            _unknownFields = pb::UnknownFieldSet.MergeFrom(_unknownFields, other._unknownFields);
-        }
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public void MergeFrom(GetBundleResponse other) {
+      if (other == null) {
+        return;
+      }
+      if (other.Success != false) {
+        Success = other.Success;
+      }
+      if (other.Message.Length != 0) {
+        Message = other.Message;
+      }
+      if (other.Content.Length != 0) {
+        Content = other.Content;
+      }
+      if (other.Hash.Length != 0) {
+        Hash = other.Hash;
+      }
+      if (other.Size != 0) {
+        Size = other.Size;
+      }
+      _unknownFields = pb::UnknownFieldSet.MergeFrom(_unknownFields, other._unknownFields);
+    }
 
-        [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
-        [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
-        public void MergeFrom(pb::CodedInputStream input)
-        {
-#if !GOOGLE_PROTOBUF_REFSTRUCT_COMPATIBILITY_MODE
-            input.ReadRawMessage(this);
-#else
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public void MergeFrom(pb::CodedInputStream input) {
+    #if !GOOGLE_PROTOBUF_REFSTRUCT_COMPATIBILITY_MODE
+      input.ReadRawMessage(this);
+    #else
       uint tag;
       while ((tag = input.ReadTag()) != 0) {
         switch(tag) {
@@ -1601,55 +1398,47 @@ namespace DotNetGameServer
           }
         }
       }
-#endif
-        }
-
-#if !GOOGLE_PROTOBUF_REFSTRUCT_COMPATIBILITY_MODE
-        [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
-        [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
-        void pb::IBufferMessage.InternalMergeFrom(ref pb::ParseContext input)
-        {
-            uint tag;
-            while ((tag = input.ReadTag()) != 0)
-            {
-                switch (tag)
-                {
-                    default:
-                        _unknownFields = pb::UnknownFieldSet.MergeFieldFrom(_unknownFields, ref input);
-                        break;
-                    case 8:
-                        {
-                            Success = input.ReadBool();
-                            break;
-                        }
-                    case 18:
-                        {
-                            Message = input.ReadString();
-                            break;
-                        }
-                    case 26:
-                        {
-                            Content = input.ReadBytes();
-                            break;
-                        }
-                    case 34:
-                        {
-                            Hash = input.ReadString();
-                            break;
-                        }
-                    case 40:
-                        {
-                            Size = input.ReadInt32();
-                            break;
-                        }
-                }
-            }
-        }
-#endif
-
+    #endif
     }
 
-    #endregion
+    #if !GOOGLE_PROTOBUF_REFSTRUCT_COMPATIBILITY_MODE
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    void pb::IBufferMessage.InternalMergeFrom(ref pb::ParseContext input) {
+      uint tag;
+      while ((tag = input.ReadTag()) != 0) {
+        switch(tag) {
+          default:
+            _unknownFields = pb::UnknownFieldSet.MergeFieldFrom(_unknownFields, ref input);
+            break;
+          case 8: {
+            Success = input.ReadBool();
+            break;
+          }
+          case 18: {
+            Message = input.ReadString();
+            break;
+          }
+          case 26: {
+            Content = input.ReadBytes();
+            break;
+          }
+          case 34: {
+            Hash = input.ReadString();
+            break;
+          }
+          case 40: {
+            Size = input.ReadInt32();
+            break;
+          }
+        }
+      }
+    }
+    #endif
+
+  }
+
+  #endregion
 
 }
 

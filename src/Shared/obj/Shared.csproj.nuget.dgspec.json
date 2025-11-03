@@ -1,17 +1,17 @@
 {
   "format": 1,
   "restore": {
-    "D:\\Study and Job\\NewServerGame\\DotNetGameServer\\src\\Shared\\Shared.csproj": {}
+    "d:\\Study and Job\\NewServerGame\\DotNetGameServer\\src\\Shared\\Shared.csproj": {}
   },
   "projects": {
-    "D:\\Study and Job\\NewServerGame\\DotNetGameServer\\src\\Shared\\Shared.csproj": {
+    "d:\\Study and Job\\NewServerGame\\DotNetGameServer\\src\\Shared\\Shared.csproj": {
       "version": "1.0.0",
       "restore": {
-        "projectUniqueName": "D:\\Study and Job\\NewServerGame\\DotNetGameServer\\src\\Shared\\Shared.csproj",
+        "projectUniqueName": "d:\\Study and Job\\NewServerGame\\DotNetGameServer\\src\\Shared\\Shared.csproj",
         "projectName": "Shared",
-        "projectPath": "D:\\Study and Job\\NewServerGame\\DotNetGameServer\\src\\Shared\\Shared.csproj",
+        "projectPath": "d:\\Study and Job\\NewServerGame\\DotNetGameServer\\src\\Shared\\Shared.csproj",
         "packagesPath": "C:\\Users\\33502\\.nuget\\packages\\",
-        "outputPath": "D:\\Study and Job\\NewServerGame\\DotNetGameServer\\src\\Shared\\obj\\",
+        "outputPath": "d:\\Study and Job\\NewServerGame\\DotNetGameServer\\src\\Shared\\obj\\",
         "projectStyle": "PackageReference",
         "configFilePaths": [
           "C:\\Users\\33502\\AppData\\Roaming\\NuGet\\NuGet.Config"

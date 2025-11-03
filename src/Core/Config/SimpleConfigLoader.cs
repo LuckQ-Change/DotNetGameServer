@@ -10,50 +10,6 @@ public static class SimpleConfigLoader
     private const string DefaultFileName = "config.json";
 
     /// <summary>
-    /// 加载 MySQL 连接字符串：支持直接 <c>conn</c> 字段或组合构建。
-    /// </summary>
-    /// <param name="baseDirectory">配置文件基准目录，默认应用程序目录。</param>
-    /// <returns>连接字符串；无法解析时返回 <c>null</c>。</returns>
-    public static string? LoadMySqlConnectionString(string? baseDirectory = null)
-    {
-        var dir = baseDirectory ?? AppContext.BaseDirectory;
-        var path = Path.Combine(dir, DefaultFileName);
-        if (!File.Exists(path)) return null;
-
-        try
-        {
-            using var stream = File.OpenRead(path);
-            using var doc = JsonDocument.Parse(stream);
-            var root = doc.RootElement;
-            if (!root.TryGetProperty("mysql", out var mysql)) return null;
-
-            // 优先：直接指定完整连接串
-            if (mysql.TryGetProperty("conn", out var connProp) && connProp.ValueKind == JsonValueKind.String)
-            {
-                var conn = connProp.GetString();
-                if (!string.IsNullOrWhiteSpace(conn)) return conn;
-            }
-
-            // 备选：组合构建连接串
-            var host = mysql.TryGetProperty("host", out var hostProp) && hostProp.ValueKind == JsonValueKind.String ? hostProp.GetString() : null;
-            var port = mysql.TryGetProperty("port", out var portProp) && portProp.ValueKind == JsonValueKind.Number ? portProp.GetInt32() : 0;
-            var user = mysql.TryGetProperty("user", out var userProp) && userProp.ValueKind == JsonValueKind.String ? userProp.GetString() : null;
-            var password = mysql.TryGetProperty("password", out var passProp) && passProp.ValueKind == JsonValueKind.String ? passProp.GetString() : null;
-            var database = mysql.TryGetProperty("database", out var dbProp) && dbProp.ValueKind == JsonValueKind.String ? dbProp.GetString() : null;
-
-            if (!string.IsNullOrWhiteSpace(host) && port > 0 && !string.IsNullOrWhiteSpace(user) && !string.IsNullOrWhiteSpace(password) && !string.IsNullOrWhiteSpace(database))
-            {
-                return Db.MySqlManager.BuildConnectionString(host!, port, user!, password!, database!);
-            }
-        }
-        catch
-        {
-            // 忽略解析错误，返回 null
-        }
-        return null;
-    }
-
-    /// <summary>
     /// 加载目录服务器的令牌签名密钥：环境变量优先，其次配置文件。
     /// </summary>
     /// <param name="baseDirectory">配置文件基准目录，默认应用程序目录。</param>

@@ -1,186 +1,115 @@
 using Core;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
-using Microsoft.AspNetCore.Hosting;
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.AspNetCore.Builder;
-using Microsoft.AspNetCore.Diagnostics.HealthChecks;
-using ServerHost.HealthChecks;
 using Microsoft.Extensions.Hosting;
-using Microsoft.Extensions.Diagnostics.HealthChecks;
-using System.Text.Json;
-using Microsoft.AspNetCore.Http; // <-- 添加 using
 using Core.Db;
 using Microsoft.EntityFrameworkCore;
+using ServerHost.HealthChecks;
+using Microsoft.AspNetCore.Builder;
+using Microsoft.AspNetCore.Diagnostics.HealthChecks;
+using Microsoft.AspNetCore.Http;
+using System.Text.Json;
+using LoginServer.Components;
 
-// 简单统一启动器：根据环境配置与参数启动指定服务
-var environment = Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT") ?? "Development";
-var builder = new ConfigurationBuilder()
-    .SetBasePath(AppContext.BaseDirectory)
-    .AddJsonFile("appsettings.json", optional: true, reloadOnChange: true)
-    .AddJsonFile($"appsettings.{environment}.json", optional: true, reloadOnChange: true)
-    .AddEnvironmentVariables()
-    .AddCommandLine(args); // <-- 添加命令行参数源
-var configuration = builder.Build();
-
-var cts = new CancellationTokenSource();
-
-// 启动健康检查主机
-var healthCheckHost = CreateHealthCheckHost(args, configuration);
-var healthCheckTask = healthCheckHost.RunAsync(cts.Token);
-
-
-// 修正配置读取逻辑：优先从命令行获取
-var service = configuration["service"] ?? Environment.GetEnvironmentVariable("SERVICE") ?? "directory";
-var port = configuration.GetValue<int?>("port") ??
-           (int.TryParse(Environment.GetEnvironmentVariable("PORT"), out var p) ? p : 5500);
-
-// 将常用配置映射到环境变量，兼容现有 SimpleConfigLoader
-MapServerSettingsToEnv(configuration);
-MapDirectorySecretToEnv(configuration);
-MapMySqlToEnv(configuration);
-
-// 构建日志工厂（容器友好：输出到控制台）
-using var loggerFactory = LoggerFactory.Create(lb =>
-{
-    lb.SetMinimumLevel(LogLevel.Information);
-    lb.AddConsole();
-});
-
-BaseGameServer server = service.ToLowerInvariant() switch
-{
-    "directory" => new DirectoryServer.DirectoryGameServer(loggerFactory.CreateLogger("Directory")),
-    "login" => new LoginServer.LoginGameServer(loggerFactory.CreateLogger("Login")),
-    "resource" => new ResourceServer.ResourceGameServer(loggerFactory.CreateLogger("Resource")),
-    "battle" => new BattleServer.BattleGameServer(loggerFactory.CreateLogger("Battle")),
-    // LogicServer 暂未提供 ILogger 构造，回退委托方式
-    "logic" => new LogicServer.LogicGameServer(message => loggerFactory.CreateLogger("Logic").LogInformation("{Message}", message)),
-    _ => throw new ArgumentException($"未知服务类型: {service}")
-};
-
-Console.CancelKeyPress += (_, e) => { e.Cancel = true; cts.Cancel(); };
-AppDomain.CurrentDomain.ProcessExit += (_, __) => { try { cts.Cancel(); } catch { } };
-
-await server.StartAsync(port);
-Console.WriteLine($"[Host] {server.ServerName} listening on port {port}, env={environment}");
-
-try
-{
-    await Task.Delay(Timeout.Infinite, cts.Token);
-}
-catch (OperationCanceledException)
-{
-    // 优雅关闭
-    await server.StopAsync();
-}
-
-// 等待健康检查主机关闭
-await healthCheckTask;
-
-static void MapServerSettingsToEnv(IConfiguration config)
-{
-    var s = config.GetSection("server");
-    void Set(string key, string? value)
+var host = Host.CreateDefaultBuilder(args)
+    .ConfigureAppConfiguration((context, config) =>
     {
-        if (!string.IsNullOrWhiteSpace(value)) Environment.SetEnvironmentVariable(key, value);
-    }
-    var maxMsg = s.GetValue<int?>("maxMessageSizeBytes");
-    var maxConn = s.GetValue<int?>("maxConcurrentConnections");
-    var rcvTo = s.GetValue<int?>("receiveTimeoutMs");
-    var backoff = s.GetValue<int?>("acceptBackoffMs");
-    Set("SERVER_MAX_MESSAGE_SIZE", maxMsg?.ToString());
-    Set("SERVER_MAX_CONNECTIONS", maxConn?.ToString());
-    Set("SERVER_RECEIVE_TIMEOUT_MS", rcvTo?.ToString());
-    Set("SERVER_ACCEPT_BACKOFF_MS", backoff?.ToString());
+        var environment = context.HostingEnvironment.EnvironmentName;
+        config.SetBasePath(AppContext.BaseDirectory)
+            .AddJsonFile("appsettings.json", optional: true, reloadOnChange: true)
+            .AddJsonFile($"appsettings.{environment}.json", optional: true, reloadOnChange: true)
+            .AddEnvironmentVariables()
+            .AddCommandLine(args);
+    })
+    .ConfigureServices((context, services) =>
+    {
+        services.AddDbContext<GameDbContext>(options =>
+         {
+             if (context.HostingEnvironment.IsDevelopment())
+             {
+                 options.UseInMemoryDatabase("GameDb");
+             }
+             else
+             {
+                 options.UseNpgsql(context.Configuration.GetConnectionString("DefaultConnection"));
+             }
+         });
 
-    // 限速/空闲覆盖（BaseGameServer 支持环境变量）
-    var maxBps = s.GetValue<int?>("maxBytesPerSecond");
-    var maxMsgs = s.GetValue<int?>("maxMessagesPerSecond");
-    var idleMs = s.GetValue<int?>("idleTimeoutMs");
-    Set("SERVER_MAX_BPS", maxBps?.ToString());
-    Set("SERVER_MAX_MSGS", maxMsgs?.ToString());
-    Set("SERVER_IDLE_MS", idleMs?.ToString());
-}
+        services.AddScoped<IUserAuthComponent, DbUserAuthComponent>();
 
-static void MapDirectorySecretToEnv(IConfiguration config)
+        services.AddHostedService<GameServerService>();
+
+        services.AddHealthChecks().AddCheck<ServerHealthCheck>("server_health_check");
+    })
+    .ConfigureLogging(logging =>
+    {
+        logging.ClearProviders();
+        logging.AddConsole();
+    })
+    .Build();
+
+// Seed the database in development environment
 {
-    var token = config["directory:tokenSecret"];
-    if (!string.IsNullOrWhiteSpace(token))
+    using var scope = host.Services.CreateScope();
+    var services = scope.ServiceProvider;
+    var env = services.GetRequiredService<IHostEnvironment>();
+    if (env.IsDevelopment())
     {
-        Environment.SetEnvironmentVariable("DIRECTORY_TOKEN_SECRET", token);
-    }
-}
-
-static void MapMySqlToEnv(IConfiguration config)
-{
-    var mysql = config.GetSection("mysql");
-    // 支持完整连接串或分项变量
-    var conn = mysql.GetValue<string?>("conn");
-    if (!string.IsNullOrWhiteSpace(conn))
-    {
-        Environment.SetEnvironmentVariable("MYSQL_CONN", conn);
-        return;
-    }
-    void Set(string key, string? value)
-    {
-        if (!string.IsNullOrWhiteSpace(value)) Environment.SetEnvironmentVariable(key, value);
-    }
-    Set("MYSQL_HOST", mysql.GetValue<string?>("host"));
-    var port = mysql.GetValue<int?>("port");
-    Set("MYSQL_PORT", port?.ToString());
-    Set("MYSQL_USER", mysql.GetValue<string?>("user"));
-    Set("MYSQL_PASSWORD", mysql.GetValue<string?>("password"));
-    Set("MYSQL_DB", mysql.GetValue<string?>("database"));
-}
-
-static IHost CreateHealthCheckHost(string[] args, IConfiguration config) =>
-    Host.CreateDefaultBuilder(args)
-        .ConfigureWebHostDefaults(webBuilder =>
+        var dbContext = services.GetRequiredService<GameDbContext>();
+        if (!dbContext.Users.Any())
         {
-            var healthCheckUrl = config.GetValue<string>("healthCheckUrl") ?? "http://*:5100";
-            webBuilder.UseUrls(healthCheckUrl);
-            webBuilder.ConfigureServices(services =>
-            {
-                services.AddHealthChecks().AddCheck<ServerHealthCheck>("server_health_check");
-            });
-            webBuilder.Configure(app =>
-            {
-                app.UseRouting();
-                app.UseEndpoints(endpoints =>
-                {
-                    endpoints.MapHealthChecks("/health", new HealthCheckOptions
-                    {
-                        ResponseWriter = WriteHealthCheckResponse
-                    });
-                });
-            });
-        }).Build();
-
-// 将方法移出并设为 static
-static Task WriteHealthCheckResponse(HttpContext context, HealthReport report)
-{
-    context.Response.ContentType = "application/json";
-    var options = new JsonSerializerOptions
-    {
-        WriteIndented = true
-    };
-    var json = new
-    {
-        status = report.Status.ToString(),
-        checks = report.Entries.Select(e => new
-        {
-            name = e.Key,
-            status = e.Value.Status.ToString(),
-            description = e.Value.Description,
-            exception = e.Value.Exception?.Message,
-            data = e.Value.Data
-        })
-    };
-    return context.Response.WriteAsync(JsonSerializer.Serialize(json, options));
+            // Assuming the User model is accessible, as per the user's intent.
+            // A 'using' for the User model's namespace and System.Linq may be required.
+            dbContext.Users.Add(new Core.Db.User { Username = "test", Password = "password" });
+            dbContext.SaveChanges();
+        }
+    }
 }
 
-// 添加数据库上下文
-builder.Services.AddDbContext<GameDbContext>(options =>
-    options.UseNpgsql(builder.Configuration.GetConnectionString("DefaultConnection")));
+await host.RunAsync();
 
-// Add services to the container.
+public class GameServerService : IHostedService
+{
+    private readonly ILogger<GameServerService> _logger;
+    private readonly IConfiguration _configuration;
+    private readonly IServiceProvider _serviceProvider;
+    private readonly IHostEnvironment _hostEnvironment;
+    private BaseGameServer? _server;
+
+    public GameServerService(ILogger<GameServerService> logger, IConfiguration configuration, IServiceProvider serviceProvider, IHostEnvironment hostEnvironment)
+    {
+        _logger = logger;
+        _configuration = configuration;
+        _serviceProvider = serviceProvider;
+        _hostEnvironment = hostEnvironment;
+    }
+
+    public async Task StartAsync(CancellationToken cancellationToken)
+    {
+        var service = _configuration["service"] ?? Environment.GetEnvironmentVariable("SERVICE") ?? "directory";
+        var port = _configuration.GetValue<int?>("port") ??
+                   (int.TryParse(Environment.GetEnvironmentVariable("PORT"), out var p) ? p : 5500);
+
+        _server = service.ToLowerInvariant() switch
+        {
+            "directory" => new DirectoryServer.DirectoryGameServer(_serviceProvider.GetRequiredService<ILogger<DirectoryServer.DirectoryGameServer>>()),
+            "login" => new LoginServer.LoginGameServer(_serviceProvider.GetRequiredService<ILogger<LoginServer.LoginGameServer>>(), _serviceProvider.GetRequiredService<IUserAuthComponent>()),
+            "resource" => new ResourceServer.ResourceGameServer(_serviceProvider.GetRequiredService<ILogger<ResourceServer.ResourceGameServer>>()),
+            "battle" => new BattleServer.BattleGameServer(_serviceProvider.GetRequiredService<ILogger<BattleServer.BattleGameServer>>()),
+            "logic" => new LogicServer.LogicGameServer(_serviceProvider.GetRequiredService<ILogger<LogicServer.LogicGameServer>>()),
+            _ => throw new ArgumentException($"未知服务类型: {service}")
+        };
+
+        await _server.StartAsync(port);
+        _logger.LogInformation($"[Host] {_server.ServerName} listening on port {port}, env={_hostEnvironment.EnvironmentName}");
+    }
+
+    public async Task StopAsync(CancellationToken cancellationToken)
+    {
+        if (_server != null)
+        {
+            await _server.StopAsync();
+        }
+    }
+}

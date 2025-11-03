@@ -1,37 +1,38 @@
 using Core;
+using Core.Components;
 using Core.Ecs;
 using DotNetGameServer;
 using Microsoft.Extensions.Logging;
-using Core.Db;
+using System;
+using System.Threading.Tasks;
 
 namespace BattleServer;
 
 public class BattleGameServer : BaseGameServer
 {
-    private readonly GameDbContext _dbContext;
-
-    public BattleGameServer(GameDbContext dbContext)
+    public BattleGameServer(ILogger<BattleGameServer> logger) : base("Battle", logger)
     {
-        _dbContext = dbContext;
     }
 
-    public override void Start()
+    public override async Task StartAsync(int port)
     {
         RegisterStrongMessageHandler<StartBattleRequest, StartBattleResponse>(new StartBattleMessageHandler());
         RegisterStrongMessageHandler<AttackRequest, AttackResponse>(new AttackMessageHandler());
 
         var ecs = new EcsWorldComponent();
-        AddComponent<EcsWorldComponent>(ecs);
+        AddComponent(ecs);
+        // Register the ECS system
         _ = ecs.World.RegisterSystemAsync(new Ecs.BattleGcSystem(TimeSpan.FromMinutes(30)));
-        AddComponent<Core.Components.HeartbeatClientComponent>(
-            new Core.Components.HeartbeatClientComponent(
-                message => Log(message),
-                type: "battle",
-                portProvider: () => ListeningPort,
-                playerCountProvider: null,
-                statusProvider: () => "online",
-                baseDir: AppContext.BaseDirectory
-            )
-        );
+
+        AddComponent(new HeartbeatClientComponent(
+            message => Log(message),
+            type: "battle",
+            portProvider: () => ListeningPort,
+            playerCountProvider: () => 0, // Replace with actual player count
+            statusProvider: () => "online",
+            baseDir: AppContext.BaseDirectory
+        ));
+
+        await base.StartAsync(port);
     }
 }

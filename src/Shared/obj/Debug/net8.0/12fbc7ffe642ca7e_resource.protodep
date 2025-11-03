@@ -1,1 +1,2 @@
-obj\Debug\net8.0\Protos/Resource.cs: Protos/resource.proto
+obj\Debug\net8.0\Protos/Resource.cs \
+obj\Debug\net8.0\Protos/ResourceGrpc.cs: Protos/resource.proto

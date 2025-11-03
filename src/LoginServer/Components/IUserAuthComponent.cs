@@ -1,6 +1,6 @@
 using Core;
 
-namespace LoginServer;
+namespace LoginServer.Components;
 
 /// <summary>
 /// 用户认证组件接口

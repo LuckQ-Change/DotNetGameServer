@@ -1,4 +1,5 @@
 using DotNetGameServer;
+using Microsoft.Extensions.Logging;
 
 namespace Core;
 
@@ -61,10 +62,17 @@ public interface IServerContext
     AuthInfo? Auth { get; }
 
     /// <summary>
-    /// 写入日志消息。
+    /// 写入日志消息，默认为 Information 级别。
     /// </summary>
     /// <param name="message">日志内容。</param>
     void Log(string message);
+
+    /// <summary>
+    /// 写入指定级别的日志消息。
+    /// </summary>
+    /// <param name="message">日志内容。</param>
+    /// <param name="level">日志级别。</param>
+    void Log(string message, LogLevel level);
 
     /// <summary>
     /// 获取指定类型的服务器组件。

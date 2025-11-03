@@ -6,6 +6,9 @@ using System.IO;
 using System.Net.Security;
 using System.Security.Authentication;
 using System.Security.Cryptography.X509Certificates;
+using Microsoft.AspNetCore.Builder;
+using Microsoft.AspNetCore.Hosting;
+using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Logging;
 using Core.Telemetry;
 using Core.Logging;
@@ -28,6 +31,7 @@ public abstract class BaseGameServer : IServerContext
     private TcpListener? _listener;
     private CancellationTokenSource? _cts;
     private Task? _ecsUpdateLoop;
+    private IWebHost? _webHost; // For health checks
     private readonly ILogger _logger;
     private readonly System.Diagnostics.Metrics.Instrument? _connectionsGauge;
     private readonly ConcurrentDictionary<string, IStrongHandlerInvoker> _typedHandlers = new();
@@ -144,6 +148,32 @@ public abstract class BaseGameServer : IServerContext
         _listener = new TcpListener(IPAddress.Any, port);
         _listener.Start();
         ListeningPort = port;
+
+        // Start health check endpoint
+        try
+        {
+            _webHost = new WebHostBuilder()
+                .UseKestrel()
+                .UseUrls($"http://*:{port + 10000}")
+                .Configure(app =>
+                {
+                    app.Run(async context =>
+                    {
+                        if (context.Request.Path == "/healthz")
+                        {
+                            context.Response.StatusCode = 200;
+                            await context.Response.WriteAsync("Healthy");
+                        }
+                    });
+                })
+                .Build();
+            _ = _webHost.RunAsync(_cts.Token);
+        }
+        catch (Exception ex)
+        {
+            Log($"健康检查端点启动失败: {ex.Message}");
+        }
+
         Log($"服务器已启动，端口 {port}");
         
         // 接受连接循环（异步）
@@ -159,6 +189,7 @@ public abstract class BaseGameServer : IServerContext
     {
         try { _cts?.Cancel(); } catch { }
         try { _listener?.Stop(); } catch { }
+        try { _webHost?.StopAsync().Wait(); } catch { }
         _listener = null;
         ListeningPort = null;
 

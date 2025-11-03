@@ -32,3 +32,12 @@ message GetBundleResponse {
   string hash = 4;
   int32 size = 5;
 }
+
+// --- Resource Service Definition ---
+service ResourceService {
+  // Queries the latest resource version and necessary bundles
+  rpc QueryVersion(QueryVersionRequest) returns (QueryVersionResponse);
+
+  // Gets a specific resource bundle (can be deprecated if HTTP is used)
+  rpc GetBundle(GetBundleRequest) returns (GetBundleResponse);
+}

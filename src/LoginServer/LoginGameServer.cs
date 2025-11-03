@@ -1,15 +1,20 @@
 using Core;
 using DotNetGameServer;
 using Microsoft.Extensions.Logging;
+using Core.Db;
 
 namespace LoginServer;
 
-/// <summary>
-/// 登录服务器实现
-/// </summary>
 public class LoginGameServer : BaseGameServer
 {
-    public LoginGameServer(Action<string> log) : base("Login", log)
+    private readonly GameDbContext _dbContext;
+
+    public LoginGameServer(GameDbContext dbContext)
+    {
+        _dbContext = dbContext;
+    }
+
+    public override void Start()
     {
         // 注册登录消息处理器（强类型路由）
         RegisterStrongMessageHandler<LoginRequest, LoginResponse>(new LoginMessageHandler());

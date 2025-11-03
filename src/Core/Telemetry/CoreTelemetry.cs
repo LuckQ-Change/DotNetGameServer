@@ -37,7 +37,7 @@ public static class CoreTelemetry
     {
         return Meter.CreateObservableGauge(
             name: "current_connections",
-            observeValue: () => new Measurement<int>(getter(), new KeyValuePair<string, object?>("server_name", serverName)),
+            observeValue: () => new Measurement<int>(getter(), [new KeyValuePair<string, object?>("server_name", serverName)]),
             unit: "count",
             description: "当前并发连接数量");
     }

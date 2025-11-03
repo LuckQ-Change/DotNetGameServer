@@ -3,19 +3,20 @@ using DotNetGameServer;
 using LogicServer.SignIn.Components;
 using LogicServer.SignIn.Handlers;
 using Core.Ecs;
+using Core.Db;
 
 namespace LogicServer;
 
-/// <summary>
-/// 逻辑服务器
-/// </summary>
 public class LogicGameServer : BaseGameServer
 {
-    /// <summary>
-    /// 初始化逻辑服务器并注册相关强类型消息与组件。
-    /// </summary>
-    /// <param name="log">日志输出委托。</param>
-    public LogicGameServer(Action<string> log) : base("Logic", log)
+    private readonly GameDbContext _dbContext;
+
+    public LogicGameServer(GameDbContext dbContext)
+    {
+        _dbContext = dbContext;
+    }
+
+    public override void Start()
     {
         RegisterStrongMessageHandler<QuerySignInStatusRequest, QuerySignInStatusResponse>(new QuerySignInStatusMessageHandler());
         RegisterStrongMessageHandler<ClaimSignInRewardRequest, ClaimSignInRewardResponse>(new ClaimSignInRewardMessageHandler());

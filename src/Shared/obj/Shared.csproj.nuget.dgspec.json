@@ -1,17 +1,17 @@
 {
   "format": 1,
   "restore": {
-    "d:\\Study and Job\\NewServerGame\\DotNetGameServer\\src\\Shared\\Shared.csproj": {}
+    "D:\\Study and Job\\NewServerGame\\DotNetGameServer\\src\\Shared\\Shared.csproj": {}
   },
   "projects": {
-    "d:\\Study and Job\\NewServerGame\\DotNetGameServer\\src\\Shared\\Shared.csproj": {
+    "D:\\Study and Job\\NewServerGame\\DotNetGameServer\\src\\Shared\\Shared.csproj": {
       "version": "1.0.0",
       "restore": {
-        "projectUniqueName": "d:\\Study and Job\\NewServerGame\\DotNetGameServer\\src\\Shared\\Shared.csproj",
+        "projectUniqueName": "D:\\Study and Job\\NewServerGame\\DotNetGameServer\\src\\Shared\\Shared.csproj",
         "projectName": "Shared",
-        "projectPath": "d:\\Study and Job\\NewServerGame\\DotNetGameServer\\src\\Shared\\Shared.csproj",
+        "projectPath": "D:\\Study and Job\\NewServerGame\\DotNetGameServer\\src\\Shared\\Shared.csproj",
         "packagesPath": "C:\\Users\\33502\\.nuget\\packages\\",
-        "outputPath": "d:\\Study and Job\\NewServerGame\\DotNetGameServer\\src\\Shared\\obj\\",
+        "outputPath": "D:\\Study and Job\\NewServerGame\\DotNetGameServer\\src\\Shared\\obj\\",
         "projectStyle": "PackageReference",
         "configFilePaths": [
           "C:\\Users\\33502\\AppData\\Roaming\\NuGet\\NuGet.Config"
@@ -45,13 +45,17 @@
           "dependencies": {
             "Google.Protobuf": {
               "target": "Package",
-              "version": "[3.33.0, )"
+              "version": "[3.25.1, )"
+            },
+            "Grpc.Net.Client": {
+              "target": "Package",
+              "version": "[2.59.0, )"
             },
             "Grpc.Tools": {
               "include": "Runtime, Build, Native, ContentFiles, Analyzers, BuildTransitive",
               "suppressParent": "All",
               "target": "Package",
-              "version": "[2.76.0, )"
+              "version": "[2.60.0, )"
             }
           },
           "imports": [

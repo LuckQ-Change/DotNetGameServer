@@ -4,14 +4,14 @@
     "d:\\Study and Job\\NewServerGame\\DotNetGameServer\\src\\ServerHost\\ServerHost.csproj": {}
   },
   "projects": {
-    "d:\\Study and Job\\NewServerGame\\DotNetGameServer\\src\\BattleServer\\BattleServer.csproj": {
+    "D:\\Study and Job\\NewServerGame\\DotNetGameServer\\src\\BattleServer\\BattleServer.csproj": {
       "version": "1.0.0",
       "restore": {
-        "projectUniqueName": "d:\\Study and Job\\NewServerGame\\DotNetGameServer\\src\\BattleServer\\BattleServer.csproj",
+        "projectUniqueName": "D:\\Study and Job\\NewServerGame\\DotNetGameServer\\src\\BattleServer\\BattleServer.csproj",
         "projectName": "BattleServer",
-        "projectPath": "d:\\Study and Job\\NewServerGame\\DotNetGameServer\\src\\BattleServer\\BattleServer.csproj",
+        "projectPath": "D:\\Study and Job\\NewServerGame\\DotNetGameServer\\src\\BattleServer\\BattleServer.csproj",
         "packagesPath": "C:\\Users\\33502\\.nuget\\packages\\",
-        "outputPath": "d:\\Study and Job\\NewServerGame\\DotNetGameServer\\src\\BattleServer\\obj\\",
+        "outputPath": "D:\\Study and Job\\NewServerGame\\DotNetGameServer\\src\\BattleServer\\obj\\",
         "projectStyle": "PackageReference",
         "configFilePaths": [
           "C:\\Users\\33502\\AppData\\Roaming\\NuGet\\NuGet.Config"
@@ -88,8 +88,8 @@
           "net8.0": {
             "targetAlias": "net8.0",
             "projectReferences": {
-              "d:\\Study and Job\\NewServerGame\\DotNetGameServer\\src\\Shared\\Shared.csproj": {
-                "projectPath": "d:\\Study and Job\\NewServerGame\\DotNetGameServer\\src\\Shared\\Shared.csproj"
+              "D:\\Study and Job\\NewServerGame\\DotNetGameServer\\src\\Shared\\Shared.csproj": {
+                "projectPath": "D:\\Study and Job\\NewServerGame\\DotNetGameServer\\src\\Shared\\Shared.csproj"
               }
             }
           }
@@ -113,13 +113,17 @@
               "target": "Package",
               "version": "[3.33.0, )"
             },
+            "Microsoft.Extensions.DependencyInjection.Abstractions": {
+              "target": "Package",
+              "version": "[8.0.0, )"
+            },
             "Microsoft.Extensions.Logging.Abstractions": {
               "target": "Package",
-              "version": "[9.0.0, )"
+              "version": "[8.0.0, )"
             },
-            "MySqlConnector": {
+            "Npgsql.EntityFrameworkCore.PostgreSQL": {
               "target": "Package",
-              "version": "[2.3.6, )"
+              "version": "[8.0.4, )"
             }
           },
           "imports": [
@@ -145,14 +149,14 @@
         }
       }
     },
-    "d:\\Study and Job\\NewServerGame\\DotNetGameServer\\src\\DirectoryServer\\DirectoryServer.csproj": {
+    "D:\\Study and Job\\NewServerGame\\DotNetGameServer\\src\\DirectoryServer\\DirectoryServer.csproj": {
       "version": "1.0.0",
       "restore": {
-        "projectUniqueName": "d:\\Study and Job\\NewServerGame\\DotNetGameServer\\src\\DirectoryServer\\DirectoryServer.csproj",
+        "projectUniqueName": "D:\\Study and Job\\NewServerGame\\DotNetGameServer\\src\\DirectoryServer\\DirectoryServer.csproj",
         "projectName": "DirectoryServer",
-        "projectPath": "d:\\Study and Job\\NewServerGame\\DotNetGameServer\\src\\DirectoryServer\\DirectoryServer.csproj",
+        "projectPath": "D:\\Study and Job\\NewServerGame\\DotNetGameServer\\src\\DirectoryServer\\DirectoryServer.csproj",
         "packagesPath": "C:\\Users\\33502\\.nuget\\packages\\",
-        "outputPath": "d:\\Study and Job\\NewServerGame\\DotNetGameServer\\src\\DirectoryServer\\obj\\",
+        "outputPath": "D:\\Study and Job\\NewServerGame\\DotNetGameServer\\src\\DirectoryServer\\obj\\",
         "projectStyle": "PackageReference",
         "configFilePaths": [
           "C:\\Users\\33502\\AppData\\Roaming\\NuGet\\NuGet.Config"
@@ -207,14 +211,14 @@
         }
       }
     },
-    "d:\\Study and Job\\NewServerGame\\DotNetGameServer\\src\\LogicGameServer\\LogicServer.csproj": {
+    "D:\\Study and Job\\NewServerGame\\DotNetGameServer\\src\\LogicGameServer\\LogicServer.csproj": {
       "version": "1.0.0",
       "restore": {
-        "projectUniqueName": "d:\\Study and Job\\NewServerGame\\DotNetGameServer\\src\\LogicGameServer\\LogicServer.csproj",
+        "projectUniqueName": "D:\\Study and Job\\NewServerGame\\DotNetGameServer\\src\\LogicGameServer\\LogicServer.csproj",
         "projectName": "LogicServer",
-        "projectPath": "d:\\Study and Job\\NewServerGame\\DotNetGameServer\\src\\LogicGameServer\\LogicServer.csproj",
+        "projectPath": "D:\\Study and Job\\NewServerGame\\DotNetGameServer\\src\\LogicGameServer\\LogicServer.csproj",
         "packagesPath": "C:\\Users\\33502\\.nuget\\packages\\",
-        "outputPath": "d:\\Study and Job\\NewServerGame\\DotNetGameServer\\src\\LogicGameServer\\obj\\",
+        "outputPath": "D:\\Study and Job\\NewServerGame\\DotNetGameServer\\src\\LogicGameServer\\obj\\",
         "projectStyle": "PackageReference",
         "configFilePaths": [
           "C:\\Users\\33502\\AppData\\Roaming\\NuGet\\NuGet.Config"
@@ -232,8 +236,8 @@
               "d:\\Study and Job\\NewServerGame\\DotNetGameServer\\src\\Core\\Core.csproj": {
                 "projectPath": "d:\\Study and Job\\NewServerGame\\DotNetGameServer\\src\\Core\\Core.csproj"
               },
-              "d:\\Study and Job\\NewServerGame\\DotNetGameServer\\src\\Shared\\Shared.csproj": {
-                "projectPath": "d:\\Study and Job\\NewServerGame\\DotNetGameServer\\src\\Shared\\Shared.csproj"
+              "D:\\Study and Job\\NewServerGame\\DotNetGameServer\\src\\Shared\\Shared.csproj": {
+                "projectPath": "D:\\Study and Job\\NewServerGame\\DotNetGameServer\\src\\Shared\\Shared.csproj"
               }
             }
           }
@@ -272,14 +276,14 @@
         }
       }
     },
-    "d:\\Study and Job\\NewServerGame\\DotNetGameServer\\src\\LoginServer\\LoginServer.csproj": {
+    "D:\\Study and Job\\NewServerGame\\DotNetGameServer\\src\\LoginServer\\LoginServer.csproj": {
       "version": "1.0.0",
       "restore": {
-        "projectUniqueName": "d:\\Study and Job\\NewServerGame\\DotNetGameServer\\src\\LoginServer\\LoginServer.csproj",
+        "projectUniqueName": "D:\\Study and Job\\NewServerGame\\DotNetGameServer\\src\\LoginServer\\LoginServer.csproj",
         "projectName": "LoginServer",
-        "projectPath": "d:\\Study and Job\\NewServerGame\\DotNetGameServer\\src\\LoginServer\\LoginServer.csproj",
+        "projectPath": "D:\\Study and Job\\NewServerGame\\DotNetGameServer\\src\\LoginServer\\LoginServer.csproj",
         "packagesPath": "C:\\Users\\33502\\.nuget\\packages\\",
-        "outputPath": "d:\\Study and Job\\NewServerGame\\DotNetGameServer\\src\\LoginServer\\obj\\",
+        "outputPath": "D:\\Study and Job\\NewServerGame\\DotNetGameServer\\src\\LoginServer\\obj\\",
         "projectStyle": "PackageReference",
         "configFilePaths": [
           "C:\\Users\\33502\\AppData\\Roaming\\NuGet\\NuGet.Config"
@@ -418,20 +422,20 @@
           "net8.0": {
             "targetAlias": "net8.0",
             "projectReferences": {
-              "d:\\Study and Job\\NewServerGame\\DotNetGameServer\\src\\BattleServer\\BattleServer.csproj": {
-                "projectPath": "d:\\Study and Job\\NewServerGame\\DotNetGameServer\\src\\BattleServer\\BattleServer.csproj"
+              "D:\\Study and Job\\NewServerGame\\DotNetGameServer\\src\\BattleServer\\BattleServer.csproj": {
+                "projectPath": "D:\\Study and Job\\NewServerGame\\DotNetGameServer\\src\\BattleServer\\BattleServer.csproj"
               },
               "d:\\Study and Job\\NewServerGame\\DotNetGameServer\\src\\Core\\Core.csproj": {
                 "projectPath": "d:\\Study and Job\\NewServerGame\\DotNetGameServer\\src\\Core\\Core.csproj"
               },
-              "d:\\Study and Job\\NewServerGame\\DotNetGameServer\\src\\DirectoryServer\\DirectoryServer.csproj": {
-                "projectPath": "d:\\Study and Job\\NewServerGame\\DotNetGameServer\\src\\DirectoryServer\\DirectoryServer.csproj"
+              "D:\\Study and Job\\NewServerGame\\DotNetGameServer\\src\\DirectoryServer\\DirectoryServer.csproj": {
+                "projectPath": "D:\\Study and Job\\NewServerGame\\DotNetGameServer\\src\\DirectoryServer\\DirectoryServer.csproj"
               },
-              "d:\\Study and Job\\NewServerGame\\DotNetGameServer\\src\\LogicGameServer\\LogicServer.csproj": {
-                "projectPath": "d:\\Study and Job\\NewServerGame\\DotNetGameServer\\src\\LogicGameServer\\LogicServer.csproj"
+              "D:\\Study and Job\\NewServerGame\\DotNetGameServer\\src\\LogicGameServer\\LogicServer.csproj": {
+                "projectPath": "D:\\Study and Job\\NewServerGame\\DotNetGameServer\\src\\LogicGameServer\\LogicServer.csproj"
               },
-              "d:\\Study and Job\\NewServerGame\\DotNetGameServer\\src\\LoginServer\\LoginServer.csproj": {
-                "projectPath": "d:\\Study and Job\\NewServerGame\\DotNetGameServer\\src\\LoginServer\\LoginServer.csproj"
+              "D:\\Study and Job\\NewServerGame\\DotNetGameServer\\src\\LoginServer\\LoginServer.csproj": {
+                "projectPath": "D:\\Study and Job\\NewServerGame\\DotNetGameServer\\src\\LoginServer\\LoginServer.csproj"
               },
               "d:\\Study and Job\\NewServerGame\\DotNetGameServer\\src\\ResourceServer\\ResourceServer.csproj": {
                 "projectPath": "d:\\Study and Job\\NewServerGame\\DotNetGameServer\\src\\ResourceServer\\ResourceServer.csproj"
@@ -476,14 +480,14 @@
         }
       }
     },
-    "d:\\Study and Job\\NewServerGame\\DotNetGameServer\\src\\Shared\\Shared.csproj": {
+    "D:\\Study and Job\\NewServerGame\\DotNetGameServer\\src\\Shared\\Shared.csproj": {
       "version": "1.0.0",
       "restore": {
-        "projectUniqueName": "d:\\Study and Job\\NewServerGame\\DotNetGameServer\\src\\Shared\\Shared.csproj",
+        "projectUniqueName": "D:\\Study and Job\\NewServerGame\\DotNetGameServer\\src\\Shared\\Shared.csproj",
         "projectName": "Shared",
-        "projectPath": "d:\\Study and Job\\NewServerGame\\DotNetGameServer\\src\\Shared\\Shared.csproj",
+        "projectPath": "D:\\Study and Job\\NewServerGame\\DotNetGameServer\\src\\Shared\\Shared.csproj",
         "packagesPath": "C:\\Users\\33502\\.nuget\\packages\\",
-        "outputPath": "d:\\Study and Job\\NewServerGame\\DotNetGameServer\\src\\Shared\\obj\\",
+        "outputPath": "D:\\Study and Job\\NewServerGame\\DotNetGameServer\\src\\Shared\\obj\\",
         "projectStyle": "PackageReference",
         "configFilePaths": [
           "C:\\Users\\33502\\AppData\\Roaming\\NuGet\\NuGet.Config"
@@ -517,13 +521,17 @@
           "dependencies": {
             "Google.Protobuf": {
               "target": "Package",
-              "version": "[3.33.0, )"
+              "version": "[3.25.1, )"
+            },
+            "Grpc.Net.Client": {
+              "target": "Package",
+              "version": "[2.59.0, )"
             },
             "Grpc.Tools": {
               "include": "Runtime, Build, Native, ContentFiles, Analyzers, BuildTransitive",
               "suppressParent": "All",
               "target": "Package",
-              "version": "[2.76.0, )"
+              "version": "[2.60.0, )"
             }
           },
           "imports": [

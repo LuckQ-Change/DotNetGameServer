@@ -58,7 +58,7 @@ app.MapGet("/api/server-status", async (IHttpClientFactory httpClientFactory) =>
             var response = await client.GetAsync(endpoint.Value);
             var content = await response.Content.ReadAsStringAsync();
             var serverReport = JsonDocument.Parse(content);
-            
+
             serverReport.RootElement.TryGetProperty("status", out var statusElement);
             serverReport.RootElement.TryGetProperty("checks", out var checksElement);
 

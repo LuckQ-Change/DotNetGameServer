@@ -32,7 +32,7 @@ public class SimpleUserAuthComponent : IUserAuthComponent
         {
             return Task.FromResult(new AuthResult(true, "登录成功"));
         }
-        
+
         return Task.FromResult(new AuthResult(false, "用户名或密码错误"));
     }
 }

@@ -32,7 +32,7 @@ var healthCheckTask = healthCheckHost.RunAsync(cts.Token);
 
 // 修正配置读取逻辑：优先从命令行获取
 var service = configuration["service"] ?? Environment.GetEnvironmentVariable("SERVICE") ?? "directory";
-var port = configuration.GetValue<int?>("port") ?? 
+var port = configuration.GetValue<int?>("port") ??
            (int.TryParse(Environment.GetEnvironmentVariable("PORT"), out var p) ? p : 5500);
 
 // 将常用配置映射到环境变量，兼容现有 SimpleConfigLoader
@@ -138,7 +138,7 @@ static IHost CreateHealthCheckHost(string[] args, IConfiguration config) =>
         .ConfigureWebHostDefaults(webBuilder =>
         {
             var healthCheckUrl = config.GetValue<string>("healthCheckUrl") ?? "http://*:5100";
-            webBuilder.UseUrls(healthCheckUrl); 
+            webBuilder.UseUrls(healthCheckUrl);
             webBuilder.ConfigureServices(services =>
             {
                 services.AddHealthChecks().AddCheck<ServerHealthCheck>("server_health_check");

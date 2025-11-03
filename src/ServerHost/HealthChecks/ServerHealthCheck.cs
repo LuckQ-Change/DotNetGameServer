@@ -7,12 +7,12 @@ namespace ServerHost.HealthChecks
     public class ServerHealthCheck : IHealthCheck
     {
         public Task<HealthCheckResult> CheckHealthAsync(
-            HealthCheckContext context, 
+            HealthCheckContext context,
             CancellationToken cancellationToken = default)
         {
             // 在这里，您可以添加检查服务器依赖项（如数据库、其他服务等）的逻辑。
             // 为简单起见，我们只返回一个健康状态。
-            var isHealthy = true; 
+            var isHealthy = true;
 
             if (isHealthy)
             {

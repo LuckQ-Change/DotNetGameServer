@@ -12,9 +12,7 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Logging;
 using Core.Telemetry;
 using Core.Logging;
-using Google.Protobuf;
 using Core.Components;
-using DotNetGameServer;
 
 namespace Core;
 
@@ -109,7 +107,7 @@ public abstract class BaseGameServer : IServerContext
         return _components.TryGetValue(typeof(T), out var component) ? component as T : null;
     }
 
-    
+
 
     /// <summary>
     /// 注册强类型消息处理器，采用具体的请求/响应类型进行分发。
@@ -175,7 +173,7 @@ public abstract class BaseGameServer : IServerContext
         }
 
         Log($"服务器已启动，端口 {port}");
-        
+
         // 接受连接循环（异步）
         _ = Task.Run(() => AcceptLoop(_cts.Token));
         // 周期驱动 ECS 系统更新（异步）
@@ -280,7 +278,7 @@ public abstract class BaseGameServer : IServerContext
     {
         var remote = client.Client.RemoteEndPoint?.ToString() ?? "未知";
         Log($"客户端连接: {remote}");
-        
+
         using (client)
         {
             System.Threading.Interlocked.Increment(ref _currentConnections);
@@ -387,7 +385,7 @@ public abstract class BaseGameServer : IServerContext
                     }
                     var incomingReqId = string.IsNullOrWhiteSpace(envelope.RequestId) ? Guid.NewGuid().ToString("N") : envelope.RequestId;
                     var reqContext = new RequestServerContext(this, envelope.Token ?? string.Empty, remote, incomingReqId);
-                    
+
                     // 频率限流：按消息条数
                     var mps = AddMessagesAndGetRate(1);
                     if (mps > _maxMessagesPerSecond)
@@ -429,7 +427,7 @@ public abstract class BaseGameServer : IServerContext
             {
                 Log($"客户端异常: {ex.Message}");
             }
-            
+
             Log($"客户端断开: {remote}");
             System.Threading.Interlocked.Decrement(ref _currentConnections);
         }
@@ -461,7 +459,7 @@ public abstract class BaseGameServer : IServerContext
         }
     }
 
-    
+
 
     /// <summary>
     /// 从网络流精确读取指定长度的字节；若对端关闭则返回已读取长度。

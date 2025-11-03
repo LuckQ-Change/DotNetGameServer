@@ -154,7 +154,7 @@ internal sealed class StrongHandlerInvoker<TReq, TResp> : IStrongHandlerInvoker
         if (string.IsNullOrWhiteSpace(errorMessage)) errorMessage = errorCode ?? status;
         return (respType, respObj.ToByteArray(), errorCodeInt, errorMessage);
     }
-    
+
     private static string? TryExtractUserId(TReq req)
     {
         // 优先使用标准接口，避免反射依赖

@@ -13,9 +13,9 @@
     <SourceRoot Include="C:\Users\33502\.nuget\packages\" />
   </ItemGroup>
   <ImportGroup Condition=" '$(ExcludeRestorePackageImports)' != 'true' ">
-    <Import Project="$(NuGetPackageRoot)grpc.tools\2.76.0\build\Grpc.Tools.props" Condition="Exists('$(NuGetPackageRoot)grpc.tools\2.76.0\build\Grpc.Tools.props')" />
+    <Import Project="$(NuGetPackageRoot)grpc.tools\2.60.0\build\Grpc.Tools.props" Condition="Exists('$(NuGetPackageRoot)grpc.tools\2.60.0\build\Grpc.Tools.props')" />
   </ImportGroup>
   <PropertyGroup Condition=" '$(ExcludeRestorePackageImports)' != 'true' ">
-    <PkgGrpc_Tools Condition=" '$(PkgGrpc_Tools)' == '' ">C:\Users\33502\.nuget\packages\grpc.tools\2.76.0</PkgGrpc_Tools>
+    <PkgGrpc_Tools Condition=" '$(PkgGrpc_Tools)' == '' ">C:\Users\33502\.nuget\packages\grpc.tools\2.60.0</PkgGrpc_Tools>
   </PropertyGroup>
 </Project>

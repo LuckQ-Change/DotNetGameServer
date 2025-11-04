@@ -9,6 +9,7 @@
       "DirectoryServer/1.0.0": {
         "dependencies": {
           "Core": "1.0.0",
+          "MessagePack": "2.5.140",
           "Polly": "8.4.2",
           "StackExchange.Redis": "2.7.33"
         },
@@ -55,6 +56,27 @@
           }
         }
       },
+      "MessagePack/2.5.140": {
+        "dependencies": {
+          "MessagePack.Annotations": "2.5.140",
+          "Microsoft.NET.StringTools": "17.6.3",
+          "System.Runtime.CompilerServices.Unsafe": "6.0.0"
+        },
+        "runtime": {
+          "lib/net6.0/MessagePack.dll": {
+            "assemblyVersion": "2.5.0.0",
+            "fileVersion": "2.5.140.61180"
+          }
+        }
+      },
+      "MessagePack.Annotations/2.5.140": {
+        "runtime": {
+          "lib/netstandard2.0/MessagePack.Annotations.dll": {
+            "assemblyVersion": "2.5.0.0",
+            "fileVersion": "2.5.140.61180"
+          }
+        }
+      },
       "Microsoft.EntityFrameworkCore/8.0.4": {
         "dependencies": {
           "Microsoft.EntityFrameworkCore.Abstractions": "8.0.4",
@@ -84,18 +106,6 @@
         },
         "runtime": {
           "lib/net8.0/Microsoft.EntityFrameworkCore.InMemory.dll": {
-            "assemblyVersion": "8.0.4.0",
-            "fileVersion": "8.0.424.16902"
-          }
-        }
-      },
-      "Microsoft.EntityFrameworkCore.Relational/8.0.4": {
-        "dependencies": {
-          "Microsoft.EntityFrameworkCore": "8.0.4",
-          "Microsoft.Extensions.Configuration.Abstractions": "8.0.0"
-        },
-        "runtime": {
-          "lib/net8.0/Microsoft.EntityFrameworkCore.Relational.dll": {
             "assemblyVersion": "8.0.4.0",
             "fileVersion": "8.0.424.16902"
           }
@@ -145,28 +155,11 @@
         }
       },
       "Microsoft.Extensions.Primitives/8.0.0": {},
-      "Npgsql/8.0.3": {
-        "dependencies": {
-          "Microsoft.Extensions.Logging.Abstractions": "8.0.0"
-        },
+      "Microsoft.NET.StringTools/17.6.3": {
         "runtime": {
-          "lib/net8.0/Npgsql.dll": {
-            "assemblyVersion": "8.0.3.0",
-            "fileVersion": "8.0.3.0"
-          }
-        }
-      },
-      "Npgsql.EntityFrameworkCore.PostgreSQL/8.0.4": {
-        "dependencies": {
-          "Microsoft.EntityFrameworkCore": "8.0.4",
-          "Microsoft.EntityFrameworkCore.Abstractions": "8.0.4",
-          "Microsoft.EntityFrameworkCore.Relational": "8.0.4",
-          "Npgsql": "8.0.3"
-        },
-        "runtime": {
-          "lib/net8.0/Npgsql.EntityFrameworkCore.PostgreSQL.dll": {
-            "assemblyVersion": "8.0.4.0",
-            "fileVersion": "8.0.4.0"
+          "lib/net7.0/Microsoft.NET.StringTools.dll": {
+            "assemblyVersion": "1.0.0.0",
+            "fileVersion": "17.6.3.22601"
           }
         }
       },
@@ -213,13 +206,14 @@
         }
       },
       "System.IO.Pipelines/5.0.1": {},
+      "System.Runtime.CompilerServices.Unsafe/6.0.0": {},
       "Core/1.0.0": {
         "dependencies": {
           "Google.Protobuf": "3.33.0",
           "Microsoft.EntityFrameworkCore.InMemory": "8.0.4",
+          "Microsoft.Extensions.Configuration.Abstractions": "8.0.0",
           "Microsoft.Extensions.DependencyInjection.Abstractions": "8.0.0",
           "Microsoft.Extensions.Logging.Abstractions": "8.0.0",
-          "Npgsql.EntityFrameworkCore.PostgreSQL": "8.0.4",
           "Shared": "1.0.0"
         },
         "runtime": {
@@ -277,6 +271,20 @@
       "path": "grpc.net.common/2.59.0",
       "hashPath": "grpc.net.common.2.59.0.nupkg.sha512"
     },
+    "MessagePack/2.5.140": {
+      "type": "package",
+      "serviceable": true,
+      "sha512": "sha512-nkIsgy8BkIfv40bSz9XZb4q//scI1PF3AYeB5X66nSlIhBIqbdpLz8Qk3gHvnjV3RZglQLO/ityK3eNfLii2NA==",
+      "path": "messagepack/2.5.140",
+      "hashPath": "messagepack.2.5.140.nupkg.sha512"
+    },
+    "MessagePack.Annotations/2.5.140": {
+      "type": "package",
+      "serviceable": true,
+      "sha512": "sha512-JE3vwluOrsJ4t3hnfXzIxJUh6lhx6M/KR8Sark/HOUw1DJ5UKu5JsAnnuaQngg6poFkRx1lzHSLTkxHNJO7+uQ==",
+      "path": "messagepack.annotations/2.5.140",
+      "hashPath": "messagepack.annotations.2.5.140.nupkg.sha512"
+    },
     "Microsoft.EntityFrameworkCore/8.0.4": {
       "type": "package",
       "serviceable": true,
@@ -304,13 +312,6 @@
       "sha512": "sha512-3fj0V/NKG66LLwUtoDofSyogku1ueF78uUIdGPEJJhS3MW7w3xLsizMaDYX+ooR74IM96YJI5N3tyOU5FZiiwg==",
       "path": "microsoft.entityframeworkcore.inmemory/8.0.4",
       "hashPath": "microsoft.entityframeworkcore.inmemory.8.0.4.nupkg.sha512"
-    },
-    "Microsoft.EntityFrameworkCore.Relational/8.0.4": {
-      "type": "package",
-      "serviceable": true,
-      "sha512": "sha512-aWLT6e9a8oMzXgF0YQpYYa3mDeU+yb2UQSQ+RrIgyGgSpzPfSKgpA7v2kOVDuZr2AQ6NNAlWPaBG7wZuKQI96w==",
-      "path": "microsoft.entityframeworkcore.relational/8.0.4",
-      "hashPath": "microsoft.entityframeworkcore.relational.8.0.4.nupkg.sha512"
     },
     "Microsoft.Extensions.Caching.Abstractions/8.0.0": {
       "type": "package",
@@ -375,19 +376,12 @@
       "path": "microsoft.extensions.primitives/8.0.0",
       "hashPath": "microsoft.extensions.primitives.8.0.0.nupkg.sha512"
     },
-    "Npgsql/8.0.3": {
+    "Microsoft.NET.StringTools/17.6.3": {
       "type": "package",
       "serviceable": true,
-      "sha512": "sha512-6WEmzsQJCZAlUG1pThKg/RmeF6V+I0DmBBBE/8YzpRtEzhyZzKcK7ulMANDm5CkxrALBEC8H+5plxHWtIL7xnA==",
-      "path": "npgsql/8.0.3",
-      "hashPath": "npgsql.8.0.3.nupkg.sha512"
-    },
-    "Npgsql.EntityFrameworkCore.PostgreSQL/8.0.4": {
-      "type": "package",
-      "serviceable": true,
-      "sha512": "sha512-/hHd9MqTRVDgIpsToCcxMDxZqla0HAQACiITkq1+L9J2hmHKV6lBAPlauF+dlNSfHpus7rrljWx4nAanKD6qAw==",
-      "path": "npgsql.entityframeworkcore.postgresql/8.0.4",
-      "hashPath": "npgsql.entityframeworkcore.postgresql.8.0.4.nupkg.sha512"
+      "sha512": "sha512-N0ZIanl1QCgvUumEL1laasU0a7sOE5ZwLZVTn0pAePnfhq8P7SvTjF8Axq+CnavuQkmdQpGNXQ1efZtu5kDFbA==",
+      "path": "microsoft.net.stringtools/17.6.3",
+      "hashPath": "microsoft.net.stringtools.17.6.3.nupkg.sha512"
     },
     "Pipelines.Sockets.Unofficial/2.2.8": {
       "type": "package",
@@ -423,6 +417,13 @@
       "sha512": "sha512-qEePWsaq9LoEEIqhbGe6D5J8c9IqQOUuTzzV6wn1POlfdLkJliZY3OlB0j0f17uMWlqZYjH7txj+2YbyrIA8Yg==",
       "path": "system.io.pipelines/5.0.1",
       "hashPath": "system.io.pipelines.5.0.1.nupkg.sha512"
+    },
+    "System.Runtime.CompilerServices.Unsafe/6.0.0": {
+      "type": "package",
+      "serviceable": true,
+      "sha512": "sha512-/iUeP3tq1S0XdNNoMz5C9twLSrM/TH+qElHkXWaPvuNOt+99G75NrV0OS2EqHx5wMN7popYjpc8oTjC1y16DLg==",
+      "path": "system.runtime.compilerservices.unsafe/6.0.0",
+      "hashPath": "system.runtime.compilerservices.unsafe.6.0.0.nupkg.sha512"
     },
     "Core/1.0.0": {
       "type": "project",

@@ -88,8 +88,8 @@ app.MapGet("/api/server-status", async (IHttpClientFactory httpClientFactory) =>
 // Server-Sent Events (SSE) 实时推送服务器状态
 app.MapGet("/api/server-status/stream", async (IHttpClientFactory httpClientFactory, HttpContext context) =>
 {
-    context.Response.Headers.Add("Cache-Control", "no-cache");
-    context.Response.Headers.Add("Content-Type", "text/event-stream");
+    context.Response.Headers.Append("Cache-Control", "no-cache");
+    context.Response.Headers.Append("Content-Type", "text/event-stream");
 
     var client = httpClientFactory.CreateClient();
     var cancellation = context.RequestAborted;

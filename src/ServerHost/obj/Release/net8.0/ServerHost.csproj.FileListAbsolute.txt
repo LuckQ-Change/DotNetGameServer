@@ -162,3 +162,6 @@ C:\Users\Administrator\Desktop\TTT\DotNetGameServer\src\ServerHost\bin\Release\n
 C:\Users\Administrator\Desktop\TTT\DotNetGameServer\src\ServerHost\obj\Release\net8.0\ServerHost.csproj.Up2Date
 C:\Users\Administrator\Desktop\TTT\DotNetGameServer\src\ServerHost\obj\Release\net8.0\ServerHost.genruntimeconfig.cache
 C:\Users\Administrator\Desktop\TTT\DotNetGameServer\src\ServerHost\obj\Release\net8.0\ref\ServerHost.dll
+C:\Users\Administrator\Desktop\TTT\DotNetGameServer\src\ServerHost\bin\Release\net8.0\MessagePack.dll
+C:\Users\Administrator\Desktop\TTT\DotNetGameServer\src\ServerHost\bin\Release\net8.0\MessagePack.Annotations.dll
+C:\Users\Administrator\Desktop\TTT\DotNetGameServer\src\ServerHost\bin\Release\net8.0\Microsoft.NET.StringTools.dll

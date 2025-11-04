@@ -17,7 +17,6 @@ C:\Users\Administrator\Desktop\TTT\DotNetGameServer\tests\DirectoryServer.Tests\
 C:\Users\Administrator\Desktop\TTT\DotNetGameServer\tests\DirectoryServer.Tests\bin\Release\net9.0\Microsoft.EntityFrameworkCore.dll
 C:\Users\Administrator\Desktop\TTT\DotNetGameServer\tests\DirectoryServer.Tests\bin\Release\net9.0\Microsoft.EntityFrameworkCore.Abstractions.dll
 C:\Users\Administrator\Desktop\TTT\DotNetGameServer\tests\DirectoryServer.Tests\bin\Release\net9.0\Microsoft.EntityFrameworkCore.InMemory.dll
-C:\Users\Administrator\Desktop\TTT\DotNetGameServer\tests\DirectoryServer.Tests\bin\Release\net9.0\Microsoft.EntityFrameworkCore.Relational.dll
 C:\Users\Administrator\Desktop\TTT\DotNetGameServer\tests\DirectoryServer.Tests\bin\Release\net9.0\Microsoft.TestPlatform.CoreUtilities.dll
 C:\Users\Administrator\Desktop\TTT\DotNetGameServer\tests\DirectoryServer.Tests\bin\Release\net9.0\Microsoft.TestPlatform.PlatformAbstractions.dll
 C:\Users\Administrator\Desktop\TTT\DotNetGameServer\tests\DirectoryServer.Tests\bin\Release\net9.0\Microsoft.VisualStudio.TestPlatform.ObjectModel.dll
@@ -26,8 +25,6 @@ C:\Users\Administrator\Desktop\TTT\DotNetGameServer\tests\DirectoryServer.Tests\
 C:\Users\Administrator\Desktop\TTT\DotNetGameServer\tests\DirectoryServer.Tests\bin\Release\net9.0\Microsoft.TestPlatform.Utilities.dll
 C:\Users\Administrator\Desktop\TTT\DotNetGameServer\tests\DirectoryServer.Tests\bin\Release\net9.0\Microsoft.VisualStudio.TestPlatform.Common.dll
 C:\Users\Administrator\Desktop\TTT\DotNetGameServer\tests\DirectoryServer.Tests\bin\Release\net9.0\Newtonsoft.Json.dll
-C:\Users\Administrator\Desktop\TTT\DotNetGameServer\tests\DirectoryServer.Tests\bin\Release\net9.0\Npgsql.dll
-C:\Users\Administrator\Desktop\TTT\DotNetGameServer\tests\DirectoryServer.Tests\bin\Release\net9.0\Npgsql.EntityFrameworkCore.PostgreSQL.dll
 C:\Users\Administrator\Desktop\TTT\DotNetGameServer\tests\DirectoryServer.Tests\bin\Release\net9.0\Pipelines.Sockets.Unofficial.dll
 C:\Users\Administrator\Desktop\TTT\DotNetGameServer\tests\DirectoryServer.Tests\bin\Release\net9.0\Polly.dll
 C:\Users\Administrator\Desktop\TTT\DotNetGameServer\tests\DirectoryServer.Tests\bin\Release\net9.0\Polly.Core.dll
@@ -119,3 +116,6 @@ C:\Users\Administrator\Desktop\TTT\DotNetGameServer\tests\DirectoryServer.Tests\
 C:\Users\Administrator\Desktop\TTT\DotNetGameServer\tests\DirectoryServer.Tests\obj\Release\net9.0\DirectoryServer.Tests.pdb
 C:\Users\Administrator\Desktop\TTT\DotNetGameServer\tests\DirectoryServer.Tests\obj\Release\net9.0\DirectoryServer.Tests.genruntimeconfig.cache
 C:\Users\Administrator\Desktop\TTT\DotNetGameServer\tests\DirectoryServer.Tests\obj\Release\net9.0\ref\DirectoryServer.Tests.dll
+C:\Users\Administrator\Desktop\TTT\DotNetGameServer\tests\DirectoryServer.Tests\bin\Release\net9.0\MessagePack.dll
+C:\Users\Administrator\Desktop\TTT\DotNetGameServer\tests\DirectoryServer.Tests\bin\Release\net9.0\MessagePack.Annotations.dll
+C:\Users\Administrator\Desktop\TTT\DotNetGameServer\tests\DirectoryServer.Tests\bin\Release\net9.0\Microsoft.NET.StringTools.dll

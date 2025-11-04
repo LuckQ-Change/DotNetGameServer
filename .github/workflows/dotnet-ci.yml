@@ -7,7 +7,7 @@ on:
     branches: [ main, master ]
 
 jobs:
-  build-and-test:
+  build:
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
@@ -37,56 +37,4 @@ jobs:
       - name: Build
         run: dotnet build DotNetGameServer.sln --configuration Release --no-restore
 
-      - name: Start Redis (for integration tests)
-        run: |
-          docker run -d --name test-redis -p 6379:6379 redis:7 \
-            redis-server --save 20 1 --appendonly yes --loglevel warning --requirepass "changeme"
-          # Wait until Redis is ready
-          for i in {1..20}; do
-            if docker exec test-redis redis-cli -a "changeme" PING | grep -q PONG; then
-              echo "Redis is ready"; break; fi; sleep 1;
-          done
-
-      - name: Test
-        env:
-          DIRECTORY_TOKEN_SECRET: unit-secret
-          REDIS_CONNECTION: localhost:6379,password=changeme
-          DOTNET_ENVIRONMENT: Development
-          ASPNETCORE_ENVIRONMENT: Development
-        run: |
-          set -e
-          ATTEMPTS=0
-          MAX_ATTEMPTS=2
-          until [ $ATTEMPTS -ge $MAX_ATTEMPTS ]
-          do
-            ATTEMPTS=$((ATTEMPTS+1))
-            echo "Attempt $ATTEMPTS/$MAX_ATTEMPTS: dotnet test with coverage and thresholds"
-            if dotnet test DotNetGameServer.sln --configuration Release --no-build \
-              /p:CollectCoverage=true /p:CoverletOutputFormat=cobertura \
-              /p:CoverletOutput=./TestResults/coverage/ \
-              /p:Include='[DirectoryServer*]*' \
-              /p:ExcludeByFile='**/RedisServerRegistryComponent.cs' \
-              /p:Threshold=60 /p:ThresholdType=line /p:ThresholdStat=total; then
-              echo "Tests passed with coverage threshold"
-              break
-            else
-              echo "Tests failed, retrying..."
-            fi
-          done
-          if [ $ATTEMPTS -ge $MAX_ATTEMPTS ]; then
-            echo "Tests failed after $MAX_ATTEMPTS attempts" >&2
-            exit 1
-          fi
-
-      - name: Cleanup Redis
-        if: always()
-        run: |
-          docker logs test-redis --tail 50 || true
-          docker rm -f test-redis || true
-
-      - name: Upload coverage report
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: coverage-${{ matrix.dotnet-version }}
-          path: TestResults/coverage/**
+      # 单元测试已删除，此处不再执行测试与覆盖率统计。

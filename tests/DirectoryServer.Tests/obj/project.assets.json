@@ -2181,8 +2181,10 @@
   },
   "projectFileDependencyGroups": {
     "net8.0": [
+      "Core >= 1.0.0",
       "DirectoryServer >= 1.0.0",
       "Microsoft.NET.Test.Sdk >= 17.12.0",
+      "Shared >= 1.0.0",
       "coverlet.collector >= 6.0.2",
       "coverlet.msbuild >= 6.0.2",
       "xunit >= 2.9.2",
@@ -2216,8 +2218,14 @@
         "net8.0": {
           "targetAlias": "net8.0",
           "projectReferences": {
+            "C:\\Users\\Administrator\\Desktop\\TTT\\DotNetGameServer\\src\\Core\\Core.csproj": {
+              "projectPath": "C:\\Users\\Administrator\\Desktop\\TTT\\DotNetGameServer\\src\\Core\\Core.csproj"
+            },
             "C:\\Users\\Administrator\\Desktop\\TTT\\DotNetGameServer\\src\\DirectoryServer\\DirectoryServer.csproj": {
               "projectPath": "C:\\Users\\Administrator\\Desktop\\TTT\\DotNetGameServer\\src\\DirectoryServer\\DirectoryServer.csproj"
+            },
+            "C:\\Users\\Administrator\\Desktop\\TTT\\DotNetGameServer\\src\\Shared\\Shared.csproj": {
+              "projectPath": "C:\\Users\\Administrator\\Desktop\\TTT\\DotNetGameServer\\src\\Shared\\Shared.csproj"
             }
           }
         }

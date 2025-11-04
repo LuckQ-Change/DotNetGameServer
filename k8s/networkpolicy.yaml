@@ -1,0 +1,43 @@
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: game-server-network-policy
+  labels:
+    app: game-server
+spec:
+  podSelector:
+    matchLabels:
+      app: game-server
+  policyTypes:
+    - Ingress
+    - Egress
+  ingress:
+    # 允许 Prometheus 抓取指标（9464）。如使用 Prometheus Operator，通常运行在 monitoring 命名空间。
+    # 可按需调整 namespaceSelector/ podSelector 以匹配实际部署。
+    - ports:
+        - port: 9464
+          protocol: TCP
+      from:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: monitoring
+        - podSelector:
+            matchLabels:
+              app.kubernetes.io/name: prometheus
+    # 其它入站默认拒绝
+  egress:
+    # 允许访问 Redis 服务（6379）
+    - to:
+        - podSelector:
+            matchLabels:
+              app: redis
+      ports:
+        - port: 6379
+          protocol: TCP
+    # 允许 DNS 解析（如需）
+    - to:
+        - namespaceSelector: {}
+      ports:
+        - port: 53
+          protocol: UDP
+    # 若采用 OTLP 导出到外部端点，请按需增加相应 egress 规则

@@ -5,7 +5,12 @@ metadata:
   labels:
     app: game-server
 spec:
-  replicas: 1
+  replicas: 2
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 0
   selector:
     matchLabels:
       app: game-server
@@ -14,10 +19,39 @@ spec:
       labels:
         app: game-server
     spec:
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 10001
+        runAsGroup: 10001
+      topologySpreadConstraints:
+        - maxSkew: 1
+          topologyKey: kubernetes.io/hostname
+          whenUnsatisfiable: ScheduleAnyway
+          labelSelector:
+            matchLabels:
+              app: game-server
+      affinity:
+        podAntiAffinity:
+          preferredDuringSchedulingIgnoredDuringExecution:
+            - weight: 100
+              podAffinityTerm:
+                labelSelector:
+                  matchExpressions:
+                    - key: app
+                      operator: In
+                      values:
+                        - game-server
+                topologyKey: kubernetes.io/hostname
       containers:
         - name: server
           image: game-server:latest
           imagePullPolicy: IfNotPresent
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop:
+                - ALL
           env:
             - name: ASPNETCORE_ENVIRONMENT
               valueFrom:
@@ -34,13 +68,53 @@ spec:
                 configMapKeyRef:
                   name: game-server-config
                   key: PORT
+            - name: DIRECTORY_REGISTRY
+              valueFrom:
+                configMapKeyRef:
+                  name: game-server-config
+                  key: DIRECTORY_REGISTRY
+            - name: REDIS_CONNECTION
+              valueFrom:
+                secretKeyRef:
+                  name: game-server-secret
+                  key: REDIS_CONNECTION
             - name: DIRECTORY_TOKEN_SECRET
               valueFrom:
                 secretKeyRef:
                   name: game-server-secret
                   key: DIRECTORY_TOKEN_SECRET
+            - name: TELEMETRY_METRICS_ENABLED
+              value: "true"
+            - name: TELEMETRY_METRICS_MODE
+              value: "prometheus"
+            - name: PROMETHEUS_PORT
+              value: "9464"
+            # Redis TLS/mTLS 可选配置（按需开启）
+            - name: DIRECTORY_REDIS_SSL
+              valueFrom:
+                configMapKeyRef:
+                  name: game-server-config
+                  key: DIRECTORY_REDIS_SSL
+            - name: DIRECTORY_REDIS_SSL_HOST
+              valueFrom:
+                configMapKeyRef:
+                  name: game-server-config
+                  key: DIRECTORY_REDIS_SSL_HOST
+            - name: DIRECTORY_REDIS_CLIENT_CERT_PATH
+              value: "/etc/redis/tls/client.pfx"
+            - name: DIRECTORY_REDIS_CLIENT_CERT_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: redis-client-cert-secret
+                  key: CLIENT_CERT_PASSWORD
+            - name: DIRECTORY_REDIS_VALIDATE_SERVER_CERT
+              valueFrom:
+                configMapKeyRef:
+                  name: game-server-config
+                  key: DIRECTORY_REDIS_VALIDATE_SERVER_CERT
           ports:
             - containerPort: 5500
+            - containerPort: 9464
           readinessProbe:
             tcpSocket:
               port: 5500
@@ -58,6 +132,14 @@ spec:
             requests:
               cpu: "100m"
               memory: "128Mi"
+          volumeMounts:
+            - name: redis-client-cert
+              mountPath: /etc/redis/tls
+              readOnly: true
+      volumes:
+        - name: redis-client-cert
+          secret:
+            secretName: redis-client-cert-secret
 ---
 apiVersion: v1
 kind: Service

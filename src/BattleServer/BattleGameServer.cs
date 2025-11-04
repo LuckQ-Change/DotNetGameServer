@@ -3,8 +3,6 @@ using Core.Components;
 using Core.Ecs;
 using DotNetGameServer;
 using Microsoft.Extensions.Logging;
-using System;
-using System.Threading.Tasks;
 
 namespace BattleServer;
 

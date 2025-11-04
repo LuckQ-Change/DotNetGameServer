@@ -1,33 +1,35 @@
 {
   "format": 1,
   "restore": {
-    "d:\\Study and Job\\NewServerGame\\DotNetGameServer\\src\\ServerHost\\ServerHost.csproj": {}
+    "C:\\Users\\Administrator\\Desktop\\TTT\\DotNetGameServer\\src\\ServerHost\\ServerHost.csproj": {}
   },
   "projects": {
-    "D:\\Study and Job\\NewServerGame\\DotNetGameServer\\src\\BattleServer\\BattleServer.csproj": {
+    "C:\\Users\\Administrator\\Desktop\\TTT\\DotNetGameServer\\src\\BattleServer\\BattleServer.csproj": {
       "version": "1.0.0",
       "restore": {
-        "projectUniqueName": "D:\\Study and Job\\NewServerGame\\DotNetGameServer\\src\\BattleServer\\BattleServer.csproj",
+        "projectUniqueName": "C:\\Users\\Administrator\\Desktop\\TTT\\DotNetGameServer\\src\\BattleServer\\BattleServer.csproj",
         "projectName": "BattleServer",
-        "projectPath": "D:\\Study and Job\\NewServerGame\\DotNetGameServer\\src\\BattleServer\\BattleServer.csproj",
-        "packagesPath": "C:\\Users\\33502\\.nuget\\packages\\",
-        "outputPath": "D:\\Study and Job\\NewServerGame\\DotNetGameServer\\src\\BattleServer\\obj\\",
+        "projectPath": "C:\\Users\\Administrator\\Desktop\\TTT\\DotNetGameServer\\src\\BattleServer\\BattleServer.csproj",
+        "packagesPath": "C:\\Users\\Administrator\\.nuget\\packages\\",
+        "outputPath": "C:\\Users\\Administrator\\Desktop\\TTT\\DotNetGameServer\\src\\BattleServer\\obj\\",
         "projectStyle": "PackageReference",
         "configFilePaths": [
-          "C:\\Users\\33502\\AppData\\Roaming\\NuGet\\NuGet.Config"
+          "C:\\Users\\Administrator\\AppData\\Roaming\\NuGet\\NuGet.Config",
+          "C:\\Program Files (x86)\\NuGet\\Config\\Microsoft.VisualStudio.Offline.config"
         ],
         "originalTargetFrameworks": [
           "net8.0"
         ],
         "sources": {
+          "C:\\Program Files (x86)\\Microsoft SDKs\\NuGetPackages\\": {},
           "https://api.nuget.org/v3/index.json": {}
         },
         "frameworks": {
           "net8.0": {
             "targetAlias": "net8.0",
             "projectReferences": {
-              "d:\\Study and Job\\NewServerGame\\DotNetGameServer\\src\\Core\\Core.csproj": {
-                "projectPath": "d:\\Study and Job\\NewServerGame\\DotNetGameServer\\src\\Core\\Core.csproj"
+              "C:\\Users\\Administrator\\Desktop\\TTT\\DotNetGameServer\\src\\Core\\Core.csproj": {
+                "projectPath": "C:\\Users\\Administrator\\Desktop\\TTT\\DotNetGameServer\\src\\Core\\Core.csproj"
               }
             }
           }
@@ -41,7 +43,8 @@
           "enableAudit": "true",
           "auditLevel": "low",
           "auditMode": "direct"
-        }
+        },
+        "SdkAnalysisLevel": "9.0.300"
       },
       "frameworks": {
         "net8.0": {
@@ -62,34 +65,36 @@
               "privateAssets": "all"
             }
           },
-          "runtimeIdentifierGraphPath": "C:\\Program Files\\dotnet\\sdk\\8.0.303/PortableRuntimeIdentifierGraph.json"
+          "runtimeIdentifierGraphPath": "C:\\Program Files\\dotnet\\sdk\\9.0.306/PortableRuntimeIdentifierGraph.json"
         }
       }
     },
-    "d:\\Study and Job\\NewServerGame\\DotNetGameServer\\src\\Core\\Core.csproj": {
+    "C:\\Users\\Administrator\\Desktop\\TTT\\DotNetGameServer\\src\\Core\\Core.csproj": {
       "version": "1.0.0",
       "restore": {
-        "projectUniqueName": "d:\\Study and Job\\NewServerGame\\DotNetGameServer\\src\\Core\\Core.csproj",
+        "projectUniqueName": "C:\\Users\\Administrator\\Desktop\\TTT\\DotNetGameServer\\src\\Core\\Core.csproj",
         "projectName": "Core",
-        "projectPath": "d:\\Study and Job\\NewServerGame\\DotNetGameServer\\src\\Core\\Core.csproj",
-        "packagesPath": "C:\\Users\\33502\\.nuget\\packages\\",
-        "outputPath": "d:\\Study and Job\\NewServerGame\\DotNetGameServer\\src\\Core\\obj\\",
+        "projectPath": "C:\\Users\\Administrator\\Desktop\\TTT\\DotNetGameServer\\src\\Core\\Core.csproj",
+        "packagesPath": "C:\\Users\\Administrator\\.nuget\\packages\\",
+        "outputPath": "C:\\Users\\Administrator\\Desktop\\TTT\\DotNetGameServer\\src\\Core\\obj\\",
         "projectStyle": "PackageReference",
         "configFilePaths": [
-          "C:\\Users\\33502\\AppData\\Roaming\\NuGet\\NuGet.Config"
+          "C:\\Users\\Administrator\\AppData\\Roaming\\NuGet\\NuGet.Config",
+          "C:\\Program Files (x86)\\NuGet\\Config\\Microsoft.VisualStudio.Offline.config"
         ],
         "originalTargetFrameworks": [
           "net8.0"
         ],
         "sources": {
+          "C:\\Program Files (x86)\\Microsoft SDKs\\NuGetPackages\\": {},
           "https://api.nuget.org/v3/index.json": {}
         },
         "frameworks": {
           "net8.0": {
             "targetAlias": "net8.0",
             "projectReferences": {
-              "d:\\Study and Job\\NewServerGame\\DotNetGameServer\\src\\Shared\\Shared.csproj": {
-                "projectPath": "d:\\Study and Job\\NewServerGame\\DotNetGameServer\\src\\Shared\\Shared.csproj"
+              "C:\\Users\\Administrator\\Desktop\\TTT\\DotNetGameServer\\src\\Shared\\Shared.csproj": {
+                "projectPath": "C:\\Users\\Administrator\\Desktop\\TTT\\DotNetGameServer\\src\\Shared\\Shared.csproj"
               }
             }
           }
@@ -103,7 +108,8 @@
           "enableAudit": "true",
           "auditLevel": "low",
           "auditMode": "direct"
-        }
+        },
+        "SdkAnalysisLevel": "9.0.300"
       },
       "frameworks": {
         "net8.0": {
@@ -117,6 +123,10 @@
               "target": "Package",
               "version": "[8.0.4, )"
             },
+            "Microsoft.Extensions.Configuration.Abstractions": {
+              "target": "Package",
+              "version": "[8.0.0, )"
+            },
             "Microsoft.Extensions.DependencyInjection.Abstractions": {
               "target": "Package",
               "version": "[8.0.0, )"
@@ -124,10 +134,6 @@
             "Microsoft.Extensions.Logging.Abstractions": {
               "target": "Package",
               "version": "[8.0.0, )"
-            },
-            "Npgsql.EntityFrameworkCore.PostgreSQL": {
-              "target": "Package",
-              "version": "[8.0.4, )"
             }
           },
           "imports": [
@@ -149,34 +155,36 @@
               "privateAssets": "all"
             }
           },
-          "runtimeIdentifierGraphPath": "C:\\Program Files\\dotnet\\sdk\\8.0.303/PortableRuntimeIdentifierGraph.json"
+          "runtimeIdentifierGraphPath": "C:\\Program Files\\dotnet\\sdk\\9.0.306/PortableRuntimeIdentifierGraph.json"
         }
       }
     },
-    "D:\\Study and Job\\NewServerGame\\DotNetGameServer\\src\\DirectoryServer\\DirectoryServer.csproj": {
+    "C:\\Users\\Administrator\\Desktop\\TTT\\DotNetGameServer\\src\\DirectoryServer\\DirectoryServer.csproj": {
       "version": "1.0.0",
       "restore": {
-        "projectUniqueName": "D:\\Study and Job\\NewServerGame\\DotNetGameServer\\src\\DirectoryServer\\DirectoryServer.csproj",
+        "projectUniqueName": "C:\\Users\\Administrator\\Desktop\\TTT\\DotNetGameServer\\src\\DirectoryServer\\DirectoryServer.csproj",
         "projectName": "DirectoryServer",
-        "projectPath": "D:\\Study and Job\\NewServerGame\\DotNetGameServer\\src\\DirectoryServer\\DirectoryServer.csproj",
-        "packagesPath": "C:\\Users\\33502\\.nuget\\packages\\",
-        "outputPath": "D:\\Study and Job\\NewServerGame\\DotNetGameServer\\src\\DirectoryServer\\obj\\",
+        "projectPath": "C:\\Users\\Administrator\\Desktop\\TTT\\DotNetGameServer\\src\\DirectoryServer\\DirectoryServer.csproj",
+        "packagesPath": "C:\\Users\\Administrator\\.nuget\\packages\\",
+        "outputPath": "C:\\Users\\Administrator\\Desktop\\TTT\\DotNetGameServer\\src\\DirectoryServer\\obj\\",
         "projectStyle": "PackageReference",
         "configFilePaths": [
-          "C:\\Users\\33502\\AppData\\Roaming\\NuGet\\NuGet.Config"
+          "C:\\Users\\Administrator\\AppData\\Roaming\\NuGet\\NuGet.Config",
+          "C:\\Program Files (x86)\\NuGet\\Config\\Microsoft.VisualStudio.Offline.config"
         ],
         "originalTargetFrameworks": [
           "net8.0"
         ],
         "sources": {
+          "C:\\Program Files (x86)\\Microsoft SDKs\\NuGetPackages\\": {},
           "https://api.nuget.org/v3/index.json": {}
         },
         "frameworks": {
           "net8.0": {
             "targetAlias": "net8.0",
             "projectReferences": {
-              "d:\\Study and Job\\NewServerGame\\DotNetGameServer\\src\\Core\\Core.csproj": {
-                "projectPath": "d:\\Study and Job\\NewServerGame\\DotNetGameServer\\src\\Core\\Core.csproj"
+              "C:\\Users\\Administrator\\Desktop\\TTT\\DotNetGameServer\\src\\Core\\Core.csproj": {
+                "projectPath": "C:\\Users\\Administrator\\Desktop\\TTT\\DotNetGameServer\\src\\Core\\Core.csproj"
               }
             }
           }
@@ -190,11 +198,26 @@
           "enableAudit": "true",
           "auditLevel": "low",
           "auditMode": "direct"
-        }
+        },
+        "SdkAnalysisLevel": "9.0.300"
       },
       "frameworks": {
         "net8.0": {
           "targetAlias": "net8.0",
+          "dependencies": {
+            "MessagePack": {
+              "target": "Package",
+              "version": "[2.5.140, )"
+            },
+            "Polly": {
+              "target": "Package",
+              "version": "[8.4.2, )"
+            },
+            "StackExchange.Redis": {
+              "target": "Package",
+              "version": "[2.7.33, )"
+            }
+          },
           "imports": [
             "net461",
             "net462",
@@ -211,37 +234,39 @@
               "privateAssets": "all"
             }
           },
-          "runtimeIdentifierGraphPath": "C:\\Program Files\\dotnet\\sdk\\8.0.303/PortableRuntimeIdentifierGraph.json"
+          "runtimeIdentifierGraphPath": "C:\\Program Files\\dotnet\\sdk\\9.0.306/PortableRuntimeIdentifierGraph.json"
         }
       }
     },
-    "D:\\Study and Job\\NewServerGame\\DotNetGameServer\\src\\LogicGameServer\\LogicServer.csproj": {
+    "C:\\Users\\Administrator\\Desktop\\TTT\\DotNetGameServer\\src\\LogicGameServer\\LogicServer.csproj": {
       "version": "1.0.0",
       "restore": {
-        "projectUniqueName": "D:\\Study and Job\\NewServerGame\\DotNetGameServer\\src\\LogicGameServer\\LogicServer.csproj",
+        "projectUniqueName": "C:\\Users\\Administrator\\Desktop\\TTT\\DotNetGameServer\\src\\LogicGameServer\\LogicServer.csproj",
         "projectName": "LogicServer",
-        "projectPath": "D:\\Study and Job\\NewServerGame\\DotNetGameServer\\src\\LogicGameServer\\LogicServer.csproj",
-        "packagesPath": "C:\\Users\\33502\\.nuget\\packages\\",
-        "outputPath": "D:\\Study and Job\\NewServerGame\\DotNetGameServer\\src\\LogicGameServer\\obj\\",
+        "projectPath": "C:\\Users\\Administrator\\Desktop\\TTT\\DotNetGameServer\\src\\LogicGameServer\\LogicServer.csproj",
+        "packagesPath": "C:\\Users\\Administrator\\.nuget\\packages\\",
+        "outputPath": "C:\\Users\\Administrator\\Desktop\\TTT\\DotNetGameServer\\src\\LogicGameServer\\obj\\",
         "projectStyle": "PackageReference",
         "configFilePaths": [
-          "C:\\Users\\33502\\AppData\\Roaming\\NuGet\\NuGet.Config"
+          "C:\\Users\\Administrator\\AppData\\Roaming\\NuGet\\NuGet.Config",
+          "C:\\Program Files (x86)\\NuGet\\Config\\Microsoft.VisualStudio.Offline.config"
         ],
         "originalTargetFrameworks": [
           "net8.0"
         ],
         "sources": {
+          "C:\\Program Files (x86)\\Microsoft SDKs\\NuGetPackages\\": {},
           "https://api.nuget.org/v3/index.json": {}
         },
         "frameworks": {
           "net8.0": {
             "targetAlias": "net8.0",
             "projectReferences": {
-              "d:\\Study and Job\\NewServerGame\\DotNetGameServer\\src\\Core\\Core.csproj": {
-                "projectPath": "d:\\Study and Job\\NewServerGame\\DotNetGameServer\\src\\Core\\Core.csproj"
+              "C:\\Users\\Administrator\\Desktop\\TTT\\DotNetGameServer\\src\\Core\\Core.csproj": {
+                "projectPath": "C:\\Users\\Administrator\\Desktop\\TTT\\DotNetGameServer\\src\\Core\\Core.csproj"
               },
-              "d:\\Study and Job\\NewServerGame\\DotNetGameServer\\src\\Shared\\Shared.csproj": {
-                "projectPath": "d:\\Study and Job\\NewServerGame\\DotNetGameServer\\src\\Shared\\Shared.csproj"
+              "C:\\Users\\Administrator\\Desktop\\TTT\\DotNetGameServer\\src\\Shared\\Shared.csproj": {
+                "projectPath": "C:\\Users\\Administrator\\Desktop\\TTT\\DotNetGameServer\\src\\Shared\\Shared.csproj"
               }
             }
           }
@@ -255,7 +280,8 @@
           "enableAudit": "true",
           "auditLevel": "low",
           "auditMode": "direct"
-        }
+        },
+        "SdkAnalysisLevel": "9.0.300"
       },
       "frameworks": {
         "net8.0": {
@@ -276,34 +302,36 @@
               "privateAssets": "all"
             }
           },
-          "runtimeIdentifierGraphPath": "C:\\Program Files\\dotnet\\sdk\\8.0.303/PortableRuntimeIdentifierGraph.json"
+          "runtimeIdentifierGraphPath": "C:\\Program Files\\dotnet\\sdk\\9.0.306/PortableRuntimeIdentifierGraph.json"
         }
       }
     },
-    "D:\\Study and Job\\NewServerGame\\DotNetGameServer\\src\\LoginServer\\LoginServer.csproj": {
+    "C:\\Users\\Administrator\\Desktop\\TTT\\DotNetGameServer\\src\\LoginServer\\LoginServer.csproj": {
       "version": "1.0.0",
       "restore": {
-        "projectUniqueName": "D:\\Study and Job\\NewServerGame\\DotNetGameServer\\src\\LoginServer\\LoginServer.csproj",
+        "projectUniqueName": "C:\\Users\\Administrator\\Desktop\\TTT\\DotNetGameServer\\src\\LoginServer\\LoginServer.csproj",
         "projectName": "LoginServer",
-        "projectPath": "D:\\Study and Job\\NewServerGame\\DotNetGameServer\\src\\LoginServer\\LoginServer.csproj",
-        "packagesPath": "C:\\Users\\33502\\.nuget\\packages\\",
-        "outputPath": "D:\\Study and Job\\NewServerGame\\DotNetGameServer\\src\\LoginServer\\obj\\",
+        "projectPath": "C:\\Users\\Administrator\\Desktop\\TTT\\DotNetGameServer\\src\\LoginServer\\LoginServer.csproj",
+        "packagesPath": "C:\\Users\\Administrator\\.nuget\\packages\\",
+        "outputPath": "C:\\Users\\Administrator\\Desktop\\TTT\\DotNetGameServer\\src\\LoginServer\\obj\\",
         "projectStyle": "PackageReference",
         "configFilePaths": [
-          "C:\\Users\\33502\\AppData\\Roaming\\NuGet\\NuGet.Config"
+          "C:\\Users\\Administrator\\AppData\\Roaming\\NuGet\\NuGet.Config",
+          "C:\\Program Files (x86)\\NuGet\\Config\\Microsoft.VisualStudio.Offline.config"
         ],
         "originalTargetFrameworks": [
           "net8.0"
         ],
         "sources": {
+          "C:\\Program Files (x86)\\Microsoft SDKs\\NuGetPackages\\": {},
           "https://api.nuget.org/v3/index.json": {}
         },
         "frameworks": {
           "net8.0": {
             "targetAlias": "net8.0",
             "projectReferences": {
-              "d:\\Study and Job\\NewServerGame\\DotNetGameServer\\src\\Core\\Core.csproj": {
-                "projectPath": "d:\\Study and Job\\NewServerGame\\DotNetGameServer\\src\\Core\\Core.csproj"
+              "C:\\Users\\Administrator\\Desktop\\TTT\\DotNetGameServer\\src\\Core\\Core.csproj": {
+                "projectPath": "C:\\Users\\Administrator\\Desktop\\TTT\\DotNetGameServer\\src\\Core\\Core.csproj"
               }
             }
           }
@@ -317,7 +345,8 @@
           "enableAudit": "true",
           "auditLevel": "low",
           "auditMode": "direct"
-        }
+        },
+        "SdkAnalysisLevel": "9.0.300"
       },
       "frameworks": {
         "net8.0": {
@@ -338,34 +367,36 @@
               "privateAssets": "all"
             }
           },
-          "runtimeIdentifierGraphPath": "C:\\Program Files\\dotnet\\sdk\\8.0.303/PortableRuntimeIdentifierGraph.json"
+          "runtimeIdentifierGraphPath": "C:\\Program Files\\dotnet\\sdk\\9.0.306/PortableRuntimeIdentifierGraph.json"
         }
       }
     },
-    "D:\\Study and Job\\NewServerGame\\DotNetGameServer\\src\\ResourceServer\\ResourceServer.csproj": {
+    "C:\\Users\\Administrator\\Desktop\\TTT\\DotNetGameServer\\src\\ResourceServer\\ResourceServer.csproj": {
       "version": "1.0.0",
       "restore": {
-        "projectUniqueName": "D:\\Study and Job\\NewServerGame\\DotNetGameServer\\src\\ResourceServer\\ResourceServer.csproj",
+        "projectUniqueName": "C:\\Users\\Administrator\\Desktop\\TTT\\DotNetGameServer\\src\\ResourceServer\\ResourceServer.csproj",
         "projectName": "ResourceServer",
-        "projectPath": "D:\\Study and Job\\NewServerGame\\DotNetGameServer\\src\\ResourceServer\\ResourceServer.csproj",
-        "packagesPath": "C:\\Users\\33502\\.nuget\\packages\\",
-        "outputPath": "D:\\Study and Job\\NewServerGame\\DotNetGameServer\\src\\ResourceServer\\obj\\",
+        "projectPath": "C:\\Users\\Administrator\\Desktop\\TTT\\DotNetGameServer\\src\\ResourceServer\\ResourceServer.csproj",
+        "packagesPath": "C:\\Users\\Administrator\\.nuget\\packages\\",
+        "outputPath": "C:\\Users\\Administrator\\Desktop\\TTT\\DotNetGameServer\\src\\ResourceServer\\obj\\",
         "projectStyle": "PackageReference",
         "configFilePaths": [
-          "C:\\Users\\33502\\AppData\\Roaming\\NuGet\\NuGet.Config"
+          "C:\\Users\\Administrator\\AppData\\Roaming\\NuGet\\NuGet.Config",
+          "C:\\Program Files (x86)\\NuGet\\Config\\Microsoft.VisualStudio.Offline.config"
         ],
         "originalTargetFrameworks": [
           "net8.0"
         ],
         "sources": {
+          "C:\\Program Files (x86)\\Microsoft SDKs\\NuGetPackages\\": {},
           "https://api.nuget.org/v3/index.json": {}
         },
         "frameworks": {
           "net8.0": {
             "targetAlias": "net8.0",
             "projectReferences": {
-              "d:\\Study and Job\\NewServerGame\\DotNetGameServer\\src\\Core\\Core.csproj": {
-                "projectPath": "d:\\Study and Job\\NewServerGame\\DotNetGameServer\\src\\Core\\Core.csproj"
+              "C:\\Users\\Administrator\\Desktop\\TTT\\DotNetGameServer\\src\\Core\\Core.csproj": {
+                "projectPath": "C:\\Users\\Administrator\\Desktop\\TTT\\DotNetGameServer\\src\\Core\\Core.csproj"
               }
             }
           }
@@ -379,7 +410,8 @@
           "enableAudit": "true",
           "auditLevel": "low",
           "auditMode": "direct"
-        }
+        },
+        "SdkAnalysisLevel": "9.0.300"
       },
       "frameworks": {
         "net8.0": {
@@ -400,49 +432,51 @@
               "privateAssets": "all"
             }
           },
-          "runtimeIdentifierGraphPath": "C:\\Program Files\\dotnet\\sdk\\8.0.303/PortableRuntimeIdentifierGraph.json"
+          "runtimeIdentifierGraphPath": "C:\\Program Files\\dotnet\\sdk\\9.0.306/PortableRuntimeIdentifierGraph.json"
         }
       }
     },
-    "d:\\Study and Job\\NewServerGame\\DotNetGameServer\\src\\ServerHost\\ServerHost.csproj": {
+    "C:\\Users\\Administrator\\Desktop\\TTT\\DotNetGameServer\\src\\ServerHost\\ServerHost.csproj": {
       "version": "1.0.0",
       "restore": {
-        "projectUniqueName": "d:\\Study and Job\\NewServerGame\\DotNetGameServer\\src\\ServerHost\\ServerHost.csproj",
+        "projectUniqueName": "C:\\Users\\Administrator\\Desktop\\TTT\\DotNetGameServer\\src\\ServerHost\\ServerHost.csproj",
         "projectName": "ServerHost",
-        "projectPath": "d:\\Study and Job\\NewServerGame\\DotNetGameServer\\src\\ServerHost\\ServerHost.csproj",
-        "packagesPath": "C:\\Users\\33502\\.nuget\\packages\\",
-        "outputPath": "d:\\Study and Job\\NewServerGame\\DotNetGameServer\\src\\ServerHost\\obj\\",
+        "projectPath": "C:\\Users\\Administrator\\Desktop\\TTT\\DotNetGameServer\\src\\ServerHost\\ServerHost.csproj",
+        "packagesPath": "C:\\Users\\Administrator\\.nuget\\packages\\",
+        "outputPath": "C:\\Users\\Administrator\\Desktop\\TTT\\DotNetGameServer\\src\\ServerHost\\obj\\",
         "projectStyle": "PackageReference",
         "configFilePaths": [
-          "C:\\Users\\33502\\AppData\\Roaming\\NuGet\\NuGet.Config"
+          "C:\\Users\\Administrator\\AppData\\Roaming\\NuGet\\NuGet.Config",
+          "C:\\Program Files (x86)\\NuGet\\Config\\Microsoft.VisualStudio.Offline.config"
         ],
         "originalTargetFrameworks": [
           "net8.0"
         ],
         "sources": {
+          "C:\\Program Files (x86)\\Microsoft SDKs\\NuGetPackages\\": {},
           "https://api.nuget.org/v3/index.json": {}
         },
         "frameworks": {
           "net8.0": {
             "targetAlias": "net8.0",
             "projectReferences": {
-              "D:\\Study and Job\\NewServerGame\\DotNetGameServer\\src\\BattleServer\\BattleServer.csproj": {
-                "projectPath": "D:\\Study and Job\\NewServerGame\\DotNetGameServer\\src\\BattleServer\\BattleServer.csproj"
+              "C:\\Users\\Administrator\\Desktop\\TTT\\DotNetGameServer\\src\\BattleServer\\BattleServer.csproj": {
+                "projectPath": "C:\\Users\\Administrator\\Desktop\\TTT\\DotNetGameServer\\src\\BattleServer\\BattleServer.csproj"
               },
-              "d:\\Study and Job\\NewServerGame\\DotNetGameServer\\src\\Core\\Core.csproj": {
-                "projectPath": "d:\\Study and Job\\NewServerGame\\DotNetGameServer\\src\\Core\\Core.csproj"
+              "C:\\Users\\Administrator\\Desktop\\TTT\\DotNetGameServer\\src\\Core\\Core.csproj": {
+                "projectPath": "C:\\Users\\Administrator\\Desktop\\TTT\\DotNetGameServer\\src\\Core\\Core.csproj"
               },
-              "D:\\Study and Job\\NewServerGame\\DotNetGameServer\\src\\DirectoryServer\\DirectoryServer.csproj": {
-                "projectPath": "D:\\Study and Job\\NewServerGame\\DotNetGameServer\\src\\DirectoryServer\\DirectoryServer.csproj"
+              "C:\\Users\\Administrator\\Desktop\\TTT\\DotNetGameServer\\src\\DirectoryServer\\DirectoryServer.csproj": {
+                "projectPath": "C:\\Users\\Administrator\\Desktop\\TTT\\DotNetGameServer\\src\\DirectoryServer\\DirectoryServer.csproj"
               },
-              "D:\\Study and Job\\NewServerGame\\DotNetGameServer\\src\\LogicGameServer\\LogicServer.csproj": {
-                "projectPath": "D:\\Study and Job\\NewServerGame\\DotNetGameServer\\src\\LogicGameServer\\LogicServer.csproj"
+              "C:\\Users\\Administrator\\Desktop\\TTT\\DotNetGameServer\\src\\LogicGameServer\\LogicServer.csproj": {
+                "projectPath": "C:\\Users\\Administrator\\Desktop\\TTT\\DotNetGameServer\\src\\LogicGameServer\\LogicServer.csproj"
               },
-              "D:\\Study and Job\\NewServerGame\\DotNetGameServer\\src\\LoginServer\\LoginServer.csproj": {
-                "projectPath": "D:\\Study and Job\\NewServerGame\\DotNetGameServer\\src\\LoginServer\\LoginServer.csproj"
+              "C:\\Users\\Administrator\\Desktop\\TTT\\DotNetGameServer\\src\\LoginServer\\LoginServer.csproj": {
+                "projectPath": "C:\\Users\\Administrator\\Desktop\\TTT\\DotNetGameServer\\src\\LoginServer\\LoginServer.csproj"
               },
-              "D:\\Study and Job\\NewServerGame\\DotNetGameServer\\src\\ResourceServer\\ResourceServer.csproj": {
-                "projectPath": "D:\\Study and Job\\NewServerGame\\DotNetGameServer\\src\\ResourceServer\\ResourceServer.csproj"
+              "C:\\Users\\Administrator\\Desktop\\TTT\\DotNetGameServer\\src\\ResourceServer\\ResourceServer.csproj": {
+                "projectPath": "C:\\Users\\Administrator\\Desktop\\TTT\\DotNetGameServer\\src\\ResourceServer\\ResourceServer.csproj"
               }
             }
           }
@@ -456,7 +490,8 @@
           "enableAudit": "true",
           "auditLevel": "low",
           "auditMode": "direct"
-        }
+        },
+        "SdkAnalysisLevel": "9.0.300"
       },
       "frameworks": {
         "net8.0": {
@@ -467,6 +502,26 @@
               "suppressParent": "All",
               "target": "Package",
               "version": "[8.0.4, )"
+            },
+            "Npgsql.EntityFrameworkCore.PostgreSQL": {
+              "target": "Package",
+              "version": "[8.0.4, )"
+            },
+            "OpenTelemetry.Exporter.OpenTelemetryProtocol": {
+              "target": "Package",
+              "version": "[1.8.1, )"
+            },
+            "OpenTelemetry.Extensions.Hosting": {
+              "target": "Package",
+              "version": "[1.8.1, )"
+            },
+            "OpenTelemetry.Instrumentation.Http": {
+              "target": "Package",
+              "version": "[1.8.1, )"
+            },
+            "OpenTelemetry.Instrumentation.Runtime": {
+              "target": "Package",
+              "version": "[1.8.1, )"
             }
           },
           "imports": [
@@ -488,26 +543,28 @@
               "privateAssets": "all"
             }
           },
-          "runtimeIdentifierGraphPath": "C:\\Program Files\\dotnet\\sdk\\8.0.303/PortableRuntimeIdentifierGraph.json"
+          "runtimeIdentifierGraphPath": "C:\\Program Files\\dotnet\\sdk\\9.0.306/PortableRuntimeIdentifierGraph.json"
         }
       }
     },
-    "d:\\Study and Job\\NewServerGame\\DotNetGameServer\\src\\Shared\\Shared.csproj": {
+    "C:\\Users\\Administrator\\Desktop\\TTT\\DotNetGameServer\\src\\Shared\\Shared.csproj": {
       "version": "1.0.0",
       "restore": {
-        "projectUniqueName": "d:\\Study and Job\\NewServerGame\\DotNetGameServer\\src\\Shared\\Shared.csproj",
+        "projectUniqueName": "C:\\Users\\Administrator\\Desktop\\TTT\\DotNetGameServer\\src\\Shared\\Shared.csproj",
         "projectName": "Shared",
-        "projectPath": "d:\\Study and Job\\NewServerGame\\DotNetGameServer\\src\\Shared\\Shared.csproj",
-        "packagesPath": "C:\\Users\\33502\\.nuget\\packages\\",
-        "outputPath": "d:\\Study and Job\\NewServerGame\\DotNetGameServer\\src\\Shared\\obj\\",
+        "projectPath": "C:\\Users\\Administrator\\Desktop\\TTT\\DotNetGameServer\\src\\Shared\\Shared.csproj",
+        "packagesPath": "C:\\Users\\Administrator\\.nuget\\packages\\",
+        "outputPath": "C:\\Users\\Administrator\\Desktop\\TTT\\DotNetGameServer\\src\\Shared\\obj\\",
         "projectStyle": "PackageReference",
         "configFilePaths": [
-          "C:\\Users\\33502\\AppData\\Roaming\\NuGet\\NuGet.Config"
+          "C:\\Users\\Administrator\\AppData\\Roaming\\NuGet\\NuGet.Config",
+          "C:\\Program Files (x86)\\NuGet\\Config\\Microsoft.VisualStudio.Offline.config"
         ],
         "originalTargetFrameworks": [
           "net8.0"
         ],
         "sources": {
+          "C:\\Program Files (x86)\\Microsoft SDKs\\NuGetPackages\\": {},
           "https://api.nuget.org/v3/index.json": {}
         },
         "frameworks": {
@@ -525,7 +582,8 @@
           "enableAudit": "true",
           "auditLevel": "low",
           "auditMode": "direct"
-        }
+        },
+        "SdkAnalysisLevel": "9.0.300"
       },
       "frameworks": {
         "net8.0": {
@@ -562,7 +620,7 @@
               "privateAssets": "all"
             }
           },
-          "runtimeIdentifierGraphPath": "C:\\Program Files\\dotnet\\sdk\\8.0.303/PortableRuntimeIdentifierGraph.json"
+          "runtimeIdentifierGraphPath": "C:\\Program Files\\dotnet\\sdk\\9.0.306/PortableRuntimeIdentifierGraph.json"
         }
       }
     }

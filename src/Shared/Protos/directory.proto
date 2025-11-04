@@ -56,6 +56,19 @@ message SwitchServerResponse {
   int64 expireAt = 6; // unix ms
 }
 
+// 切服令牌验证（服务端二次校验，可选）
+message VerifySwitchTokenRequest {
+  string userId = 1;    // 令牌绑定的用户
+  string serverId = 2;  // 目标服务器ID
+  string token = 3;     // 客户端携带的已签名令牌
+  bool consume = 4;     // 是否在验证通过后消费（防重放）
+}
+message VerifySwitchTokenResponse {
+  bool valid = 1;
+  string message = 2;
+  int64 expireAt = 3;   // 若有效，返回过期时间（unix ms）
+}
+
 // 业务服心跳上报
 message HeartbeatRequest {
   string id = 1;

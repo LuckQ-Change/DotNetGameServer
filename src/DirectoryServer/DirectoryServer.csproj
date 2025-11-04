@@ -10,4 +10,10 @@
     <Nullable>enable</Nullable>
   </PropertyGroup>
 
+  <ItemGroup>
+    <PackageReference Include="StackExchange.Redis" Version="2.7.33" />
+    <PackageReference Include="Polly" Version="8.4.2" />
+    <PackageReference Include="MessagePack" Version="2.5.140" />
+  </ItemGroup>
+
 </Project>

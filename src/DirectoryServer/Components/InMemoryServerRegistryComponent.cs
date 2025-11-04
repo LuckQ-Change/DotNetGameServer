@@ -1,4 +1,6 @@
 using System.Collections.Concurrent;
+using System.Diagnostics.Metrics;
+using Core.Telemetry;
 
 namespace DirectoryServer.Components;
 
@@ -12,6 +14,12 @@ public class InMemoryServerRegistryComponent : IServerRegistryComponent
     private Task? _cleanupTask;
 
     public string Name => "ServerRegistry";
+
+    // Metrics
+    private static readonly Counter<long> _switchTokenIssueTotal = CoreTelemetry.Meter.CreateCounter<long>(
+        "directory_switch_token_issue_total", unit: "count", description: "发放切服令牌次数");
+    private static readonly Counter<long> _switchTokenCheckTotal = CoreTelemetry.Meter.CreateCounter<long>(
+        "directory_switch_token_check_total", unit: "count", description: "校验切服令牌次数");
 
     public Task InitializeAsync()
     {
@@ -66,7 +74,26 @@ public class InMemoryServerRegistryComponent : IServerRegistryComponent
         var expire = DateTime.UtcNow.Add(ttl);
         var st = new SwitchToken(token, expire);
         _tokens[$"{userId}:{target.Id}"] = st;
+        _switchTokenIssueTotal.Add(1,
+            new KeyValuePair<string, object?>("user_id", userId),
+            new KeyValuePair<string, object?>("server_id", target.Id));
         return st;
+    }
+
+    public bool CheckSwitchToken(string userId, string serverId, string tokenId, bool consume = false)
+    {
+        PurgeExpired();
+        var key = $"{userId}:{serverId}";
+        if (!_tokens.TryGetValue(key, out var st)) return false;
+        if (st.ExpireAtUtc <= DateTime.UtcNow) { _tokens.TryRemove(key, out _); return false; }
+        var ok = string.Equals(st.Token, tokenId, StringComparison.Ordinal);
+        if (ok && consume) _tokens.TryRemove(key, out _);
+        _switchTokenCheckTotal.Add(1,
+            new KeyValuePair<string, object?>("user_id", userId),
+            new KeyValuePair<string, object?>("server_id", serverId),
+            new KeyValuePair<string, object?>("consume", consume ? "true" : "false"),
+            new KeyValuePair<string, object?>("result", ok ? "success" : "fail"));
+        return ok;
     }
 
     private void PurgeExpired()

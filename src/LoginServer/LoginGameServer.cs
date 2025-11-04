@@ -4,7 +4,6 @@ using DotNetGameServer;
 using LoginServer.Components;
 using LoginServer.Handlers;
 using Microsoft.Extensions.Logging;
-using System.Threading.Tasks;
 
 namespace LoginServer;
 
@@ -13,7 +12,7 @@ public class LoginGameServer : BaseGameServer
     private readonly IUserAuthComponent _userAuthComponent;
 
     // ILogger and IUserAuthComponent will be provided by the DI container
-    public LoginGameServer(ILogger<LoginGameServer> logger, IUserAuthComponent userAuthComponent) 
+    public LoginGameServer(ILogger<LoginGameServer> logger, IUserAuthComponent userAuthComponent)
         : base("Login", logger)
     {
         _userAuthComponent = userAuthComponent;
@@ -38,7 +37,7 @@ public class LoginGameServer : BaseGameServer
             statusProvider: () => "online",
             baseDir: AppContext.BaseDirectory
         ));
-        
+
         // Call the base StartAsync to start the server listener
         await base.StartAsync(port);
     }

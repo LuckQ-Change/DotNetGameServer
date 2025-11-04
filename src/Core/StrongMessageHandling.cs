@@ -1,8 +1,5 @@
-using System;
-using System.Collections.Concurrent;
 using System.Reflection;
 using System.Diagnostics;
-using System.Threading.Tasks;
 using Google.Protobuf;
 using Shared;
 using Core.Components;
@@ -24,7 +21,7 @@ public interface IStrongMessageHandler<TReq, TResp>
     /// <param name="request">请求对象。</param>
     /// <param name="context">服务器上下文。</param>
     /// <returns>响应对象；无响应则返回 <c>null</c>。</returns>
-    Task<TResp?> HandleAsync(TReq request, IServerContext context);
+    public Task<TResp?> HandleAsync(TReq request, IServerContext context);
 }
 
 /// <summary>
@@ -35,7 +32,7 @@ internal interface IStrongHandlerInvoker
     /// <summary>
     /// 使用 ByteString 载荷调用处理器，返回响应类型名与响应字节；无响应则为 null
     /// </summary>
-    Task<(string responseType, byte[] payload, int errorCode, string errorMessage)?> Invoke(ByteString payload, IServerContext context);
+    public Task<(string responseType, byte[] payload, int errorCode, string errorMessage)?> Invoke(ByteString payload, IServerContext context);
 }
 
 internal sealed class StrongHandlerInvoker<TReq, TResp> : IStrongHandlerInvoker

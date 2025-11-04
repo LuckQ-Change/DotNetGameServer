@@ -8,6 +8,11 @@ public interface IServerRegistryComponent : IServerComponent
     IEnumerable<ServerRecord> ListServers();
     ServerRecord? GetServer(string id);
     SwitchToken IssueSwitchToken(string userId, ServerRecord target, TimeSpan ttl);
+    /// <summary>
+    /// 校验切服令牌：匹配注册表中为 (userId, serverId) 存储的原始令牌ID。
+    /// 若 consume 为 true，验证通过后从注册表中删除以防止重放。
+    /// </summary>
+    bool CheckSwitchToken(string userId, string serverId, string tokenId, bool consume = false);
 }
 
 public record ServerRecord(

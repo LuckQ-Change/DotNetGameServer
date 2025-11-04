@@ -1,0 +1,139 @@
+{
+  "Version": 1,
+  "WorkspaceRootPath": "C:\\Users\\Administrator\\Desktop\\TTT\\DotNetGameServer\\",
+  "Documents": [
+    {
+      "AbsoluteMoniker": "D:0:0:{EAB30DB7-58B5-4B34-971E-82A9CF2565FB}|src\\LogicGameServer\\LogicServer.csproj|c:\\users\\administrator\\desktop\\ttt\\dotnetgameserver\\src\\logicgameserver\\logicgameserver.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{EAB30DB7-58B5-4B34-971E-82A9CF2565FB}|src\\LogicGameServer\\LogicServer.csproj|solutionrelative:src\\logicgameserver\\logicgameserver.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{81271898-0E31-4290-9927-54E4524B7742}|src\\LoginServer\\LoginServer.csproj|c:\\users\\administrator\\desktop\\ttt\\dotnetgameserver\\src\\loginserver\\logingameserver.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{81271898-0E31-4290-9927-54E4524B7742}|src\\LoginServer\\LoginServer.csproj|solutionrelative:src\\loginserver\\logingameserver.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{B8E1370F-AD02-4F2B-9A54-5E6A704C59C2}|src\\ResourceServer\\ResourceServer.csproj|c:\\users\\administrator\\desktop\\ttt\\dotnetgameserver\\src\\resourceserver\\resourcegameserver.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{B8E1370F-AD02-4F2B-9A54-5E6A704C59C2}|src\\ResourceServer\\ResourceServer.csproj|solutionrelative:src\\resourceserver\\resourcegameserver.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{11EEDEC6-F504-45AC-A7D1-E2B9F6AAF78D}|src\\AdminPanel\\AdminPanel.csproj|c:\\users\\administrator\\desktop\\ttt\\dotnetgameserver\\src\\adminpanel\\program.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{11EEDEC6-F504-45AC-A7D1-E2B9F6AAF78D}|src\\AdminPanel\\AdminPanel.csproj|solutionrelative:src\\adminpanel\\program.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{73658460-C2BE-4418-9507-F479D08571ED}|src\\BattleServer\\BattleServer.csproj|c:\\users\\administrator\\desktop\\ttt\\dotnetgameserver\\src\\battleserver\\battlegameserver.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{73658460-C2BE-4418-9507-F479D08571ED}|src\\BattleServer\\BattleServer.csproj|solutionrelative:src\\battleserver\\battlegameserver.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{EB683F95-A552-4058-AA88-BCE5A7D512EC}|src\\Core\\Core.csproj|c:\\users\\administrator\\desktop\\ttt\\dotnetgameserver\\src\\core\\strongmessagehandling.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{EB683F95-A552-4058-AA88-BCE5A7D512EC}|src\\Core\\Core.csproj|solutionrelative:src\\core\\strongmessagehandling.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{EB683F95-A552-4058-AA88-BCE5A7D512EC}|src\\Core\\Core.csproj|c:\\users\\administrator\\desktop\\ttt\\dotnetgameserver\\src\\core\\basegameserver.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{EB683F95-A552-4058-AA88-BCE5A7D512EC}|src\\Core\\Core.csproj|solutionrelative:src\\core\\basegameserver.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    }
+  ],
+  "DocumentGroupContainers": [
+    {
+      "Orientation": 0,
+      "VerticalTabListWidth": 256,
+      "DocumentGroups": [
+        {
+          "DockedWidth": 200,
+          "SelectedChildIndex": 0,
+          "Children": [
+            {
+              "$type": "Document",
+              "DocumentIndex": 0,
+              "Title": "LogicGameServer.cs",
+              "DocumentMoniker": "C:\\Users\\Administrator\\Desktop\\TTT\\DotNetGameServer\\src\\LogicGameServer\\LogicGameServer.cs",
+              "RelativeDocumentMoniker": "src\\LogicGameServer\\LogicGameServer.cs",
+              "ToolTip": "C:\\Users\\Administrator\\Desktop\\TTT\\DotNetGameServer\\src\\LogicGameServer\\LogicGameServer.cs",
+              "RelativeToolTip": "src\\LogicGameServer\\LogicGameServer.cs",
+              "ViewState": "AgIAAAAAAAAAAAAAAADwvwYAAAAAAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2025-11-04T10:00:29.259Z",
+              "EditorCaption": ""
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 1,
+              "Title": "LoginGameServer.cs",
+              "DocumentMoniker": "C:\\Users\\Administrator\\Desktop\\TTT\\DotNetGameServer\\src\\LoginServer\\LoginGameServer.cs",
+              "RelativeDocumentMoniker": "src\\LoginServer\\LoginGameServer.cs",
+              "ToolTip": "C:\\Users\\Administrator\\Desktop\\TTT\\DotNetGameServer\\src\\LoginServer\\LoginGameServer.cs",
+              "RelativeToolTip": "src\\LoginServer\\LoginGameServer.cs",
+              "ViewState": "AgIAAAAAAAAAAAAAAADwvwgAAAAAAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2025-11-04T10:00:23.132Z",
+              "EditorCaption": ""
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 2,
+              "Title": "ResourceGameServer.cs",
+              "DocumentMoniker": "C:\\Users\\Administrator\\Desktop\\TTT\\DotNetGameServer\\src\\ResourceServer\\ResourceGameServer.cs",
+              "RelativeDocumentMoniker": "src\\ResourceServer\\ResourceGameServer.cs",
+              "ToolTip": "C:\\Users\\Administrator\\Desktop\\TTT\\DotNetGameServer\\src\\ResourceServer\\ResourceGameServer.cs",
+              "RelativeToolTip": "src\\ResourceServer\\ResourceGameServer.cs",
+              "ViewState": "AgIAAAAAAAAAAAAAAAAAAAcAAAAAAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2025-11-04T10:00:11.939Z",
+              "EditorCaption": ""
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 3,
+              "Title": "Program.cs",
+              "DocumentMoniker": "C:\\Users\\Administrator\\Desktop\\TTT\\DotNetGameServer\\src\\AdminPanel\\Program.cs",
+              "RelativeDocumentMoniker": "src\\AdminPanel\\Program.cs",
+              "ToolTip": "C:\\Users\\Administrator\\Desktop\\TTT\\DotNetGameServer\\src\\AdminPanel\\Program.cs",
+              "RelativeToolTip": "src\\AdminPanel\\Program.cs",
+              "ViewState": "AgIAAAAAAAAAAAAAAAAAAAMAAAAkAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2025-11-04T09:59:32.621Z",
+              "EditorCaption": ""
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 4,
+              "Title": "BattleGameServer.cs",
+              "DocumentMoniker": "C:\\Users\\Administrator\\Desktop\\TTT\\DotNetGameServer\\src\\BattleServer\\BattleGameServer.cs",
+              "RelativeDocumentMoniker": "src\\BattleServer\\BattleGameServer.cs",
+              "ToolTip": "C:\\Users\\Administrator\\Desktop\\TTT\\DotNetGameServer\\src\\BattleServer\\BattleGameServer.cs",
+              "RelativeToolTip": "src\\BattleServer\\BattleGameServer.cs",
+              "ViewState": "AgIAAAAAAAAAAAAAAAAAAAYAAAAXAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2025-11-04T09:59:18.441Z",
+              "EditorCaption": ""
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 5,
+              "Title": "StrongMessageHandling.cs",
+              "DocumentMoniker": "C:\\Users\\Administrator\\Desktop\\TTT\\DotNetGameServer\\src\\Core\\StrongMessageHandling.cs",
+              "RelativeDocumentMoniker": "src\\Core\\StrongMessageHandling.cs",
+              "ToolTip": "C:\\Users\\Administrator\\Desktop\\TTT\\DotNetGameServer\\src\\Core\\StrongMessageHandling.cs",
+              "RelativeToolTip": "src\\Core\\StrongMessageHandling.cs",
+              "ViewState": "AgIAAAAAAAAAAAAAAAAAACcAAAAvAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2025-11-04T09:56:51.479Z",
+              "EditorCaption": ""
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 6,
+              "Title": "BaseGameServer.cs",
+              "DocumentMoniker": "C:\\Users\\Administrator\\Desktop\\TTT\\DotNetGameServer\\src\\Core\\BaseGameServer.cs",
+              "RelativeDocumentMoniker": "src\\Core\\BaseGameServer.cs",
+              "ToolTip": "C:\\Users\\Administrator\\Desktop\\TTT\\DotNetGameServer\\src\\Core\\BaseGameServer.cs",
+              "RelativeToolTip": "src\\Core\\BaseGameServer.cs",
+              "ViewState": "AgIAAAAAAAAAAAAAAAAAAAwAAAATAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2025-11-04T09:54:25.169Z",
+              "EditorCaption": ""
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

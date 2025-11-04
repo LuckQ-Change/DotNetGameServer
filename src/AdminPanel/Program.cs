@@ -1,14 +1,5 @@
-using Microsoft.AspNetCore.Builder;
-using Microsoft.Extensions.Hosting;
-using System.Net.Http;
 using System.Text.Json;
-using System.Threading.Tasks;
-using System.Collections.Generic;
-using System.Linq;
-using Microsoft.AspNetCore.Http;
-using System.IO;
 using System.Security.Cryptography;
-using System;
 using DotNetGameServer.AdminPanel.Data;
 using Microsoft.EntityFrameworkCore;
 
@@ -31,7 +22,8 @@ if (!app.Environment.IsDevelopment())
 
 var options = new DefaultFilesOptions();
 options.DefaultFileNames.Clear();
-options.DefaultFileNames.Add("resource-management.html");
+// 将首页改为管理界面（服务器监控）
+options.DefaultFileNames.Add("monitoring/status.html");
 app.UseDefaultFiles(options);
 app.UseStaticFiles();
 
@@ -91,6 +83,65 @@ app.MapGet("/api/server-status", async (IHttpClientFactory httpClientFactory) =>
     };
 
     return Results.Json(finalReport);
+});
+
+// Server-Sent Events (SSE) 实时推送服务器状态
+app.MapGet("/api/server-status/stream", async (IHttpClientFactory httpClientFactory, HttpContext context) =>
+{
+    context.Response.Headers.Add("Cache-Control", "no-cache");
+    context.Response.Headers.Add("Content-Type", "text/event-stream");
+
+    var client = httpClientFactory.CreateClient();
+    var cancellation = context.RequestAborted;
+
+    while (!cancellation.IsCancellationRequested)
+    {
+        var tasks = serverHealthEndpoints.Select(async endpoint =>
+        {
+            try
+            {
+                var response = await client.GetAsync(endpoint.Value, cancellation);
+                var content = await response.Content.ReadAsStringAsync(cancellation);
+                var serverReport = JsonDocument.Parse(content);
+
+                serverReport.RootElement.TryGetProperty("status", out var statusElement);
+                serverReport.RootElement.TryGetProperty("checks", out var checksElement);
+
+                return new ServerStatusResult
+                {
+                    Name = endpoint.Key,
+                    Status = statusElement.GetString() ?? "Unknown",
+                    Checks = checksElement.Clone(),
+                };
+            }
+            catch (Exception ex)
+            {
+                return new ServerStatusResult
+                {
+                    Name = endpoint.Key,
+                    Status = "Unhealthy",
+                    Description = "无法连接到健康检查端点或处理时发生错误。",
+                    Exception = ex.Message
+                };
+            }
+        });
+
+        var results = await Task.WhenAll(tasks);
+        var overallStatus = results.Any(r => r.Status != "Healthy") ? "Unhealthy" : "Healthy";
+        var payload = JsonSerializer.Serialize(new { status = overallStatus, checks = results });
+
+        await context.Response.WriteAsync($"data: {payload}\n\n", cancellation);
+        await context.Response.Body.FlushAsync(cancellation);
+
+        try
+        {
+            await Task.Delay(TimeSpan.FromSeconds(2), cancellation); // 2秒推送一次
+        }
+        catch (TaskCanceledException)
+        {
+            break;
+        }
+    }
 });
 
 app.MapPost("/api/resource/upload", async (IFormFile file, AdminDbContext dbContext, ILogger<Program> logger) =>

@@ -1,4 +1,4 @@
-name: AI Code Review
+name: AI Code Review (dry-run)
 
 on:
   pull_request:
@@ -13,33 +13,28 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
         with:
-          fetch-depth: 0
+          fetch-depth: 0  # 保证有完整历史以生成 diff
 
       - name: Setup Node
         uses: actions/setup-node@v4
         with:
           node-version: 20
 
-      - name: Install deps
-        run: npm ci || npm i
+      - name: Prepare deps (no package.json at repo root)
+        run: |
+          echo "{}" > package.json
+          npm install axios dotenv nodemailer
 
-      - name: Run AI review
+      - name: Run AI review (dry-run)
         run: node tools/ai-review/ci-review.js
         env:
+          AI_DRY_RUN: "true"
+          # PR 场景用 base/head；push 场景自动回退
           DIFF_BASE: ${{ github.event.pull_request.base.sha || github.event.before }}
           DIFF_TARGET: ${{ github.event.pull_request.head.sha || github.sha }}
-          AI_BASE_URL: ${{ secrets.AI_BASE_URL }}
-          AI_API_KEY: ${{ secrets.AI_API_KEY }}
-          AI_MODEL: ${{ secrets.AI_MODEL }}
-          FEISHU_WEBHOOK_URL: ${{ secrets.FEISHU_WEBHOOK_URL }}
-          WECOM_WEBHOOK_URL: ${{ secrets.WECOM_WEBHOOK_URL }}
-          SMTP_HOST: ${{ secrets.SMTP_HOST }}
-          SMTP_PORT: 465
-          SMTP_SECURE: true
-          SMTP_USER: ${{ secrets.SMTP_USER }}
-          SMTP_PASS: ${{ secrets.SMTP_PASS }}
-          SMTP_FROM: ${{ secrets.SMTP_FROM }}
-          SMTP_TO: ${{ secrets.SMTP_TO }}
+
+      - name: List reviews
+        run: ls -la reviews || true
 
       - name: Upload reviews
         uses: actions/upload-artifact@v4

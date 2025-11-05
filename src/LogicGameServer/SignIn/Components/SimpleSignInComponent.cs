@@ -5,7 +5,7 @@ namespace LogicServer.SignIn.Components;
 
 public class SimpleSignInComponent : ISignInComponent
 {
-    private class UserState
+    private sealed class UserState
     {
         public DateOnly CycleStart { get; set; }
         public HashSet<int> ClaimedDays { get; } = new();

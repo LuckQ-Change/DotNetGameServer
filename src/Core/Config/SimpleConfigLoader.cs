@@ -1,4 +1,5 @@
 using System.Text.Json;
+using Shared.Constants;
 
 namespace Core.Config;
 
@@ -17,7 +18,7 @@ public static class SimpleConfigLoader
     public static string? LoadDirectoryTokenSecret(string? baseDirectory = null)
     {
         // 优先环境变量
-        var env = Environment.GetEnvironmentVariable("DIRECTORY_TOKEN_SECRET");
+        var env = Environment.GetEnvironmentVariable(ConfigKeys.DirectoryTokenSecretEnv);
         if (!string.IsNullOrWhiteSpace(env)) return env;
 
         var dir = baseDirectory ?? AppContext.BaseDirectory;
@@ -37,7 +38,10 @@ public static class SimpleConfigLoader
                 }
             }
         }
-        catch { }
+        catch (Exception)
+        {
+            // 配置解析失败时忽略并使用默认/环境变量值，避免启动流程被配置文件问题阻断。
+        }
         return null;
     }
 
@@ -95,7 +99,10 @@ public static class SimpleConfigLoader
                     settings.Host = hProp.GetString() ?? settings.Host;
             }
         }
-        catch { }
+        catch (Exception)
+        {
+            // 读取/解析配置文件失败时保留环境变量或默认值。
+        }
         return settings;
     }
 
@@ -124,13 +131,13 @@ public static class SimpleConfigLoader
         var settings = new ServerSettings();
 
         // 环境变量优先
-        if (int.TryParse(Environment.GetEnvironmentVariable("SERVER_MAX_MESSAGE_SIZE"), out var maxMsg) && maxMsg > 0)
+        if (int.TryParse(Environment.GetEnvironmentVariable(ConfigKeys.ServerMaxMessageSizeEnv), out var maxMsg) && maxMsg > 0)
             settings.MaxMessageSizeBytes = maxMsg;
-        if (int.TryParse(Environment.GetEnvironmentVariable("SERVER_MAX_CONNECTIONS"), out var maxConn) && maxConn > 0)
+        if (int.TryParse(Environment.GetEnvironmentVariable(ConfigKeys.ServerMaxConnectionsEnv), out var maxConn) && maxConn > 0)
             settings.MaxConcurrentConnections = maxConn;
-        if (int.TryParse(Environment.GetEnvironmentVariable("SERVER_RECEIVE_TIMEOUT_MS"), out var rcvTo) && rcvTo > 0)
+        if (int.TryParse(Environment.GetEnvironmentVariable(ConfigKeys.ServerReceiveTimeoutMsEnv), out var rcvTo) && rcvTo > 0)
             settings.ReceiveTimeoutMs = rcvTo;
-        if (int.TryParse(Environment.GetEnvironmentVariable("SERVER_ACCEPT_BACKOFF_MS"), out var backoff) && backoff >= 0)
+        if (int.TryParse(Environment.GetEnvironmentVariable(ConfigKeys.ServerAcceptBackoffMsEnv), out var backoff) && backoff >= 0)
             settings.AcceptBackoffMs = backoff;
 
         var dir = baseDirectory ?? AppContext.BaseDirectory;
@@ -154,7 +161,10 @@ public static class SimpleConfigLoader
                     settings.AcceptBackoffMs = aProp.GetInt32();
             }
         }
-        catch { }
+        catch (Exception)
+        {
+            // 读取/解析配置文件失败时保留环境变量或默认值。
+        }
 
         return settings;
     }

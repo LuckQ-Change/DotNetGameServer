@@ -66,9 +66,15 @@ public class BattleStateComponent : IEntityComponent
         IsActive = !ended;
         LastActiveUtc = DateTime.UtcNow;
 
-        var msg = ended
-            ? (playerWon ? "战斗胜利！" : "战斗失败！")
-            : $"造成 {damage} 伤害，敌人反击 {enemyDamage} 伤害";
+        string msg;
+        if (ended)
+        {
+            msg = playerWon ? "战斗胜利！" : "战斗失败！";
+        }
+        else
+        {
+            msg = $"造成 {damage} 伤害，敌人反击 {enemyDamage} 伤害";
+        }
 
         return (newPlayerHp, newEnemyHp, ended, playerWon, msg);
     }

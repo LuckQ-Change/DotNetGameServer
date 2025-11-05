@@ -1,5 +1,6 @@
 using System.Text.Json;
 using System.Security.Cryptography;
+using DotNetGameServer.AdminPanel; // 为访问 HealthStatus 和 ServerStatusResult 所在命名空间
 using DotNetGameServer.AdminPanel.Data;
 using Microsoft.EntityFrameworkCore;
 
@@ -57,7 +58,7 @@ app.MapGet("/api/server-status", async (IHttpClientFactory httpClientFactory) =>
             return new ServerStatusResult
             {
                 Name = endpoint.Key,
-                Status = statusElement.GetString() ?? "Unknown",
+                Status = statusElement.GetString() ?? HealthStatus.Unknown,
                 Checks = checksElement.Clone(), // Clone to avoid lifetime issues with JsonDocument
             };
         }
@@ -66,7 +67,7 @@ app.MapGet("/api/server-status", async (IHttpClientFactory httpClientFactory) =>
             return new ServerStatusResult
             {
                 Name = endpoint.Key,
-                Status = "Unhealthy",
+                Status = HealthStatus.Unhealthy,
                 Description = "无法连接到健康检查端点或处理时发生错误。",
                 Exception = ex.Message
             };
@@ -74,7 +75,7 @@ app.MapGet("/api/server-status", async (IHttpClientFactory httpClientFactory) =>
     });
 
     var results = await Task.WhenAll(tasks);
-    var overallStatus = results.Any(r => r.Status != "Healthy") ? "Unhealthy" : "Healthy";
+    var overallStatus = Array.Exists(results, r => r.Status != HealthStatus.Healthy) ? HealthStatus.Unhealthy : HealthStatus.Healthy;
 
     var finalReport = new
     {
@@ -110,7 +111,7 @@ app.MapGet("/api/server-status/stream", async (IHttpClientFactory httpClientFact
                 return new ServerStatusResult
                 {
                     Name = endpoint.Key,
-                    Status = statusElement.GetString() ?? "Unknown",
+                Status = statusElement.GetString() ?? HealthStatus.Unknown,
                     Checks = checksElement.Clone(),
                 };
             }
@@ -119,7 +120,7 @@ app.MapGet("/api/server-status/stream", async (IHttpClientFactory httpClientFact
                 return new ServerStatusResult
                 {
                     Name = endpoint.Key,
-                    Status = "Unhealthy",
+                    Status = HealthStatus.Unhealthy,
                     Description = "无法连接到健康检查端点或处理时发生错误。",
                     Exception = ex.Message
                 };
@@ -127,7 +128,7 @@ app.MapGet("/api/server-status/stream", async (IHttpClientFactory httpClientFact
         });
 
         var results = await Task.WhenAll(tasks);
-        var overallStatus = results.Any(r => r.Status != "Healthy") ? "Unhealthy" : "Healthy";
+        var overallStatus = Array.Exists(results, r => r.Status != HealthStatus.Healthy) ? HealthStatus.Unhealthy : HealthStatus.Healthy;
         var payload = JsonSerializer.Serialize(new { status = overallStatus, checks = results });
 
         await context.Response.WriteAsync($"data: {payload}\n\n", cancellation);
@@ -151,7 +152,9 @@ app.MapPost("/api/resource/upload", async (IFormFile file, AdminDbContext dbCont
         return Results.BadRequest("No file uploaded.");
     }
 
-    var tempPath = Path.GetTempFileName();
+    var tempDir = Path.Combine(Path.GetTempPath(), "adminpanel_uploads");
+    Directory.CreateDirectory(tempDir);
+    var tempPath = Path.Combine(tempDir, Path.GetRandomFileName());
     string hashString = string.Empty;
 
     try
@@ -212,12 +215,23 @@ app.MapPost("/api/resource/upload", async (IFormFile file, AdminDbContext dbCont
 
 app.Run();
 
-// Define a concrete class for the result to avoid type inference issues
-public class ServerStatusResult
+namespace DotNetGameServer.AdminPanel
 {
-    public string Name { get; set; } = string.Empty;
-    public string? Status { get; set; }
-    public object? Checks { get; set; }
-    public string? Description { get; set; }
-    public string? Exception { get; set; }
+    // 健康状态常量，避免魔法字符串（置于命名空间中以满足 S3903）
+    static class HealthStatus
+    {
+        public const string Healthy = "Healthy";
+        public const string Unhealthy = "Unhealthy";
+        public const string Unknown = "Unknown";
+    }
+
+    // 定义一个具体类型用于结果，避免类型推断问题
+    public class ServerStatusResult
+    {
+        public string Name { get; set; } = string.Empty;
+        public string? Status { get; set; }
+        public object? Checks { get; set; }
+        public string? Description { get; set; }
+        public string? Exception { get; set; }
+    }
 }

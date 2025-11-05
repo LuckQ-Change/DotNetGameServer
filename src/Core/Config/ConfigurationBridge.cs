@@ -1,5 +1,6 @@
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
+using Shared.Constants;
 
 namespace Core.Config;
 
@@ -14,11 +15,11 @@ public static class ConfigurationBridge
     public static string? GetDirectoryTokenSecret(IConfiguration? config, string? baseDir = null)
     {
         // IConfiguration 优先
-        var fromCfg = config?["Directory:TokenSecret"];
+        var fromCfg = config?[Shared.Constants.ConfigKeys.DirectoryTokenSecretKeyLower];
         if (!string.IsNullOrWhiteSpace(fromCfg)) return fromCfg;
 
         // 环境变量次之
-        var env = Environment.GetEnvironmentVariable("DIRECTORY_TOKEN_SECRET");
+        var env = Environment.GetEnvironmentVariable(ConfigKeys.DirectoryTokenSecretEnv);
         if (!string.IsNullOrWhiteSpace(env)) return env;
 
         // 回退到兼容加载器
@@ -30,14 +31,27 @@ public static class ConfigurationBridge
     /// </summary>
     public static void ValidateAndLog(IConfiguration config, ILogger? logger)
     {
-        var secretFromCfg = config["Directory:TokenSecret"];
-        var secretFromEnv = Environment.GetEnvironmentVariable("DIRECTORY_TOKEN_SECRET");
+        var secretFromCfg = config[Shared.Constants.ConfigKeys.DirectoryTokenSecretKeyLower];
+        var secretFromEnv = Environment.GetEnvironmentVariable(ConfigKeys.DirectoryTokenSecretEnv);
         var secretFromFile = SimpleConfigLoader.LoadDirectoryTokenSecret(AppContext.BaseDirectory);
 
-        var source = !string.IsNullOrWhiteSpace(secretFromCfg) ? "IConfiguration"
-            : !string.IsNullOrWhiteSpace(secretFromEnv) ? "Environment"
-            : secretFromFile != null ? "config.json"
-            : "missing";
+        string source;
+        if (!string.IsNullOrWhiteSpace(secretFromCfg))
+        {
+            source = "IConfiguration";
+        }
+        else if (!string.IsNullOrWhiteSpace(secretFromEnv))
+        {
+            source = "Environment";
+        }
+        else if (secretFromFile != null)
+        {
+            source = "config.json";
+        }
+        else
+        {
+            source = "missing";
+        }
 
         var effective = GetDirectoryTokenSecret(config);
         var level = source == "missing" ? LogLevel.Warning : LogLevel.Information;

@@ -27,10 +27,10 @@ public abstract class BaseGameServer : IServerContext
     private int _currentConnections;
     private TcpListener? _listener;
     private CancellationTokenSource? _cts;
-    private Task? _ecsUpdateLoop;
+    // ECS 更新循环通过后台 Task 驱动，无需持有字段引用。
     private IWebHost? _webHost; // For health checks
     private readonly ILogger _logger;
-    private readonly System.Diagnostics.Metrics.Instrument? _connectionsGauge;
+    // 连接数指标通过 Meter 注册，无需持有字段引用。
     private readonly ConcurrentDictionary<string, IStrongHandlerInvoker> _typedHandlers = new();
     private readonly ConcurrentDictionary<Type, IServerComponent> _components = new();
     // 网络鲁棒性：限速与黑名单
@@ -69,13 +69,13 @@ public abstract class BaseGameServer : IServerContext
         _maxConcurrentConnections = Math.Max(1, settings.MaxConcurrentConnections);
         _receiveTimeoutMs = Math.Max(0, settings.ReceiveTimeoutMs);
         _acceptBackoffMs = Math.Max(0, settings.AcceptBackoffMs);
-        _connectionsGauge = CoreTelemetry.CreateConnectionsGauge(() => _currentConnections, ServerName);
+        CoreTelemetry.CreateConnectionsGauge(() => _currentConnections, ServerName);
         // 若后续提供配置，可在此覆盖默认值（环境变量或配置）
-        if (int.TryParse(Environment.GetEnvironmentVariable("SERVER_MAX_BPS"), out var bps) && bps > 0)
+        if (int.TryParse(Environment.GetEnvironmentVariable(Shared.Constants.ConfigKeys.ServerMaxBpsEnv), out var bps) && bps > 0)
             _maxBytesPerSecond = bps;
-        if (int.TryParse(Environment.GetEnvironmentVariable("SERVER_MAX_MSGS"), out var mps) && mps > 0)
+        if (int.TryParse(Environment.GetEnvironmentVariable(Shared.Constants.ConfigKeys.ServerMaxMsgsEnv), out var mps) && mps > 0)
             _maxMessagesPerSecond = mps;
-        if (int.TryParse(Environment.GetEnvironmentVariable("SERVER_IDLE_MS"), out var idle) && idle > 0)
+        if (int.TryParse(Environment.GetEnvironmentVariable(Shared.Constants.ConfigKeys.ServerIdleMsEnv), out var idle) && idle > 0)
             _idleTimeoutMs = idle;
 
         // 集中密钥提供组件：统一加载并缓存鉴权密钥
@@ -83,7 +83,11 @@ public abstract class BaseGameServer : IServerContext
         {
             AddComponent<ITokenSecretProvider>(new TokenSecretProviderComponent(AppContext.BaseDirectory));
         }
-        catch { }
+        catch (Exception ex)
+        {
+            // 鉴权密钥提供组件初始化失败不影响服务器启动（仅影响需要认证的场景），记录后继续。
+            Log($"初始化 TokenSecretProviderComponent 失败: {ex.Message}");
+        }
     }
 
     /// <summary>
@@ -176,7 +180,7 @@ public abstract class BaseGameServer : IServerContext
         // 接受连接循环（异步）
         _ = Task.Run(() => AcceptLoop(_cts.Token));
         // 周期驱动 ECS 系统更新（异步）
-        _ecsUpdateLoop = Task.Run(() => EcsUpdateLoop(_cts.Token));
+        _ = Task.Run(() => EcsUpdateLoop(_cts.Token));
     }
 
     /// <summary>
@@ -184,9 +188,24 @@ public abstract class BaseGameServer : IServerContext
     /// </summary>
     public async Task StopAsync()
     {
-        try { _cts?.Cancel(); } catch { }
-        try { _listener?.Stop(); } catch { }
-        try { _webHost?.StopAsync().Wait(); } catch { }
+        try { _cts?.Cancel(); }
+        catch (Exception ex)
+        {
+            // 取消令牌可能已释放或已取消，记录后继续关停流程。
+            Log($"取消服务器运行令牌失败: {ex.Message}");
+        }
+        try { _listener?.Stop(); }
+        catch (Exception ex)
+        {
+            // 监听器停止失败不影响后续资源释放，记录后继续。
+            Log($"停止 TCP 监听器失败: {ex.Message}");
+        }
+        try { _webHost?.StopAsync().Wait(); }
+        catch (Exception ex)
+        {
+            // WebHost 停止失败时继续执行组件销毁，避免阻塞关机。
+            Log($"停止健康检查端点失败: {ex.Message}");
+        }
         _listener = null;
         ListeningPort = null;
 
@@ -230,7 +249,11 @@ public abstract class BaseGameServer : IServerContext
                         Log($"拒绝黑名单连接: {remoteEp}");
                         client.Close();
                     }
-                    catch { }
+                    catch (Exception ex)
+                    {
+                        // 关闭黑名单连接失败不影响服务稳定性，记录后继续。
+                        Log($"关闭黑名单连接失败: {ex.Message}");
+                    }
                     // 成功接受一次连接，重置退避
                     currentBackoffMs = _acceptBackoffMs;
                     continue;
@@ -244,7 +267,11 @@ public abstract class BaseGameServer : IServerContext
                         Log($"接受到连接但已达上限 {_maxConcurrentConnections}，拒绝 {client.Client.RemoteEndPoint}");
                         client.Close();
                     }
-                    catch { }
+                    catch (Exception ex)
+                    {
+                        // 关闭超限连接失败不影响服务稳定性，记录后继续。
+                        Log($"关闭超限连接失败: {ex.Message}");
+                    }
                     continue;
                 }
                 // 异步处理客户端生命周期
@@ -292,7 +319,11 @@ public abstract class BaseGameServer : IServerContext
                 client.ReceiveTimeout = _idleTimeoutMs; // 使用空闲超时驱动断开
                 client.SendTimeout = _receiveTimeoutMs;
             }
-            catch { }
+            catch (Exception ex)
+            {
+                // 设置超时在某些平台/网络栈上可能抛出，但不影响后续处理，记录后继续。
+                Log($"设置接收/发送超时失败: {ex.Message}");
+            }
             // 每连接滑动限速：100ms 子桶近似 1s 滑窗
             const int BucketCount = 10;
             const int BucketMs = 100;

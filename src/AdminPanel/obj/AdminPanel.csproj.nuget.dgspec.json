@@ -55,6 +55,11 @@
             "Npgsql.EntityFrameworkCore.PostgreSQL": {
               "target": "Package",
               "version": "[9.0.4, )"
+            },
+            "SonarAnalyzer.CSharp": {
+              "suppressParent": "All",
+              "target": "Package",
+              "version": "[9.10.0.77988, )"
             }
           },
           "imports": [

@@ -26,7 +26,7 @@ public class InMemoryResourceRepository : IResourceRepositoryComponent
 
     public Task<BundleContent> GetBundleAsync(string name, string version)
     {
-        var info = _bundles.FirstOrDefault(b => b.Name == name);
+        var info = _bundles.Find(b => b.Name == name);
         if (info is null)
         {
             return Task.FromResult(new BundleContent(false, "bundle not found", null, string.Empty, 0));

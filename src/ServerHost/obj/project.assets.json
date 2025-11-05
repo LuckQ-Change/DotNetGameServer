@@ -1033,6 +1033,9 @@
           }
         }
       },
+      "SonarAnalyzer.CSharp/9.10.0.77988": {
+        "type": "package"
+      },
       "StackExchange.Redis/2.7.33": {
         "type": "package",
         "dependencies": {
@@ -3028,6 +3031,26 @@
         "polly.core.nuspec"
       ]
     },
+    "SonarAnalyzer.CSharp/9.10.0.77988": {
+      "sha512": "R1ks7yLAq7A9n9nYKCVzvzvGH7JM92ZmcOQFC3a7z0QqqLpdnOV7a2Qm+jM3f85SthrahLptSjg20YVqxSo6/Q==",
+      "type": "package",
+      "path": "sonaranalyzer.csharp/9.10.0.77988",
+      "hasTools": true,
+      "files": [
+        ".nupkg.metadata",
+        ".signature.p7s",
+        "analyzers/Google.Protobuf.dll",
+        "analyzers/SonarAnalyzer.CFG.dll",
+        "analyzers/SonarAnalyzer.CSharp.dll",
+        "analyzers/SonarAnalyzer.dll",
+        "images/sonarsource_64.png",
+        "license/THIRD-PARTY-NOTICES.txt",
+        "sonaranalyzer.csharp.9.10.0.77988.nupkg.sha512",
+        "sonaranalyzer.csharp.nuspec",
+        "tools/install.ps1",
+        "tools/uninstall.ps1"
+      ]
+    },
     "StackExchange.Redis/2.7.33": {
       "sha512": "2kCX5fvhEE824a4Ab5Imyi8DRuGuTxyklXV01kegkRpsWJcPmO6+GAQ+HegKxvXAxlXZ8yaRspvWJ8t3mMClfQ==",
       "type": "package",
@@ -3550,7 +3573,8 @@
       "OpenTelemetry.Extensions.Hosting >= 1.8.1",
       "OpenTelemetry.Instrumentation.Http >= 1.8.1",
       "OpenTelemetry.Instrumentation.Runtime >= 1.8.1",
-      "ResourceServer >= 1.0.0"
+      "ResourceServer >= 1.0.0",
+      "SonarAnalyzer.CSharp >= 9.10.0.77988"
     ]
   },
   "packageFolders": {
@@ -3642,6 +3666,11 @@
           "OpenTelemetry.Instrumentation.Runtime": {
             "target": "Package",
             "version": "[1.8.1, )"
+          },
+          "SonarAnalyzer.CSharp": {
+            "suppressParent": "All",
+            "target": "Package",
+            "version": "[9.10.0.77988, )"
           }
         },
         "imports": [

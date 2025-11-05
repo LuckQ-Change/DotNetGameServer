@@ -16,6 +16,7 @@
     <Import Project="$(NuGetPackageRoot)grpc.tools\2.60.0\build\Grpc.Tools.props" Condition="Exists('$(NuGetPackageRoot)grpc.tools\2.60.0\build\Grpc.Tools.props')" />
   </ImportGroup>
   <PropertyGroup Condition=" '$(ExcludeRestorePackageImports)' != 'true' ">
+    <PkgSonarAnalyzer_CSharp Condition=" '$(PkgSonarAnalyzer_CSharp)' == '' ">C:\Users\Administrator\.nuget\packages\sonaranalyzer.csharp\9.10.0.77988</PkgSonarAnalyzer_CSharp>
     <PkgGrpc_Tools Condition=" '$(PkgGrpc_Tools)' == '' ">C:\Users\Administrator\.nuget\packages\grpc.tools\2.60.0</PkgGrpc_Tools>
   </PropertyGroup>
 </Project>

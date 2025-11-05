@@ -10,6 +10,7 @@ using Polly.Timeout;
 using MessagePack;
 using System.Security.Cryptography.X509Certificates;
 using System.Net.Security;
+using Shared.Constants;
 
 namespace DirectoryServer.Components;
 
@@ -23,7 +24,6 @@ public class RedisServerRegistryComponent : IServerRegistryComponent
     private ConnectionMultiplexer? _redis;
     private IDatabase? _db;
     private CancellationTokenSource? _cts;
-    private Task? _cleanupTask;
     private readonly Policy _redisPolicy;
     private readonly bool _useMessagePack;
     private readonly RedisSecurityOptions? _securityOptions;
@@ -40,7 +40,7 @@ public class RedisServerRegistryComponent : IServerRegistryComponent
         _connectionString = connectionString;
         _keyPrefix = keyPrefix.TrimEnd(':');
         _redisPolicy = CreatePolicy();
-        _useMessagePack = useMessagePack || (Environment.GetEnvironmentVariable("DIRECTORY_REGISTRY_USE_MSGPACK") == "1");
+        _useMessagePack = useMessagePack || (Environment.GetEnvironmentVariable(ConfigKeys.DirectoryRegistryUseMsgpack) == "1");
         _securityOptions = RedisSecurityOptions.FromEnvironment();
     }
 
@@ -105,29 +105,32 @@ public class RedisServerRegistryComponent : IServerRegistryComponent
                     _checkTokenLoadedScript = _checkTokenScript.Load(server);
                 }
             }
-            catch { /* ignore */ }
+            catch (Exception)
+            {
+                // Best-effort script preloading. If this fails, runtime evaluation still works.
+                // We intentionally ignore exceptions here to avoid failing InitializeAsync.
+            }
         }
         catch (Exception ex)
         {
-            _redisConnectFailTotal.Add(1, new KeyValuePair<string, object?>("exception", ex.GetType().Name));
-            _redisErrorsTotal.Add(1, new KeyValuePair<string, object?>("op", "connect"), new KeyValuePair<string, object?>("exception", ex.GetType().Name));
-            _redisOpLatency.Record(sw.Elapsed.TotalSeconds, new KeyValuePair<string, object?>("op", "connect"));
+            _redisConnectFailTotal.Add(1, new KeyValuePair<string, object?>(TagException, ex.GetType().Name));
+            _redisErrorsTotal.Add(1, new KeyValuePair<string, object?>(TagOp, OpConnect), new KeyValuePair<string, object?>(TagException, ex.GetType().Name));
+            _redisOpLatency.Record(sw.Elapsed.TotalSeconds, new KeyValuePair<string, object?>(TagOp, OpConnect));
             throw;
         }
         finally
         {
-            _redisOpLatency.Record(sw.Elapsed.TotalSeconds, new KeyValuePair<string, object?>("op", "connect"));
+            _redisOpLatency.Record(sw.Elapsed.TotalSeconds, new KeyValuePair<string, object?>(TagOp, OpConnect));
         }
         _cts = new CancellationTokenSource();
-        _cleanupTask = Task.Run(() => CleanupLoop(_cts.Token));
+        _ = Task.Run(() => CleanupLoop(_cts.Token));
     }
 
     public Task DestroyAsync()
     {
-        try { _cts?.Cancel(); } catch { }
-        _cleanupTask = null;
+        try { _cts?.Cancel(); } catch (Exception) { /* Best-effort cancellation during teardown. */ }
         _cts = null;
-        try { _redis?.Dispose(); } catch { }
+        try { _redis?.Dispose(); } catch (Exception) { /* Best-effort dispose; ignore failures during teardown. */ }
         _redis = null;
         _db = null;
         return Task.CompletedTask;
@@ -163,7 +166,6 @@ public class RedisServerRegistryComponent : IServerRegistryComponent
         var values = RedisExec("mget_servers", () => _db.StringGet(keys));
         for (int i = 0; i < entries.Length; i++)
         {
-            var id = (string)entries[i].Element!;
             var scoreSec = entries[i].Score;
             var val = values[i];
             if (val.IsNullOrEmpty) continue;
@@ -198,8 +200,8 @@ public class RedisServerRegistryComponent : IServerRegistryComponent
                 _db.StringSet(key, token, ttl);
             });
             _switchTokenIssueTotal.Add(1,
-                new KeyValuePair<string, object?>("user_id", userId),
-                new KeyValuePair<string, object?>("server_id", target.Id));
+                new KeyValuePair<string, object?>(TagUserId, userId),
+                new KeyValuePair<string, object?>(TagServerId, target.Id));
         }
         return new SwitchToken(token, expire);
     }
@@ -231,10 +233,10 @@ public class RedisServerRegistryComponent : IServerRegistryComponent
                 if (long.TryParse(s, out var asLong)) ok = (asLong == 1L); else ok = (s == "1");
             }
             _switchTokenCheckTotal.Add(1,
-                new KeyValuePair<string, object?>("user_id", userId),
-                new KeyValuePair<string, object?>("server_id", serverId),
-                new KeyValuePair<string, object?>("consume", consume ? "true" : "false"),
-                new KeyValuePair<string, object?>("result", ok ? "success" : "fail"));
+                new KeyValuePair<string, object?>(TagUserId, userId),
+                new KeyValuePair<string, object?>(TagServerId, serverId),
+                new KeyValuePair<string, object?>(TagConsume, consume ? "true" : "false"),
+                new KeyValuePair<string, object?>(TagResult, ok ? "success" : "fail"));
             return ok;
         });
     }
@@ -330,18 +332,31 @@ public class RedisServerRegistryComponent : IServerRegistryComponent
     }
 
     // Metrics
+    // 常量化单位/标签键，避免魔法字符串
+    private const string UnitSeconds = "s";
+    private const string UnitCount = "count";
+    private const string TagOp = "op";
+    private const string TagException = "exception";
+    private const string TagUserId = "user_id";
+    private const string TagServerId = "server_id";
+    private const string TagConsume = "consume";
+    private const string TagResult = "result";
+    private const string OpConnect = "connect";
+    private const string OpUnknown = "unknown";
+    private const string OpCircuitBreak = "circuit_break";
+
     private static readonly Histogram<double> _redisOpLatency = CoreTelemetry.Meter.CreateHistogram<double>(
-        "directory_redis_op_latency_seconds", unit: "s", description: "目录服务对 Redis 的操作耗时");
+        "directory_redis_op_latency_seconds", unit: UnitSeconds, description: "目录服务对 Redis 的操作耗时");
     private static readonly Counter<long> _redisErrorsTotal = CoreTelemetry.Meter.CreateCounter<long>(
-        "directory_redis_errors_total", unit: "count", description: "目录服务对 Redis 的操作异常次数");
+        "directory_redis_errors_total", unit: UnitCount, description: "目录服务对 Redis 的操作异常次数");
     private static readonly Counter<long> _redisConnectTotal = CoreTelemetry.Meter.CreateCounter<long>(
-        "directory_redis_connect_total", unit: "count", description: "Redis 连接成功次数");
+        "directory_redis_connect_total", unit: UnitCount, description: "Redis 连接成功次数");
     private static readonly Counter<long> _redisConnectFailTotal = CoreTelemetry.Meter.CreateCounter<long>(
-        "directory_redis_connect_fail_total", unit: "count", description: "Redis 连接失败次数");
+        "directory_redis_connect_fail_total", unit: UnitCount, description: "Redis 连接失败次数");
     private static readonly Counter<long> _switchTokenIssueTotal = CoreTelemetry.Meter.CreateCounter<long>(
-        "directory_switch_token_issue_total", unit: "count", description: "发放切服令牌次数");
+        "directory_switch_token_issue_total", unit: UnitCount, description: "发放切服令牌次数");
     private static readonly Counter<long> _switchTokenCheckTotal = CoreTelemetry.Meter.CreateCounter<long>(
-        "directory_switch_token_check_total", unit: "count", description: "校验切服令牌次数");
+        "directory_switch_token_check_total", unit: UnitCount, description: "校验切服令牌次数");
 
     private void RedisExec(string op, Action action)
     {
@@ -349,17 +364,17 @@ public class RedisServerRegistryComponent : IServerRegistryComponent
         try
         {
             var ctx = new Context();
-            ctx["op"] = op;
+            ctx[TagOp] = op;
             _redisPolicy.Execute(_ => action(), ctx);
         }
         catch (Exception ex)
         {
-            _redisErrorsTotal.Add(1, new KeyValuePair<string, object?>("op", op), new KeyValuePair<string, object?>("exception", ex.GetType().Name));
+            _redisErrorsTotal.Add(1, new KeyValuePair<string, object?>(TagOp, op), new KeyValuePair<string, object?>(TagException, ex.GetType().Name));
             throw;
         }
         finally
         {
-            _redisOpLatency.Record(sw.Elapsed.TotalSeconds, new KeyValuePair<string, object?>("op", op));
+            _redisOpLatency.Record(sw.Elapsed.TotalSeconds, new KeyValuePair<string, object?>(TagOp, op));
         }
     }
 
@@ -369,17 +384,17 @@ public class RedisServerRegistryComponent : IServerRegistryComponent
         try
         {
             var ctx = new Context();
-            ctx["op"] = op;
+            ctx[TagOp] = op;
             return _redisPolicy.Execute(_ => func(), ctx);
         }
         catch (Exception ex)
         {
-            _redisErrorsTotal.Add(1, new KeyValuePair<string, object?>("op", op), new KeyValuePair<string, object?>("exception", ex.GetType().Name));
+            _redisErrorsTotal.Add(1, new KeyValuePair<string, object?>(TagOp, op), new KeyValuePair<string, object?>(TagException, ex.GetType().Name));
             throw;
         }
         finally
         {
-            _redisOpLatency.Record(sw.Elapsed.TotalSeconds, new KeyValuePair<string, object?>("op", op));
+            _redisOpLatency.Record(sw.Elapsed.TotalSeconds, new KeyValuePair<string, object?>(TagOp, op));
         }
     }
 
@@ -396,7 +411,7 @@ public class RedisServerRegistryComponent : IServerRegistryComponent
                 sleepDurationProvider: attempt => TimeSpan.FromMilliseconds(100 * Math.Pow(2, attempt)),
                 onRetry: (ex, ts, attempt, ctx) =>
                 {
-                    _redisErrorsTotal.Add(1, new KeyValuePair<string, object?>("op", ctx != null && ctx.ContainsKey("op") ? ctx["op"] : "unknown"), new KeyValuePair<string, object?>("exception", ex.GetType().Name));
+                    _redisErrorsTotal.Add(1, new KeyValuePair<string, object?>(TagOp, ctx != null && ctx.ContainsKey(TagOp) ? ctx[TagOp] : OpUnknown), new KeyValuePair<string, object?>(TagException, ex.GetType().Name));
                 });
 
         // 断路器：连续 5 次失败后熔断 30s
@@ -407,7 +422,7 @@ public class RedisServerRegistryComponent : IServerRegistryComponent
                 durationOfBreak: TimeSpan.FromSeconds(30),
                 onBreak: (ex, ts) =>
                 {
-                    _redisErrorsTotal.Add(1, new KeyValuePair<string, object?>("op", "circuit_break"), new KeyValuePair<string, object?>("exception", ex.GetType().Name));
+                    _redisErrorsTotal.Add(1, new KeyValuePair<string, object?>(TagOp, OpCircuitBreak), new KeyValuePair<string, object?>(TagException, ex.GetType().Name));
                 },
                 onReset: () => { /* no-op */ },
                 onHalfOpen: () => { /* no-op */ }
@@ -432,11 +447,11 @@ public class RedisServerRegistryComponent : IServerRegistryComponent
         {
             try
             {
-                var sslEnv = Environment.GetEnvironmentVariable("DIRECTORY_REDIS_SSL");
-                var sslHostEnv = Environment.GetEnvironmentVariable("DIRECTORY_REDIS_SSL_HOST");
-                var certPathEnv = Environment.GetEnvironmentVariable("DIRECTORY_REDIS_CLIENT_CERT_PATH");
-                var certPwdEnv = Environment.GetEnvironmentVariable("DIRECTORY_REDIS_CLIENT_CERT_PASSWORD");
-                var validateEnv = Environment.GetEnvironmentVariable("DIRECTORY_REDIS_VALIDATE_SERVER_CERT");
+                var sslEnv = Environment.GetEnvironmentVariable(ConfigKeys.DirectoryRedisSsl);
+                var sslHostEnv = Environment.GetEnvironmentVariable(ConfigKeys.DirectoryRedisSslHost);
+                var certPathEnv = Environment.GetEnvironmentVariable(ConfigKeys.DirectoryRedisClientCertPath);
+                var certPwdEnv = Environment.GetEnvironmentVariable(ConfigKeys.DirectoryRedisClientCertPassword);
+                var validateEnv = Environment.GetEnvironmentVariable(ConfigKeys.DirectoryRedisValidateServerCert);
 
                 bool hasAny = !string.IsNullOrWhiteSpace(sslEnv) || !string.IsNullOrWhiteSpace(sslHostEnv)
                               || !string.IsNullOrWhiteSpace(certPathEnv) || !string.IsNullOrWhiteSpace(validateEnv);
@@ -454,20 +469,17 @@ public class RedisServerRegistryComponent : IServerRegistryComponent
                 }
 
                 RemoteCertificateValidationCallback? validation = null;
-                if (!string.IsNullOrWhiteSpace(validateEnv))
+                if (!string.IsNullOrWhiteSpace(validateEnv) && bool.TryParse(validateEnv, out var validateFlag))
                 {
-                    if (bool.TryParse(validateEnv, out var validateFlag))
+                    validation = (sender, certificate, chain, errors) =>
                     {
-                        validation = (sender, certificate, chain, errors) =>
+                        if (validateFlag)
                         {
-                            if (validateFlag)
-                            {
-                                return errors == SslPolicyErrors.None;
-                            }
-                            // 允许跳过验证（仅测试环境使用）
-                            return true;
-                        };
-                    }
+                            return errors == SslPolicyErrors.None;
+                        }
+                        // 允许跳过验证（仅测试环境使用）
+                        return true;
+                    };
                 }
 
                 return new RedisSecurityOptions

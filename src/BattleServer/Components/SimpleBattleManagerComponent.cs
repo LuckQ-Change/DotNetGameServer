@@ -11,12 +11,22 @@ public class SimpleBattleManagerComponent : IBattleManagerComponent
 
     public Task InitializeAsync()
     {
+        // 初始化：清空战斗状态
         _battles.Clear();
         return Task.CompletedTask;
     }
 
     public Task DestroyAsync()
     {
+        // 销毁：将所有进行中的战斗标记为结束，然后清理状态，避免与 InitializeAsync 完全相同的实现。
+        foreach (var id in _battles.Keys.ToList())
+        {
+            var b = _battles[id];
+            if (b.IsActive)
+            {
+                _battles[id] = b with { IsActive = false };
+            }
+        }
         _battles.Clear();
         return Task.CompletedTask;
     }
@@ -86,9 +96,15 @@ public class SimpleBattleManagerComponent : IBattleManagerComponent
             await EndBattleAsync(battleId);
         }
 
-        var message = battleEnded
-            ? (playerWon ? "战斗胜利！" : "战斗失败！")
-            : $"造成 {damage} 伤害，敌人反击 {enemyDamage} 伤害";
+        string message;
+        if (battleEnded)
+        {
+            message = playerWon ? "战斗胜利！" : "战斗失败！";
+        }
+        else
+        {
+            message = $"造成 {damage} 伤害，敌人反击 {enemyDamage} 伤害";
+        }
 
         return new AttackResult(message, newPlayerHp, newEnemyHp, battleEnded, playerWon);
     }

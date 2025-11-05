@@ -65,6 +65,11 @@ dotnet_style_prefer_simplified_boolean_expressions = true:suggestion
 # Enforce trailing commas in multi-line initializers
 dotnet_style_allow_multiple_blank_lines_experimental = false:suggestion
 
+# Magic strings / Duplicate string literals
+# 规则：禁止在代码中出现“明显的业务含义字符串”作为硬编码；如需使用，请抽取为常量、枚举或资源（Resx）
+# 说明：启用 Sonar C# 规则 S1192，将重复出现的字符串字面量视为问题，强制开发者提取为常量或资源
+dotnet_diagnostic.S1192.severity = error
+
 [*.{csproj,props,targets}]
 indent_style = space
 indent_size = 2

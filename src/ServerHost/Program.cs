@@ -14,6 +14,7 @@ using LoginServer.Components;
 using OpenTelemetry.Resources;
 using OpenTelemetry.Metrics;
 using Core.Telemetry;
+using ServerHost; // 访问命名空间中的类型（HostingUtilities、GameServerService）
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -41,11 +42,8 @@ builder.Services.AddDbContext<GameDbContext>(options =>
 builder.Services.AddScoped<IUserAuthComponent, DbUserAuthComponent>();
 
 // Telemetry: Metrics
-var metricsEnabled = builder.Configuration.GetValue<bool?>("telemetry:metrics:enabled")
-    ?? (bool.TryParse(Environment.GetEnvironmentVariable("TELEMETRY_METRICS_ENABLED"), out var v) ? v : false);
-var metricsMode = builder.Configuration["telemetry:metrics:mode"]
-    ?? Environment.GetEnvironmentVariable("TELEMETRY_METRICS_MODE")
-    ?? "prometheus";
+var metricsEnabled = builder.Configuration.GetValue<bool?>(Shared.Constants.ConfigKeys.TelemetryMetricsEnabledKeyLower)
+    ?? (bool.TryParse(Environment.GetEnvironmentVariable(Shared.Constants.ConfigKeys.TelemetryMetricsEnabledEnv), out var v) && v);
 
 if (metricsEnabled)
 {
@@ -57,14 +55,16 @@ if (metricsEnabled)
             mb.AddHttpClientInstrumentation();
             mb.AddMeter(CoreTelemetry.Meter.Name);
 
-            var endpoint = builder.Configuration["telemetry:metrics:otlp:endpoint"]
-                ?? Environment.GetEnvironmentVariable("OTLP_ENDPOINT")
-                ?? "http://localhost:4318";
-            mb.AddOtlpExporter(otlpOptions =>
+            var endpoint = builder.Configuration[Shared.Constants.ConfigKeys.TelemetryMetricsOtlpEndpointKeyLower]
+                ?? Environment.GetEnvironmentVariable(Shared.Constants.ConfigKeys.OtlpEndpointEnv);
+            if (!string.IsNullOrWhiteSpace(endpoint))
             {
-                otlpOptions.Endpoint = new Uri(endpoint);
-                otlpOptions.Protocol = OpenTelemetry.Exporter.OtlpExportProtocol.HttpProtobuf;
-            });
+                mb.AddOtlpExporter(otlpOptions =>
+                {
+                    otlpOptions.Endpoint = new Uri(endpoint);
+                    otlpOptions.Protocol = OpenTelemetry.Exporter.OtlpExportProtocol.HttpProtobuf;
+                });
+            }
         });
 }
 
@@ -76,32 +76,19 @@ builder.Logging.ClearProviders();
 builder.Logging.AddConsole();
 
 // Health check HTTP URL
-var healthUrl = builder.Configuration["service:healthCheckUrl"]
-               ?? Environment.GetEnvironmentVariable("SERVICE__HEALTHCHECKURL")
-               ?? Environment.GetEnvironmentVariable("HEALTHCHECK_URL")
-               ?? "http://localhost:5100";
+var healthUrl = builder.Configuration[Shared.Constants.ConfigKeys.ServiceHealthCheckUrlKeyLower]
+               ?? Environment.GetEnvironmentVariable(Shared.Constants.ConfigKeys.ServiceHealthCheckUrlEnv)
+               ?? Environment.GetEnvironmentVariable(Shared.Constants.ConfigKeys.HealthCheckUrlEnv);
 
 var app = builder.Build();
 // Configure listening URL for the embedded HTTP server (health checks)
-try { app.Urls.Add(healthUrl); } catch { /* ignore malformed url */ }
+if (!string.IsNullOrWhiteSpace(healthUrl))
+{
+    try { app.Urls.Add(healthUrl); } catch { /* ignore malformed url */ }
+}
 
 // Seed the database in development environment
-{
-    using var scope = app.Services.CreateScope();
-    var services = scope.ServiceProvider;
-    var env = services.GetRequiredService<IHostEnvironment>();
-    if (env.IsDevelopment())
-    {
-        var dbContext = services.GetRequiredService<GameDbContext>();
-        if (!dbContext.Users.Any())
-        {
-            // Assuming the User model is accessible, as per the user's intent.
-            // A 'using' for the User model's namespace and System.Linq may be required.
-            dbContext.Users.Add(new Core.Db.User { Username = "test", Password = "password" });
-            dbContext.SaveChanges();
-        }
-    }
-}
+HostingUtilities.SeedDevelopmentDatabase(app.Services);
 
 // Map health checks endpoint
 app.MapHealthChecks("/health", new Microsoft.AspNetCore.Diagnostics.HealthChecks.HealthCheckOptions
@@ -126,6 +113,30 @@ app.MapHealthChecks("/health", new Microsoft.AspNetCore.Diagnostics.HealthChecks
 
 await app.RunAsync();
 
+namespace ServerHost
+{
+    public static class HostingUtilities
+    {
+        public static void SeedDevelopmentDatabase(IServiceProvider services)
+        {
+            using var scope = services.CreateScope();
+            var serviceProvider = scope.ServiceProvider;
+            var env = serviceProvider.GetRequiredService<IHostEnvironment>();
+            if (env.IsDevelopment())
+            {
+                var dbContext = serviceProvider.GetRequiredService<GameDbContext>();
+                if (!dbContext.Users.Any())
+                {
+                    dbContext.Users.Add(new Core.Db.User { Username = "test", Password = "password" });
+                    dbContext.SaveChanges();
+                }
+            }
+        }
+    }
+}
+
+namespace ServerHost
+{
 public class GameServerService : IHostedService
 {
     private readonly ILogger<GameServerService> _logger;
@@ -144,9 +155,9 @@ public class GameServerService : IHostedService
 
     public async Task StartAsync(CancellationToken cancellationToken)
     {
-        var service = _configuration["service"] ?? Environment.GetEnvironmentVariable("SERVICE") ?? "directory";
+        var service = _configuration[Shared.Constants.ConfigKeys.ServiceConfigKey] ?? Environment.GetEnvironmentVariable(Shared.Constants.ConfigKeys.ServiceEnv) ?? "directory";
         var port = _configuration.GetValue<int?>("port") ??
-                   (int.TryParse(Environment.GetEnvironmentVariable("PORT"), out var p) ? p : 5500);
+                   (int.TryParse(Environment.GetEnvironmentVariable(Shared.Constants.ConfigKeys.PortEnv), out var p) ? p : 5500);
 
         // 启动提示（更明显的控制台输出）
         _logger.LogInformation("[Host] 正在启动服务: {service} (port={port}, env={env})", service, port, _hostEnvironment.EnvironmentName);
@@ -158,7 +169,7 @@ public class GameServerService : IHostedService
         // 安全护栏：Production 环境下进行关键配置校验
         if (_hostEnvironment.IsProduction())
         {
-            ValidateProductionConfiguration(service);
+            ValidateProductionConfiguration();
         }
 
         _server = service.ToLowerInvariant() switch
@@ -184,7 +195,7 @@ public class GameServerService : IHostedService
             await _server.StopAsync();
         }
     }
-    private void ValidateProductionConfiguration(string service)
+    private void ValidateProductionConfiguration()
     {
         // 目录令牌密钥校验：禁止使用默认 dev-secret/changeme
         var secret = Core.Config.SimpleConfigLoader.LoadDirectoryTokenSecret(AppContext.BaseDirectory);
@@ -194,10 +205,10 @@ public class GameServerService : IHostedService
         }
 
         // Redis 连接串校验（当目录注册模式为 redis）
-        var registryMode = (_configuration["directory:registry:mode"] ?? Environment.GetEnvironmentVariable("DIRECTORY_REGISTRY") ?? "memory").ToLowerInvariant();
-        if (registryMode == "redis")
+        var registryMode = (_configuration[Shared.Constants.ConfigKeys.DirectoryRegistryModeLower] ?? Environment.GetEnvironmentVariable(Shared.Constants.ConfigKeys.DirectoryRegistryEnv) ?? Shared.Constants.ConfigKeys.DirectoryRegistryModeValueMemory).ToLowerInvariant();
+        if (registryMode == Shared.Constants.ConfigKeys.DirectoryRegistryModeValueRedis)
         {
-            var conn = _configuration["directory:registry:redis:connectionString"] ?? Environment.GetEnvironmentVariable("REDIS_CONNECTION");
+            var conn = _configuration[Shared.Constants.ConfigKeys.DirectoryRegistryRedisConnectionStringLower] ?? Environment.GetEnvironmentVariable(Shared.Constants.ConfigKeys.RedisConnectionEnv);
             if (string.IsNullOrWhiteSpace(conn))
             {
                 throw new InvalidOperationException("[Guard] 生产环境启用 Redis 注册表时必须提供 REDIS_CONNECTION（含密码/鉴权或采用 TLS），当前缺失。");
@@ -218,5 +229,6 @@ public class GameServerService : IHostedService
             }
         }
     }
+}
 }
 // NOTE: Using directives should appear at the top of the file. The previous attempt added them mid-file and caused CS1529.

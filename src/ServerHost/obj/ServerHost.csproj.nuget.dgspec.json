@@ -49,6 +49,13 @@
       "frameworks": {
         "net8.0": {
           "targetAlias": "net8.0",
+          "dependencies": {
+            "SonarAnalyzer.CSharp": {
+              "suppressParent": "All",
+              "target": "Package",
+              "version": "[9.10.0.77988, )"
+            }
+          },
           "imports": [
             "net461",
             "net462",
@@ -134,6 +141,11 @@
             "Microsoft.Extensions.Logging.Abstractions": {
               "target": "Package",
               "version": "[8.0.0, )"
+            },
+            "SonarAnalyzer.CSharp": {
+              "suppressParent": "All",
+              "target": "Package",
+              "version": "[9.10.0.77988, )"
             }
           },
           "imports": [
@@ -213,6 +225,11 @@
               "target": "Package",
               "version": "[8.4.2, )"
             },
+            "SonarAnalyzer.CSharp": {
+              "suppressParent": "All",
+              "target": "Package",
+              "version": "[9.10.0.77988, )"
+            },
             "StackExchange.Redis": {
               "target": "Package",
               "version": "[2.7.33, )"
@@ -286,6 +303,13 @@
       "frameworks": {
         "net8.0": {
           "targetAlias": "net8.0",
+          "dependencies": {
+            "SonarAnalyzer.CSharp": {
+              "suppressParent": "All",
+              "target": "Package",
+              "version": "[9.10.0.77988, )"
+            }
+          },
           "imports": [
             "net461",
             "net462",
@@ -351,6 +375,13 @@
       "frameworks": {
         "net8.0": {
           "targetAlias": "net8.0",
+          "dependencies": {
+            "SonarAnalyzer.CSharp": {
+              "suppressParent": "All",
+              "target": "Package",
+              "version": "[9.10.0.77988, )"
+            }
+          },
           "imports": [
             "net461",
             "net462",
@@ -416,6 +447,13 @@
       "frameworks": {
         "net8.0": {
           "targetAlias": "net8.0",
+          "dependencies": {
+            "SonarAnalyzer.CSharp": {
+              "suppressParent": "All",
+              "target": "Package",
+              "version": "[9.10.0.77988, )"
+            }
+          },
           "imports": [
             "net461",
             "net462",
@@ -522,6 +560,11 @@
             "OpenTelemetry.Instrumentation.Runtime": {
               "target": "Package",
               "version": "[1.8.1, )"
+            },
+            "SonarAnalyzer.CSharp": {
+              "suppressParent": "All",
+              "target": "Package",
+              "version": "[9.10.0.77988, )"
             }
           },
           "imports": [
@@ -602,6 +645,11 @@
               "suppressParent": "All",
               "target": "Package",
               "version": "[2.60.0, )"
+            },
+            "SonarAnalyzer.CSharp": {
+              "suppressParent": "All",
+              "target": "Package",
+              "version": "[9.10.0.77988, )"
             }
           },
           "imports": [

@@ -1,6 +1,6 @@
 {
   "version": 2,
-  "dgSpecHash": "Hpv+N3Oq1jE=",
+  "dgSpecHash": "i+x4aCSAICM=",
   "success": true,
   "projectFilePath": "C:\\Users\\Administrator\\Desktop\\TTT\\DotNetGameServer\\src\\ServerHost\\ServerHost.csproj",
   "expectedPackageFiles": [
@@ -54,6 +54,7 @@
     "C:\\Users\\Administrator\\.nuget\\packages\\pipelines.sockets.unofficial\\2.2.8\\pipelines.sockets.unofficial.2.2.8.nupkg.sha512",
     "C:\\Users\\Administrator\\.nuget\\packages\\polly\\8.4.2\\polly.8.4.2.nupkg.sha512",
     "C:\\Users\\Administrator\\.nuget\\packages\\polly.core\\8.4.2\\polly.core.8.4.2.nupkg.sha512",
+    "C:\\Users\\Administrator\\.nuget\\packages\\sonaranalyzer.csharp\\9.10.0.77988\\sonaranalyzer.csharp.9.10.0.77988.nupkg.sha512",
     "C:\\Users\\Administrator\\.nuget\\packages\\stackexchange.redis\\2.7.33\\stackexchange.redis.2.7.33.nupkg.sha512",
     "C:\\Users\\Administrator\\.nuget\\packages\\system.codedom\\4.4.0\\system.codedom.4.4.0.nupkg.sha512",
     "C:\\Users\\Administrator\\.nuget\\packages\\system.collections.immutable\\6.0.0\\system.collections.immutable.6.0.0.nupkg.sha512",

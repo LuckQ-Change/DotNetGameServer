@@ -1,4 +1,5 @@
 using Core;
+using Shared.Constants;
 using Core.Components;
 using DotNetGameServer;
 using Microsoft.Extensions.Configuration;
@@ -6,28 +7,18 @@ using Microsoft.Extensions.Logging;
 
 namespace ResourceServer;
 
-public class ResourceGameServer : BaseGameServer
+public class ResourceGameServer(ILogger<ResourceGameServer> logger, IConfiguration configuration)
+    : BaseGameServer(nameof(ResourceGameServer), logger)
 {
-    private readonly IConfiguration? _configuration;
-
-    public ResourceGameServer(ILogger<ResourceGameServer> logger) : base("Resource", logger)
-    {
-        _configuration = null;
-    }
-
-    public ResourceGameServer(ILogger<ResourceGameServer> logger, IConfiguration configuration) : base("Resource", logger)
-    {
-        _configuration = configuration;
-    }
+    private readonly IConfiguration? _configuration = configuration;
 
     public override async Task StartAsync(int port)
     {
-        // Register message handlers
-        RegisterStrongMessageHandler<QueryVersionRequest, QueryVersionResponse>(new QueryVersionMessageHandler());
-        RegisterStrongMessageHandler<GetBundleRequest, GetBundleResponse>(new GetBundleMessageHandler());
+        RegisterStrongMessageHandler(new QueryVersionMessageHandler());
+        RegisterStrongMessageHandler(new GetBundleMessageHandler());
 
         // 资源根目录可配置：优先读取 appsettings resource:root，其次环境变量 RESOURCE_ROOT，最后默认程序根目录下的 Resources
-        var resourceRoot = _configuration?["resource:root"] ?? Environment.GetEnvironmentVariable("RESOURCE_ROOT");
+        var resourceRoot = _configuration?[ConfigKeys.ResourceRootConfigKey] ?? Environment.GetEnvironmentVariable(ConfigKeys.ResourceRootEnv);
         if (string.IsNullOrWhiteSpace(resourceRoot))
         {
             resourceRoot = Path.Combine(AppContext.BaseDirectory, "Resources");

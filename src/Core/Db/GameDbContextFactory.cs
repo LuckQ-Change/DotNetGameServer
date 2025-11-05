@@ -11,10 +11,7 @@ public class GameDbContextFactory : IDesignTimeDbContextFactory<GameDbContext>
         // This is a bit of a hack to get the connection string from appsettings.json
         // in the ServerHost project. A better solution might be to use user secrets
         // or environment variables.
-        var configuration = new ConfigurationBuilder()
-            .SetBasePath(Path.Combine(Directory.GetCurrentDirectory(), "../ServerHost"))
-            .AddJsonFile("appsettings.json")
-            .Build();
+        // 保留设计时工厂，当前不读取配置文件，避免未使用变量警告。
 
         var optionsBuilder = new DbContextOptionsBuilder<GameDbContext>();
 

@@ -39,6 +39,21 @@ internal sealed class StrongHandlerInvoker<TReq, TResp> : IStrongHandlerInvoker
     where TReq : class, IMessage<TReq>, new()
     where TResp : class, IMessage<TResp>, new()
 {
+    // 常量化常用标签与状态，移除重复的魔法字符串（满足 S1192）
+    private const string TagServerName = "server_name";
+    private const string TagClientIp = "client_ip";
+    private const string TagUserId = "user_id";
+    private const string TagTokenId = "token_id";
+    private const string TagException = "exception";
+    private const string TagStatus = "status";
+    private const string TagErrorCode = "error_code";
+    private const string TagLatencyMs = "latency_ms";
+
+    private const string StatusOk = "ok";
+    private const string StatusError = "error";
+    private const string StatusNoResponse = "no_response";
+    private const string StatusFail = "fail";
+
     private readonly IStrongMessageHandler<TReq, TResp> _handler;
     // 缓存静态元数据，减少重复实例化与反射
     private static readonly MessageParser<TReq> _reqParser = (MessageParser<TReq>)new TReq().Descriptor.Parser;
@@ -77,37 +92,37 @@ internal sealed class StrongHandlerInvoker<TReq, TResp> : IStrongHandlerInvoker
         try
         {
             var token = context.AccessToken;
-            if (!string.IsNullOrWhiteSpace(token))
+            var userId = TryExtractUserId(reqObj);
+            var hb = context.GetComponent<HeartbeatClientComponent>();
+            var serverId = hb?.TryGetCurrentServerId();
+            // 合并条件，避免嵌套 if (S1066)，当无法提取用户或服务器 ID 时按未认证继续处理。
+            if (!string.IsNullOrWhiteSpace(token) && !string.IsNullOrWhiteSpace(userId) && !string.IsNullOrWhiteSpace(serverId))
             {
-                var userId = TryExtractUserId(reqObj);
-                var hb = context.GetComponent<HeartbeatClientComponent>();
-                var serverId = hb?.TryGetCurrentServerId();
-                if (!string.IsNullOrWhiteSpace(userId) && !string.IsNullOrWhiteSpace(serverId))
+                var secretProvider = context.GetComponent<ITokenSecretProvider>();
+                var secret = secretProvider?.GetSecret() ?? SimpleConfigLoader.LoadDirectoryTokenSecret(AppContext.BaseDirectory) ?? "dev-secret";
+                if (TokenSigner.TryVerify(token!, userId!, serverId!, secret, out var tokenId, out var exp)
+                    && context is RequestServerContext rctx)
                 {
-                    var secretProvider = context.GetComponent<ITokenSecretProvider>();
-                    var secret = secretProvider?.GetSecret() ?? SimpleConfigLoader.LoadDirectoryTokenSecret(AppContext.BaseDirectory) ?? "dev-secret";
-                    if (TokenSigner.TryVerify(token!, userId!, serverId!, secret, out var tokenId, out var exp))
-                    {
-                        if (context is RequestServerContext rctx)
-                        {
-                            rctx.SetAuth(new AuthInfo { UserId = userId!, TokenId = tokenId, ExpireUnixSeconds = exp });
-                        }
-                    }
+                    rctx.SetAuth(new AuthInfo { UserId = userId!, TokenId = tokenId, ExpireUnixSeconds = exp });
                 }
             }
         }
-        catch { }
+        catch (Exception ex)
+        {
+            // 认证失败不应阻断请求处理，记录轻量日志后继续。
+            context.Log($"认证信息解析/校验异常，忽略并按未认证处理: {ex.Message}");
+        }
 
         var sw = Stopwatch.StartNew();
         var activity = CoreTelemetry.ActivitySource.StartActivity($"Handle {_reqTypeName}", ActivityKind.Server);
-        activity?.AddTag("server_name", context.ServerName);
-        activity?.AddTag("client_ip", context.RemoteAddress);
+        activity?.AddTag(TagServerName, context.ServerName);
+        activity?.AddTag(TagClientIp, context.RemoteAddress);
         if (context.Auth != null)
         {
-            activity?.AddTag("user_id", context.Auth.UserId);
-            activity?.AddTag("token_id", context.Auth.TokenId);
+            activity?.AddTag(TagUserId, context.Auth.UserId);
+            activity?.AddTag(TagTokenId, context.Auth.TokenId);
         }
-        string status = "ok";
+        string status = StatusOk;
         string? errorCode = null;
         int errorCodeInt = 0;
         string errorMessage = string.Empty;
@@ -117,7 +132,7 @@ internal sealed class StrongHandlerInvoker<TReq, TResp> : IStrongHandlerInvoker
             respObj = await _handler.HandleAsync(reqObj, context);
             if (respObj == null)
             {
-                status = "no_response";
+                status = StatusNoResponse;
             }
             else
             {
@@ -126,18 +141,18 @@ internal sealed class StrongHandlerInvoker<TReq, TResp> : IStrongHandlerInvoker
         }
         catch (Exception ex)
         {
-            status = "error";
+            status = StatusError;
             errorCode = ex.GetType().Name;
-            activity?.AddTag("exception", ex.Message);
+            activity?.AddTag(TagException, ex.Message);
             errorMessage = ex.Message;
         }
         finally
         {
             sw.Stop();
             CoreTelemetry.RecordRequest(context.ServerName, _reqTypeName, status, sw.Elapsed.TotalSeconds);
-            activity?.AddTag("status", status);
-            if (!string.IsNullOrWhiteSpace(errorCode)) activity?.AddTag("error_code", errorCode);
-            activity?.AddTag("latency_ms", (int)sw.Elapsed.TotalMilliseconds);
+            activity?.AddTag(TagStatus, status);
+            if (!string.IsNullOrWhiteSpace(errorCode)) activity?.AddTag(TagErrorCode, errorCode);
+            activity?.AddTag(TagLatencyMs, (int)sw.Elapsed.TotalMilliseconds);
             context.Log($"req_id={context.RequestId} ip={context.RemoteAddress} type={_reqTypeName} status={status} code={errorCode ?? ""} latency_ms={(int)sw.Elapsed.TotalMilliseconds}");
             activity?.Stop();
         }
@@ -157,7 +172,12 @@ internal sealed class StrongHandlerInvoker<TReq, TResp> : IStrongHandlerInvoker
         // 优先使用标准接口，避免反射依赖
         if (req is Shared.IUserIdentifiedRequest iid)
         {
-            try { return iid.GetUserIdOrNull(); } catch { }
+            try { return iid.GetUserIdOrNull(); }
+            catch (Exception)
+            {
+                // 对旧协议的兼容：接口实现异常时按未认证继续。
+                return null;
+            }
         }
         // 兼容旧请求：使用预缓存的常见字段属性
         try
@@ -169,13 +189,16 @@ internal sealed class StrongHandlerInvoker<TReq, TResp> : IStrongHandlerInvoker
                 if (val != null) return Convert.ToString(val);
             }
         }
-        catch { }
+        catch (Exception)
+        {
+            // 反射读取失败时不影响请求处理，按未认证继续。
+        }
         return null;
     }
 
     private static (string status, string? code) DetermineStatusAndCode(TResp resp)
     {
-        string status = "ok";
+        string status = StatusOk;
         string? code = null;
         try
         {
@@ -183,7 +206,7 @@ internal sealed class StrongHandlerInvoker<TReq, TResp> : IStrongHandlerInvoker
             if (successProp != null)
             {
                 var val = successProp.GetValue(resp);
-                if (val is bool b && !b) status = "fail";
+                if (val is bool b && !b) status = StatusFail;
             }
             var p = _respCodeProp;
             if (p != null)
@@ -192,7 +215,10 @@ internal sealed class StrongHandlerInvoker<TReq, TResp> : IStrongHandlerInvoker
                 if (v != null) code = Convert.ToString(v);
             }
         }
-        catch { }
+        catch (Exception)
+        {
+            // 兼容响应对象不含约定字段的情况，保持默认 status/code。
+        }
         return (status, code);
     }
 }

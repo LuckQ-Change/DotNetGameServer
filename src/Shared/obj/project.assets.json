@@ -83,6 +83,9 @@
         "build": {
           "buildTransitive/netcoreapp3.1/_._": {}
         }
+      },
+      "SonarAnalyzer.CSharp/9.10.0.77988": {
+        "type": "package"
       }
     }
   },
@@ -290,13 +293,34 @@
         "microsoft.extensions.logging.abstractions.nuspec",
         "useSharedDesignerContext.txt"
       ]
+    },
+    "SonarAnalyzer.CSharp/9.10.0.77988": {
+      "sha512": "R1ks7yLAq7A9n9nYKCVzvzvGH7JM92ZmcOQFC3a7z0QqqLpdnOV7a2Qm+jM3f85SthrahLptSjg20YVqxSo6/Q==",
+      "type": "package",
+      "path": "sonaranalyzer.csharp/9.10.0.77988",
+      "hasTools": true,
+      "files": [
+        ".nupkg.metadata",
+        ".signature.p7s",
+        "analyzers/Google.Protobuf.dll",
+        "analyzers/SonarAnalyzer.CFG.dll",
+        "analyzers/SonarAnalyzer.CSharp.dll",
+        "analyzers/SonarAnalyzer.dll",
+        "images/sonarsource_64.png",
+        "license/THIRD-PARTY-NOTICES.txt",
+        "sonaranalyzer.csharp.9.10.0.77988.nupkg.sha512",
+        "sonaranalyzer.csharp.nuspec",
+        "tools/install.ps1",
+        "tools/uninstall.ps1"
+      ]
     }
   },
   "projectFileDependencyGroups": {
     "net8.0": [
       "Google.Protobuf >= 3.25.1",
       "Grpc.Net.Client >= 2.59.0",
-      "Grpc.Tools >= 2.60.0"
+      "Grpc.Tools >= 2.60.0",
+      "SonarAnalyzer.CSharp >= 9.10.0.77988"
     ]
   },
   "packageFolders": {
@@ -357,6 +381,11 @@
             "suppressParent": "All",
             "target": "Package",
             "version": "[2.60.0, )"
+          },
+          "SonarAnalyzer.CSharp": {
+            "suppressParent": "All",
+            "target": "Package",
+            "version": "[9.10.0.77988, )"
           }
         },
         "imports": [

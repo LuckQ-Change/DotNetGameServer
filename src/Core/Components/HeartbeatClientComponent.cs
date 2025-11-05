@@ -63,7 +63,15 @@ public class HeartbeatClientComponent : IServerComponent
     /// </summary>
     public Task DestroyAsync()
     {
-        try { _cts?.Cancel(); } catch { }
+        try { _cts?.Cancel(); }
+        catch (OperationCanceledException)
+        {
+            // 循环已取消
+        }
+        catch (Exception)
+        {
+            // 非关键异常，忽略以完成销毁流程。
+        }
         _loopTask = null;
         _cts = null;
         return Task.CompletedTask;
@@ -106,7 +114,16 @@ public class HeartbeatClientComponent : IServerComponent
                 _log($"[目录] 心跳发送异常: {ex.Message}");
             }
 
-            try { await Task.Delay(interval, token); } catch { }
+            try { await Task.Delay(interval, token); }
+            catch (OperationCanceledException)
+            {
+                // 取消心跳循环
+                break;
+            }
+            catch (Exception)
+            {
+                // 非关键异常，忽略以保持心跳循环。
+            }
         }
     }
 
@@ -125,7 +142,10 @@ public class HeartbeatClientComponent : IServerComponent
             var secret = SimpleConfigLoader.LoadDirectoryTokenSecret(AppContext.BaseDirectory) ?? "dev-secret";
             env.Token = TokenSigner.ComposeHeartbeatToken(req.Id, secret, 300);
         }
-        catch { }
+        catch (Exception)
+        {
+            // 心跳令牌生成失败时发送未签名心跳，目录服务可按未认证处理。
+        }
         var bytes = env.ToByteArray();
         var len = BitConverter.GetBytes(bytes.Length);
         await stream.WriteAsync(len.AsMemory(0, 4), ct);

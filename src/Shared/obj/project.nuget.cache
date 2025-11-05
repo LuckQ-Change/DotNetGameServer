@@ -1,6 +1,6 @@
 {
   "version": 2,
-  "dgSpecHash": "I0f2dD/vpmQ=",
+  "dgSpecHash": "O0kqMsZ4p30=",
   "success": true,
   "projectFilePath": "C:\\Users\\Administrator\\Desktop\\TTT\\DotNetGameServer\\src\\Shared\\Shared.csproj",
   "expectedPackageFiles": [
@@ -9,7 +9,8 @@
     "C:\\Users\\Administrator\\.nuget\\packages\\grpc.net.client\\2.59.0\\grpc.net.client.2.59.0.nupkg.sha512",
     "C:\\Users\\Administrator\\.nuget\\packages\\grpc.net.common\\2.59.0\\grpc.net.common.2.59.0.nupkg.sha512",
     "C:\\Users\\Administrator\\.nuget\\packages\\grpc.tools\\2.60.0\\grpc.tools.2.60.0.nupkg.sha512",
-    "C:\\Users\\Administrator\\.nuget\\packages\\microsoft.extensions.logging.abstractions\\6.0.0\\microsoft.extensions.logging.abstractions.6.0.0.nupkg.sha512"
+    "C:\\Users\\Administrator\\.nuget\\packages\\microsoft.extensions.logging.abstractions\\6.0.0\\microsoft.extensions.logging.abstractions.6.0.0.nupkg.sha512",
+    "C:\\Users\\Administrator\\.nuget\\packages\\sonaranalyzer.csharp\\9.10.0.77988\\sonaranalyzer.csharp.9.10.0.77988.nupkg.sha512"
   ],
   "logs": []
 }

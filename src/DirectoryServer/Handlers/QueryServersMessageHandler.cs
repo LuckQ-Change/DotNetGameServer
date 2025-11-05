@@ -48,7 +48,7 @@ public class QueryServersMessageHandler : IStrongMessageHandler<QueryServersRequ
         }
 
         // 智能策略排序
-        IEnumerable<ServerRecord> ordered = all;
+        IEnumerable<ServerRecord> ordered;
         var now = DateTime.UtcNow;
         var strategy = (request.Strategy ?? string.Empty).ToLowerInvariant();
         if (strategy == "load")

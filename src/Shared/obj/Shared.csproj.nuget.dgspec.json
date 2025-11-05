@@ -59,6 +59,11 @@
               "suppressParent": "All",
               "target": "Package",
               "version": "[2.60.0, )"
+            },
+            "SonarAnalyzer.CSharp": {
+              "suppressParent": "All",
+              "target": "Package",
+              "version": "[9.10.0.77988, )"
             }
           },
           "imports": [

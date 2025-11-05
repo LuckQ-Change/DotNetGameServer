@@ -7,13 +7,11 @@ namespace ResourceServer;
 public class FileSystemResourceRepository : IResourceRepositoryComponent
 {
     private readonly string _root;
-    private readonly string _versionFile;
     public string Name => "FileSystemResourceRepository";
 
     public FileSystemResourceRepository(string root)
     {
         _root = root;
-        _versionFile = Path.Combine(_root, "version.txt");
     }
 
     public Task InitializeAsync()

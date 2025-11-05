@@ -11,29 +11,32 @@ public class InMemoryServerRegistryComponent : IServerRegistryComponent
     private readonly TimeSpan _offlineTtl = TimeSpan.FromSeconds(120);
     private readonly TimeSpan _removeTtl = TimeSpan.FromMinutes(10);
     private CancellationTokenSource? _cts;
-    private Task? _cleanupTask;
 
     public string Name => "ServerRegistry";
 
     // Metrics
+    private const string UnitCount = "count";
+    private const string TagUserId = "user_id";
+    private const string TagServerId = "server_id";
+    private const string TagConsume = "consume";
+    private const string TagResult = "result";
     private static readonly Counter<long> _switchTokenIssueTotal = CoreTelemetry.Meter.CreateCounter<long>(
-        "directory_switch_token_issue_total", unit: "count", description: "发放切服令牌次数");
+        "directory_switch_token_issue_total", unit: UnitCount, description: "发放切服令牌次数");
     private static readonly Counter<long> _switchTokenCheckTotal = CoreTelemetry.Meter.CreateCounter<long>(
-        "directory_switch_token_check_total", unit: "count", description: "校验切服令牌次数");
+        "directory_switch_token_check_total", unit: UnitCount, description: "校验切服令牌次数");
 
     public Task InitializeAsync()
     {
         _servers.Clear();
         _tokens.Clear();
         _cts = new CancellationTokenSource();
-        _cleanupTask = Task.Run(() => CleanupLoop(_cts.Token));
+        _ = Task.Run(() => CleanupLoop(_cts.Token));
         return Task.CompletedTask;
     }
 
     public Task DestroyAsync()
     {
-        try { _cts?.Cancel(); } catch { }
-        _cleanupTask = null;
+        try { _cts?.Cancel(); } catch (Exception) { /* Best-effort cancellation; ignore during teardown. */ }
         _cts = null;
         _servers.Clear();
         _tokens.Clear();
@@ -50,9 +53,8 @@ public class InMemoryServerRegistryComponent : IServerRegistryComponent
     {
         PurgeExpired();
         var now = DateTime.UtcNow;
-        foreach (var kv in _servers)
+        foreach (var rec in _servers.Values)
         {
-            var rec = kv.Value;
             var isOnline = (now - rec.LastHeartbeatUtc) <= _offlineTtl;
             yield return isOnline ? rec : rec with { Status = "offline" };
         }
@@ -75,8 +77,8 @@ public class InMemoryServerRegistryComponent : IServerRegistryComponent
         var st = new SwitchToken(token, expire);
         _tokens[$"{userId}:{target.Id}"] = st;
         _switchTokenIssueTotal.Add(1,
-            new KeyValuePair<string, object?>("user_id", userId),
-            new KeyValuePair<string, object?>("server_id", target.Id));
+            new KeyValuePair<string, object?>(TagUserId, userId),
+            new KeyValuePair<string, object?>(TagServerId, target.Id));
         return st;
     }
 
@@ -89,10 +91,10 @@ public class InMemoryServerRegistryComponent : IServerRegistryComponent
         var ok = string.Equals(st.Token, tokenId, StringComparison.Ordinal);
         if (ok && consume) _tokens.TryRemove(key, out _);
         _switchTokenCheckTotal.Add(1,
-            new KeyValuePair<string, object?>("user_id", userId),
-            new KeyValuePair<string, object?>("server_id", serverId),
-            new KeyValuePair<string, object?>("consume", consume ? "true" : "false"),
-            new KeyValuePair<string, object?>("result", ok ? "success" : "fail"));
+            new KeyValuePair<string, object?>(TagUserId, userId),
+            new KeyValuePair<string, object?>(TagServerId, serverId),
+            new KeyValuePair<string, object?>(TagConsume, consume ? "true" : "false"),
+            new KeyValuePair<string, object?>(TagResult, ok ? "success" : "fail"));
         return ok;
     }
 

@@ -293,6 +293,9 @@
           "buildTransitive/net6.0/_._": {}
         }
       },
+      "SonarAnalyzer.CSharp/9.10.0.77988": {
+        "type": "package"
+      },
       "Shared/1.0.0": {
         "type": "project",
         "framework": ".NETCoreApp,Version=v8.0",
@@ -810,6 +813,26 @@
         "useSharedDesignerContext.txt"
       ]
     },
+    "SonarAnalyzer.CSharp/9.10.0.77988": {
+      "sha512": "R1ks7yLAq7A9n9nYKCVzvzvGH7JM92ZmcOQFC3a7z0QqqLpdnOV7a2Qm+jM3f85SthrahLptSjg20YVqxSo6/Q==",
+      "type": "package",
+      "path": "sonaranalyzer.csharp/9.10.0.77988",
+      "hasTools": true,
+      "files": [
+        ".nupkg.metadata",
+        ".signature.p7s",
+        "analyzers/Google.Protobuf.dll",
+        "analyzers/SonarAnalyzer.CFG.dll",
+        "analyzers/SonarAnalyzer.CSharp.dll",
+        "analyzers/SonarAnalyzer.dll",
+        "images/sonarsource_64.png",
+        "license/THIRD-PARTY-NOTICES.txt",
+        "sonaranalyzer.csharp.9.10.0.77988.nupkg.sha512",
+        "sonaranalyzer.csharp.nuspec",
+        "tools/install.ps1",
+        "tools/uninstall.ps1"
+      ]
+    },
     "Shared/1.0.0": {
       "type": "project",
       "path": "../Shared/Shared.csproj",
@@ -823,7 +846,8 @@
       "Microsoft.Extensions.Configuration.Abstractions >= 8.0.0",
       "Microsoft.Extensions.DependencyInjection.Abstractions >= 8.0.0",
       "Microsoft.Extensions.Logging.Abstractions >= 8.0.0",
-      "Shared >= 1.0.0"
+      "Shared >= 1.0.0",
+      "SonarAnalyzer.CSharp >= 9.10.0.77988"
     ]
   },
   "packageFolders": {
@@ -894,6 +918,11 @@
           "Microsoft.Extensions.Logging.Abstractions": {
             "target": "Package",
             "version": "[8.0.0, )"
+          },
+          "SonarAnalyzer.CSharp": {
+            "suppressParent": "All",
+            "target": "Package",
+            "version": "[9.10.0.77988, )"
           }
         },
         "imports": [

@@ -69,6 +69,11 @@
             "Microsoft.Extensions.Logging.Abstractions": {
               "target": "Package",
               "version": "[8.0.0, )"
+            },
+            "SonarAnalyzer.CSharp": {
+              "suppressParent": "All",
+              "target": "Package",
+              "version": "[9.10.0.77988, )"
             }
           },
           "imports": [
@@ -147,6 +152,11 @@
             "Polly": {
               "target": "Package",
               "version": "[8.4.2, )"
+            },
+            "SonarAnalyzer.CSharp": {
+              "suppressParent": "All",
+              "target": "Package",
+              "version": "[9.10.0.77988, )"
             },
             "StackExchange.Redis": {
               "target": "Package",
@@ -228,6 +238,11 @@
               "suppressParent": "All",
               "target": "Package",
               "version": "[2.60.0, )"
+            },
+            "SonarAnalyzer.CSharp": {
+              "suppressParent": "All",
+              "target": "Package",
+              "version": "[9.10.0.77988, )"
             }
           },
           "imports": [

@@ -9,30 +9,38 @@ on:
 jobs:
   review:
     runs-on: ubuntu-latest
+
     steps:
       - name: Checkout
         uses: actions/checkout@v4
         with:
-          fetch-depth: 0
+          fetch-depth: 0  # 需要完整历史生成 diff
 
       - name: Setup Node
         uses: actions/setup-node@v4
         with:
           node-version: 20
 
-      - name: Install deps
-        run: npm ci || npm i
+      # 在子目录安装依赖（只对 tools/ai-review 生效）
+      - name: Install deps in tools/ai-review
+        run: |
+          npm --prefix tools/ai-review install
 
       - name: Run AI review
         run: node tools/ai-review/ci-review.js
         env:
+          # PR 用 base/head；push 回退到 before/sha
           DIFF_BASE: ${{ github.event.pull_request.base.sha || github.event.before }}
           DIFF_TARGET: ${{ github.event.pull_request.head.sha || github.sha }}
+
+          # 真实 AI 与通知配置（在仓库 Settings → Secrets 设置）
           AI_BASE_URL: ${{ secrets.AI_BASE_URL }}
           AI_API_KEY: ${{ secrets.AI_API_KEY }}
           AI_MODEL: ${{ secrets.AI_MODEL }}
+
           FEISHU_WEBHOOK_URL: ${{ secrets.FEISHU_WEBHOOK_URL }}
           WECOM_WEBHOOK_URL: ${{ secrets.WECOM_WEBHOOK_URL }}
+
           SMTP_HOST: ${{ secrets.SMTP_HOST }}
           SMTP_PORT: 465
           SMTP_SECURE: true

@@ -45,7 +45,7 @@ public class HeartbeatClientComponent : IServerComponent
         _playerCountProvider = playerCountProvider;
         _statusProvider = statusProvider;
         _settings = Config.SimpleConfigLoader.LoadHeartbeatSettings(baseDir);
-        _idPrefix = type;
+        _idPrefix = type; 
     }
 
     /// <summary>

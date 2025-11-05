@@ -1,40 +1,49 @@
-name: DotNet CI
+name: AI Code Review
 
 on:
-  push:
-    branches: [ main, master ]
   pull_request:
-    branches: [ main, master ]
+    types: [opened, synchronize, reopened]
+  push:
+    branches: ["**"]
 
 jobs:
-  build:
+  review:
     runs-on: ubuntu-latest
-    strategy:
-      fail-fast: false
-      matrix:
-        # The solution targets net8.0; building with 7.x SDK will fail.
-        dotnet-version: [ '8.0.x' ]
     steps:
       - name: Checkout
         uses: actions/checkout@v4
-
-      - name: Setup .NET SDK ${{ matrix.dotnet-version }}
-        uses: actions/setup-dotnet@v4
         with:
-          dotnet-version: ${{ matrix.dotnet-version }}
+          fetch-depth: 0
 
-      - name: Cache NuGet packages
-        uses: actions/cache@v4
+      - name: Setup Node
+        uses: actions/setup-node@v4
         with:
-          path: ~/.nuget/packages
-          key: ${{ runner.os }}-nuget-${{ matrix.dotnet-version }}-${{ hashFiles('**/*.csproj') }}
-          restore-keys: |
-            ${{ runner.os }}-nuget-
+          node-version: 20
 
-      - name: Restore
-        run: dotnet restore DotNetGameServer.sln
+      - name: Install deps
+        run: npm ci || npm i
 
-      - name: Build
-        run: dotnet build DotNetGameServer.sln --configuration Release --no-restore
+      - name: Run AI review
+        run: node tools/ai-review/ci-review.js
+        env:
+          DIFF_BASE: ${{ github.event.pull_request.base.sha || github.event.before }}
+          DIFF_TARGET: ${{ github.event.pull_request.head.sha || github.sha }}
+          AI_BASE_URL: ${{ secrets.AI_BASE_URL }}
+          AI_API_KEY: ${{ secrets.AI_API_KEY }}
+          AI_MODEL: ${{ secrets.AI_MODEL }}
+          FEISHU_WEBHOOK_URL: ${{ secrets.FEISHU_WEBHOOK_URL }}
+          WECOM_WEBHOOK_URL: ${{ secrets.WECOM_WEBHOOK_URL }}
+          SMTP_HOST: ${{ secrets.SMTP_HOST }}
+          SMTP_PORT: 465
+          SMTP_SECURE: true
+          SMTP_USER: ${{ secrets.SMTP_USER }}
+          SMTP_PASS: ${{ secrets.SMTP_PASS }}
+          SMTP_FROM: ${{ secrets.SMTP_FROM }}
+          SMTP_TO: ${{ secrets.SMTP_TO }}
 
-      # 单元测试已删除，此处不再执行测试与覆盖率统计。
+      - name: Upload reviews
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: ai-review
+          path: reviews/

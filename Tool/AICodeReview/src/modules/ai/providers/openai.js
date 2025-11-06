@@ -19,12 +19,7 @@ export function createOpenAIClient(options) {
         '【差异】',
         diff,
         '',
-        '语法和样式：查找语法错误和与约定的偏差',
-        '性能优化：提出更改建议以提高效率',
-        '安全实践：检查漏洞和硬编码密钥（掩盖一半信息）',
-        '错误处理：识别未处理的异常或错误',
-        '代码质量：查找代码异味、不必要的复杂性或冗余代码',
-        'Bug 检测：查找潜在 Bug 或逻辑错误',
+        '指出是那个文件中的哪个代码片段，且优化建议也是用代码片段表示',
       ].join('\n');
 
       const res = await client.chat.completions.create({

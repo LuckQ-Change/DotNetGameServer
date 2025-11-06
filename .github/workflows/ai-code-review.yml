@@ -13,14 +13,14 @@
     run: npm ci
     working-directory: ./Tool/AICodeReview
 
-  - name: Guard: ensure required secrets are set
+  - name: "Guard: ensure required secrets are set"
     shell: bash
     env:
       AI_BASE_URL: ${{ secrets.AI_BASE_URL }}
       AI_API_KEY: ${{ secrets.AI_API_KEY }}
       AI_MODEL: ${{ secrets.AI_MODEL }}
     run: |
-      if [[ -z "$AI_BASE_URL" || -z "$AI_API_KEY" || -z "$AI_MODEL" ]]; then
+      if [ -z "$AI_BASE_URL" ] || [ -z "$AI_API_KEY" ] || [ -z "$AI_MODEL" ]; then
         echo "Required secrets (AI_BASE_URL, AI_API_KEY, AI_MODEL) are missing or unavailable (fork PRs hide secrets)."
         exit 1
       fi

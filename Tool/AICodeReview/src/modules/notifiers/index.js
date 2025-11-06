@@ -40,6 +40,12 @@ function buildMessage(result, config) {
 
 export async function notifyResults({ config, results }) {
   for (const r of results) {
+    // 跳过无内容的结果：当未提取到片段且用于审查的diff为空
+    if ((!r.snippets || r.snippets.length === 0) && r.usedDiffEmpty) {
+      console.log('[notifiers] 跳过发送：无片段且diff为空', r.commit?.hash);
+      continue;
+    }
+
     const message = buildMessage(r, config);
     const authorEmail = r.commit.authorEmail;
     const larkOpenId = config.mention_map?.email_to_lark_open_id?.[authorEmail];

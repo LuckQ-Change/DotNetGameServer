@@ -49,6 +49,7 @@
   - `snippets_only`：仅输出片段纯文本（不含提交信息/建议）。
   - `issues_only`：仅输出审查建议（不含提交信息/片段）。
   - `issues_with_snippets`：只输出审查建议与片段（不含提交信息）。
+  - 默认保护：当未提取到片段且用于审查的diff为空时，将自动跳过发送通知，避免“空话模板”。
  - 片段格式：通过 `notifications.snippetFormat` 精简片段内容，支持：
    - `raw`（默认）：保留原始diff片段
    - `no_headers`：去除 `diff --git`、`@@`、`---`、`+++` 等头部行

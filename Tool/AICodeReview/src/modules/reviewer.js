@@ -25,10 +25,12 @@ export async function reviewCommits({ config, rules, model, commits }) {
       }
     });
 
+    const usedDiffEmpty = !compactDiff || String(compactDiff).trim().length === 0;
     results.push({
       commit: c,
       reviewText,
-      snippets
+      snippets,
+      usedDiffEmpty
     });
   }
   return results;

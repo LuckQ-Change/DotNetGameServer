@@ -13,13 +13,14 @@
     }
   },
   "notifications": {
-    "reportStyle" : "snippets_only",
+    "reportStyle": "snippets_only",
     "lark": {
       "enabled": true,
       "webhook": "${{ secrets.LARK_WEBHOOK }}"
     }
   },
   "review": {
+    "include" : ["scr/**/*.cs"],
     "maxSnippetsPerCommit": 2,
     "maxLinesPerSnippet": 20
   },

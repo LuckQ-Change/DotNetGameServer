@@ -44,7 +44,11 @@
 - 飞书：开启 `notifications.lark.enabled` 并填写 `webhook`；如配置 `mention_map.email_to_lark_open_id`，消息会以 `@作者名` 标注并可扩展精确@能力。
 - 企业微信：开启 `notifications.wecom.enabled` 并填写 `webhook`；在 `mention_map.email_to_wecom_userid` 配置邮箱到 `userid`，消息中使用 `<@userid>` 精确@作者。
 - 邮件：开启 `notifications.email.enabled` 并设置 `smtp` 与 `from`，收件人自动取作者邮箱。
-- 报告样式：如需“仅显示有问题的代码片段（不含提交信息/建议）”，设置 `notifications.reportStyle: "snippets_only"`，输出为纯片段内容（不包含“片段1/片段2”等前缀）。
+- 报告样式：通过 `notifications.reportStyle` 控制输出内容：
+  - `full`（默认）：包含提交信息、片段与审查建议。
+  - `snippets_only`：仅输出片段纯文本（不含提交信息/建议）。
+  - `issues_only`：仅输出审查建议（不含提交信息/片段）。
+  - `issues_with_snippets`：只输出审查建议与片段（不含提交信息）。
  - 片段格式：通过 `notifications.snippetFormat` 精简片段内容，支持：
    - `raw`（默认）：保留原始diff片段
    - `no_headers`：去除 `diff --git`、`@@`、`---`、`+++` 等头部行

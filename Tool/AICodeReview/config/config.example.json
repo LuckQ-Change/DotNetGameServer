@@ -29,7 +29,7 @@
       },
       "from": "AI Code Review <noreply@example.com>"
     },
-    "reportStyle": "snippets_only",
+    "reportStyle": "issues_with_snippets",
     "snippetFormat": "no_headers"
   },
   "mention_map": {

@@ -1,5 +1,6 @@
 {
   "name": "ai-code-review-ci",
+  "author": "WJQ",
   "version": "0.1.0",
   "private": true,
   "description": "AI驱动的代码审核CI工具，支持规则.md、多渠道通知与定时任务",

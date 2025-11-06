@@ -59,11 +59,15 @@ jobs:
               }
             },
             "notifications": {
-              "reportStyle": "snippets_only",
+              "reportStyle": "issues_with_snippets",
               "snippetFormat": "no_headers"
             },
             "schedule": { "intervalMinutes": 0, "dailyTime": "", "cron": "" },
-            "review": { "maxSnippetsPerCommit": 2, "maxLinesPerSnippet": 20 }
+            "review": { 
+              "include" : ["scr/**/*.cs"],
+              "maxSnippetsPerCommit": 2, 
+              "maxLinesPerSnippet": 20 
+            }
           }
           EOF
         working-directory: ./Tool/AICodeReview

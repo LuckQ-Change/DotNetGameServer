@@ -1,7 +1,11 @@
 import axios from 'axios';
 
 export async function sendToLark({ webhook, message, openId, authorName }) {
-  if (!webhook) throw new Error('缺少飞书webhook');
+  const url = (webhook || '').trim();
+  if (!url) {
+    console.warn('[lark] 缺少飞书webhook，已跳过发送');
+    return;
+  }
   let text = message;
   // 简单@作者（若映射存在，可使用开放ID增强）
   if (openId) {
@@ -16,5 +20,5 @@ export async function sendToLark({ webhook, message, openId, authorName }) {
       text
     }
   };
-  await axios.post(webhook, payload);
+  await axios.post(url, payload);
 }

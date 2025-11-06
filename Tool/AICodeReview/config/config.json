@@ -13,15 +13,11 @@
     }
   },
   "notifications": {
+    "reportStyle" : "snippets_only",
     "wecom": {
       "enabled": true,
       "webhook": "${{ secrets.WECOM_WEBHOOK }}"
     }
-  },
-  "schedule": {
-    "intervalMinutes": 0,
-    "dailyTime": "",
-    "cron": ""
   },
   "review": {
     "maxSnippetsPerCommit": 2,
@@ -29,8 +25,6 @@
   },
   "mention_map": {
     "email_to_lark_open_id": {},
-    "email_to_wecom_userid": {
-      "wujiaqing2020w@163.com": "武家庆"
-    }
+    "email_to_wecom_userid": {}
   }
 }

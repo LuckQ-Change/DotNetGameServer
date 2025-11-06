@@ -2,7 +2,10 @@ import fs from 'fs';
 import path from 'path';
 
 export async function loadRules(config) {
-  const rulesDir = path.join(process.cwd(), 'rules');
+  const configured = config.rules?.dir;
+  const rulesDir = configured
+    ? (path.isAbsolute(configured) ? configured : path.join(process.cwd(), configured))
+    : path.join(process.cwd(), 'rules');
   if (!fs.existsSync(rulesDir)) {
     console.warn(`[rules] 规则目录不存在，将创建: ${rulesDir}`);
     fs.mkdirSync(rulesDir, { recursive: true });

@@ -44,7 +44,7 @@
 - 飞书：开启 `notifications.lark.enabled` 并填写 `webhook`；如配置 `mention_map.email_to_lark_open_id`，消息会以 `@作者名` 标注并可扩展精确@能力。
 - 企业微信：开启 `notifications.wecom.enabled` 并填写 `webhook`；在 `mention_map.email_to_wecom_userid` 配置邮箱到 `userid`，消息中使用 `<@userid>` 精确@作者。
 - 邮件：开启 `notifications.email.enabled` 并设置 `smtp` 与 `from`，收件人自动取作者邮箱。
-- 报告样式：如需“仅显示有问题的代码片段（不含提交信息/建议）”，设置 `notifications.reportStyle: "snippets_only"`。
+- 报告样式：如需“仅显示有问题的代码片段（不含提交信息/建议）”，设置 `notifications.reportStyle: "snippets_only"`，输出为纯片段内容（不包含“片段1/片段2”等前缀）。
 
 ## 消息格式示例
 ```
@@ -79,6 +79,8 @@ AI代码审核结果
 - `notifications`: 配置各渠道开关与webhook/SMTP信息
 - `mention_map`: 将作者邮箱映射为平台用户ID，便于@作者（可选）
 - `schedule`: 配置定时策略（间隔分钟、每日时间或cron表达式）
+ - `rules.dir`: 自定义规则目录（默认 `rules`，支持绝对或相对路径）
+ - `review.include` / `review.exclude`: 审核文件路径过滤规则（glob），仅匹配的文件将被纳入差异分析与片段提取；排除的文件将被跳过。
 
 ### 请求大小控制（避免HTTP 413）
 - 工具已默认仅向模型发送“提取的片段（snippets）”，而非整份`diff`，以降低请求体大小。
@@ -110,6 +112,16 @@ AI代码审核结果
 ```
 
 审核时，这些规则文本将作为提示注入AI模型。
+
+### 规则目录示例与引用
+- 建议至少包含：
+  - `rules/naming-conventions.md`：命名规范（函数、变量、常量、文件/目录等）
+  - `rules/error-handling.md`：错误处理与日志规范（分类处理、重试与超时、结构化日志、降级）
+- 在项目的 `README.md` 中说明这些规则文件的用途与维护方式，便于团队成员查阅与更新。
+
+### 审核运行提示
+- 确保 `rules/` 目录存在且至少包含一份规则 `.md` 文件，否则无法验证代码是否符合既定标准。
+- 可按模块拆分更多规则文件（如 `performance.md`、`security.md`），工具会自动加载全部 `.md` 规则。
 
 ## 通知与@作者
 - 飞书：通过群机器人`webhook`发送文本消息；如需@作者，请配置`mention_map.email_to_lark_open_id`
@@ -182,3 +194,10 @@ AI代码审核结果
 ## CI接入文档
 - GitHub Actions 接入指南：`docs/GitHub.md`（示例已按 `Tool/AICodeReview/` 路径配置）
 - GitLab CI 接入指南：`docs/GitLab.md`（示例已按 `Tool/AICodeReview/` 路径配置）
+- 文件过滤与审核路径
+  - 通过 `review.include` 指定需审核的文件路径模式（glob：支持 `**`, `*`, `?`）。
+  - 通过 `review.exclude` 排除不需审核的文件（如 `**/*.md`, `src/vendor/**`）。
+  - 示例：
+    - 包含：`"src/**/*.{js,ts}"`, `"lib/**/*.js"`
+    - 排除：`"src/vendor/**"`, `"**/*.md"`
+  - 说明：过滤在“提交差异解析阶段”生效，仅保留匹配文件对应的 `diff --git ...` 块；后续片段提取与提示均基于过滤后的差异。

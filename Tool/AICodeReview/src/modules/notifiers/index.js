@@ -5,10 +5,12 @@ import { sendEmail } from './email.js';
 function buildMessage(result, config) {
   const c = result.commit;
   const style = config.notifications?.reportStyle || 'full';
-  const snippetsText = (result.snippets || []).map((s, i) => `片段${i + 1}:\n${s}`).join('\n\n');
+  const snippets = result.snippets || [];
+  const snippetsText = snippets.map((s, i) => `片段${i + 1}:\n${s}`).join('\n\n');
 
   if (style === 'snippets_only') {
-    return snippetsText || '（未提取到片段）';
+    const plain = snippets.join('\n\n').trim();
+    return plain || '（未提取到片段）';
   }
 
   const header = `AI代码审核结果\n仓库提交: ${c.hash}\n作者: ${c.authorName} <${c.authorEmail}>\n时间: ${c.date}\n说明: ${c.message}`;

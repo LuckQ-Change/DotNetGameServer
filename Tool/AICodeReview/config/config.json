@@ -13,6 +13,7 @@
     }
   },
   "notifications": {
+    "skipWhenNoSnippets": true,
     "reportStyle": "snippets_only",
     "lark": {
       "enabled": true,
@@ -20,7 +21,9 @@
     }
   },
   "review": {
-    "include" : ["scr/**/*.cs"],
+    "include": [
+      "scr/**/*.cs"
+    ],
     "maxSnippetsPerCommit": 20,
     "maxLinesPerSnippet": 1000
   },

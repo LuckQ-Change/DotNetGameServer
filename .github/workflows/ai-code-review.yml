@@ -59,6 +59,7 @@ jobs:
               }
             },
             "notifications": {
+              "skipWhenNoSnippets": true,
               "reportStyle": "issues_with_snippets",
               "snippetFormat": "no_headers"
             },

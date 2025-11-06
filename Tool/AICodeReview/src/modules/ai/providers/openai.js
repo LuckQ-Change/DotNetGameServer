@@ -1,7 +1,8 @@
 import OpenAI from 'openai';
 
 export function createOpenAIClient(options) {
-  const client = new OpenAI({ apiKey: options.apiKey });
+  // 支持自定义 baseURL，以兼容 OpenAI 风格的第三方服务（如企业私有或云厂商）
+  const client = new OpenAI({ apiKey: options.apiKey, baseURL: options.baseURL });
   const model = options.model || 'gpt-4o-mini';
   return {
     async review({ rulesText, diff, context }) {

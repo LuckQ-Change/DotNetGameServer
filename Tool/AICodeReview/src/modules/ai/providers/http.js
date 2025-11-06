@@ -15,19 +15,14 @@ export function createHttpClient(options) {
   const model = options.model; // openai_chat 需要
   const temperature = options.temperature ?? 0.2;
 
-  // 额外校验：当使用 openai_chat 负载时，endpoint 必须指向 /v1/chat/completions
-  if (payloadFormat === 'openai_chat') {
-    const isChatCompletions = /\/v1\/chat\/completions(\?.*)?$/i.test(endpoint);
-    if (!isChatCompletions) {
-      throw new Error(`HTTP(openai_chat) 需要 options.endpoint 指向 /v1/chat/completions；当前为: ${endpoint}`);
-    }
-  } else {
-    // 友好提示：若使用 native 负载但 endpoint 指向 chat/completions，建议切换为 openai_chat
-    if (/\/chat\/completions(\?.*)?$/i.test(endpoint)) {
-      // 仅警告不抛错，避免影响已自建兼容层的场景
-      console.warn('[AICodeReview] 检测到 payloadFormat=native 但 endpoint 指向 chat/completions，建议设置 payloadFormat:"openai_chat" 以避免协议不匹配。');
-    }
+  // 目标URL：基于 baseURL 生成
+  const base = String(options.baseURL || '').replace(/\/+$/, '');
+  if (!base) {
+    throw new Error('HTTP模型需要配置options.baseURL');
   }
+  const targetURL = payloadFormat === 'openai_chat'
+    ? `${base}/chat/completions`
+    : base;
 
   function buildPayload({ rulesText, diff, context }) {
     if (payloadFormat === 'openai_chat') {
@@ -70,7 +65,7 @@ export function createHttpClient(options) {
   return {
     async review({ rulesText, diff, context }) {
       const payload = buildPayload({ rulesText, diff, context });
-      const res = await axios.post(endpoint, payload, { headers, timeout });
+      const res = await axios.post(targetURL, payload, { headers, timeout });
       // 解析返回
       if (payloadFormat === 'openai_chat') {
         const data = res.data;

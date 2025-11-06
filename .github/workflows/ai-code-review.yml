@@ -62,10 +62,11 @@ jobs:
               "reportStyle": "issues_with_snippets",
               "snippetFormat": "no_headers"
             },
-            "schedule": { "intervalMinutes": 0, "dailyTime": "", "cron": "" },
+            "schedule": { "intervalMinutes": 60, "dailyTime": "17:00", "cron": "" },
             "review": { 
-              "maxSnippetsPerCommit": 20, 
-              "maxLinesPerSnippet": 2000 
+              "include" : ["scr/**/*.cs"],
+              "maxSnippetsPerCommit": 200, 
+              "maxLinesPerSnippet": 20000
             }
           }
           EOF

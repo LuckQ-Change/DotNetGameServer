@@ -1,20 +1,15 @@
 import { sendToLark } from './lark.js';
 import { sendToWeCom } from './wecom.js';
 import { sendEmail } from './email.js';
-import { formatSnippets } from '../utils/snippet-format.js';
 
 function buildMessage(result, config) {
   const c = result.commit;
   const style = config.notifications?.reportStyle || 'full';
-  const snippets = result.snippets || [];
-  const snippetFormat = config.notifications?.snippetFormat || 'raw';
-  const formatted = formatSnippets(snippets, snippetFormat);
-  const snippetsText = formatted.map((s, i) => `片段${i + 1}:\n${s}`).join('\n\n');
+  // 已禁用差异片段显示：不再在消息中拼接任何diff片段
 
-  // 仅片段：不显示提交信息
+  // 仅片段：已禁用片段显示，统一返回提示或空问题文本
   if (style === 'snippets_only') {
-    const plain = formatted.join('\n\n').trim();
-    return plain || '（未提取到片段）';
+    return '（已禁用差异片段显示）';
   }
 
   // 仅问题：只显示审查建议，不含提交信息与片段
@@ -26,15 +21,13 @@ function buildMessage(result, config) {
   // 问题 + 片段：不显示提交信息，仅展示问题与片段
   if (style === 'issues_with_snippets') {
     const issues = (result.reviewText || '').trim();
-    const parts = [];
-    if (issues) parts.push(`审查建议:\n${issues}`);
-    if (snippetsText) parts.push(snippetsText);
-    return parts.join('\n\n').trim() || '（无可展示内容）';
+    // 片段显示已禁用，等同于仅问题
+    return issues || '（未检出问题）';
   }
 
   // 完整：包含提交信息、片段与建议
   const header = `AI代码审核结果\n仓库提交: ${c.hash}\n作者: ${c.authorName} <${c.authorEmail}>\n时间: ${c.date}\n说明: ${c.message}`;
-  const body = `${header}\n\n${snippetsText ? snippetsText + '\n\n' : ''}审查建议:\n${result.reviewText}`;
+  const body = `${header}\n\n审查建议:\n${result.reviewText}`;
   return body;
 }
 

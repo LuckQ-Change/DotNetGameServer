@@ -44,6 +44,7 @@
 - 飞书：开启 `notifications.lark.enabled` 并填写 `webhook`；如配置 `mention_map.email_to_lark_open_id`，消息会以 `@作者名` 标注并可扩展精确@能力。
 - 企业微信：开启 `notifications.wecom.enabled` 并填写 `webhook`；在 `mention_map.email_to_wecom_userid` 配置邮箱到 `userid`，消息中使用 `<@userid>` 精确@作者。
 - 邮件：开启 `notifications.email.enabled` 并设置 `smtp` 与 `from`，收件人自动取作者邮箱。
+- 报告样式：如需“仅显示有问题的代码片段（不含提交信息/建议）”，设置 `notifications.reportStyle: "snippets_only"`。
 
 ## 消息格式示例
 ```
@@ -79,6 +80,22 @@ AI代码审核结果
 - `mention_map`: 将作者邮箱映射为平台用户ID，便于@作者（可选）
 - `schedule`: 配置定时策略（间隔分钟、每日时间或cron表达式）
 
+### 请求大小控制（避免HTTP 413）
+- 工具已默认仅向模型发送“提取的片段（snippets）”，而非整份`diff`，以降低请求体大小。
+- 可通过 `review.maxSnippetsPerCommit` 与 `review.maxLinesPerSnippet` 进一步控制上下文大小。
+- 建议默认：
+  - `review.maxSnippetsPerCommit: 2`
+  - `review.maxLinesPerSnippet: 20`
+- 若仍遇到 `HTTP 413 Payload Too Large`：
+  - 适当降低上述两个参数；或
+  - 提升服务端限制（如 Nginx `client_max_body_size`）；或
+  - 在CI中缩短审核窗口（使用 `REVIEW_MODE=daily` 或设置更近的 `REVIEW_SINCE`）。
+
+### CI 工作流注意事项
+- 请在运行步骤中将 `working-directory` 指向工具目录（推荐 `./Tool/AICodeReview`）。
+- 未设置 `working-directory` 时，程序会在仓库根查找 `config/config.json` 与 `rules/`，可能导致“配置文件缺失/规则目录不存在”。
+- `REVIEW_SINCE` 支持毫秒时间戳或ISO字符串（含时区，如 `+08:00`），内部会统一转换为UTC再传给 `git --since`。
+
 ## 规则编写
 在`rules/`目录内添加`.md`文件，每个文件一条或多条规则，建议结构：
 
@@ -112,19 +129,21 @@ AI代码审核结果
 - 请确保在企业IM中机器人具有发言权限，且用户ID映射正确
 
 ## AI部署规则
-- 模型提供方选择：
-  - `openai`：外网大模型，需可访问公网；在 `config.model.options` 中配置 `apiKey` 与 `model`。
+ - 模型提供方选择：
+  - `openai`：外网大模型；在 `config.model.options` 配置 `apiKey` 与 `model`。若对接兼容 OpenAI 的第三方（如腾讯混元），可增加 `baseURL` 指向其 `/v1` 根路径。
+    - 官方 OpenAI 示例：`{"provider":"openai","options":{"apiKey":"$OPENAI_API_KEY","model":"gpt-4o-mini"}}`
+    - 混元（OpenAI 兼容）示例：`{"provider":"openai","options":{"apiKey":"$AI_API_KEY","baseURL":"https://api.hunyuan.cloud.tencent.com/v1","model":"$AI_MODEL"}}`
   - `ollama`：本地部署模型，启动 `ollama serve` 并确保接口可用（默认 `http://localhost:11434/api/generate`）；在 `config.model.options` 配置 `endpoint` 与 `model`。
     - 示例：
       - 安装并启动：`ollama serve`
       - 拉取模型：`ollama pull qwen2.5-coder:latest`
       - 配置：`{"provider":"ollama","options":{"endpoint":"http://localhost:11434/api/generate","model":"qwen2.5-coder:latest"}}`
-  - `http`：自定义HTTP服务，需遵守接口约定：POST `endpoint`，请求体 `{ rules, diff, context }`，返回 `{ review: "文本" }`。
-    - Secrets配置建议：在CI平台配置 `AI_HTTP_ENDPOINT`、`AI_HTTP_TOKEN`（Masked，可选）与 `AI_HTTP_AUTH_PREFIX`（可选，默认 `Bearer `）并在生成的 `config.json` 中写入：
-      - `model.provider: "http"`
-      - `model.options.endpoint: $AI_HTTP_ENDPOINT`
-      - `model.options.apiKey: $AI_HTTP_TOKEN`
-      - `model.options.authHeaderPrefix: $AI_HTTP_AUTH_PREFIX`
+  - `http`：自定义HTTP服务，支持两种协议：
+    - 原生协议：POST 到 `baseURL`（即你的服务完整端点），请求体 `{ rules, diff, context }`，返回 `{ review: "文本" }`。
+    - OpenAI Chat 兼容协议：`payloadFormat: "openai_chat"`，`baseURL` 指向第三方 `/v1` 根路径（如混元），工具会自动请求 `baseURL + "/chat/completions"`；需提供 `options.model`。认证头可用 `apiKey + authHeaderPrefix` 或自定义 `headers`。
+    - Secrets配置建议：在CI平台配置 `AI_HTTP_BASE_URL`、`AI_HTTP_TOKEN`（Masked，可选）与 `AI_HTTP_AUTH_PREFIX`（可选，默认 `Bearer `）。
+      - 原生协议示例：`{"provider":"http","options":{"baseURL":"$AI_HTTP_BASE_URL","apiKey":"$AI_HTTP_TOKEN","authHeaderPrefix":"$AI_HTTP_AUTH_PREFIX"}}`
+      - OpenAI Chat 示例（混元）：`{"provider":"http","options":{"baseURL":"https://api.hunyuan.cloud.tencent.com/v1","payloadFormat":"openai_chat","apiKey":"$AI_HTTP_TOKEN","authHeaderPrefix":"Bearer ","model":"$AI_MODEL"}}`
     - 如需额外自定义头，在 `model.options.headers` 中增加：例如 `{ "X-Org": "$AI_HTTP_X_ORG" }`
 
 - 配置与环境变量：
@@ -146,7 +165,7 @@ AI代码审核结果
 - 性能与成本：
   - 外网模型存在速率限制与费用，请合理设置定时频率与触发范围（`REVIEW_MODE`/`REVIEW_SINCE`）。
   - 本地模型（Ollama）需足够的CPU/GPU与内存资源，建议在专用Runner或服务器部署。
-  - 减少提示大小：通过 `review.maxSnippetsPerCommit` 与 `review.maxLinesPerSnippet` 控制片段数量与长度，避免过大的diff导致上下文冗长。
+  - 减少提示大小：通过 `review.maxSnippetsPerCommit` 与 `review.maxLinesPerSnippet` 控制片段数量与长度（工具已默认仅发送片段，不传整份diff）。
 
 - 失败与降级：
   - 模型不可达或请求失败时，日志会打印错误；可在CI平台上查看构建日志进行排查。

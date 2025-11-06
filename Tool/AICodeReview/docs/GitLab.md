@@ -30,7 +30,7 @@ ai_code_review:
       cat > config/config.json << 'EOF'
       {
         "repo": { "path": "$CI_PROJECT_DIR" },
-        "model": { "provider": "http", "options": { "endpoint": "$AI_HTTP_ENDPOINT" } },
+        "model": { "provider": "http", "options": { "baseURL": "$AI_HTTP_BASE_URL" } },
         "notifications": {
           "wecom": { "enabled": true, "webhook": "$WECOM_WEBHOOK" },
           "lark": { "enabled": false, "webhook": "" },
@@ -71,7 +71,7 @@ ai_code_review_push:
 ```
 
 ## Secrets 与@作者映射
-- 将敏感信息存入 GitLab 的 CI 变量：如 `OPENAI_API_KEY`、`WECOM_WEBHOOK`、`LARK_WEBHOOK`、`AI_HTTP_ENDPOINT`、SMTP 密码等。
+- 将敏感信息存入 GitLab 的 CI 变量：如 `OPENAI_API_KEY`、`WECOM_WEBHOOK`、`LARK_WEBHOOK`、`AI_HTTP_BASE_URL`、SMTP 密码等。
 - `mention_map`：
   - 企业微信：配置 `email_to_wecom_userid`，消息中用 `<@userid>` 精确@作者。
   - 飞书：配置 `email_to_lark_open_id`，消息文本中加入 `@作者名`。
@@ -87,10 +87,10 @@ ai_code_review_push:
   - Runner机器需预先运行 `ollama serve`；一般不需要CI变量。
   - 在配置中设置 `model.provider: ollama`、`options.endpoint` 与 `options.model`。
 - HTTP（私有/自建服务）：
-  - 添加变量 `AI_HTTP_ENDPOINT`（Masked），值为服务地址。
+  - 添加变量 `AI_HTTP_BASE_URL`（Masked），值为服务根地址。
   - 可选：添加变量 `AI_HTTP_TOKEN`（Masked）作为认证令牌；配置 `options.apiKey: $AI_HTTP_TOKEN`
   - 可选：添加变量 `AI_HTTP_AUTH_PREFIX`（默认为 `Bearer `）用于自定义认证头前缀；配置 `options.authHeaderPrefix: $AI_HTTP_AUTH_PREFIX`
-  - 在配置中设置 `model.provider: http`、`options.endpoint: $AI_HTTP_ENDPOINT`。
+  - 在配置中设置 `model.provider: http`、`options.baseURL: $AI_HTTP_BASE_URL`。
 
 示例（在流水线生成的 `config.json` 中写入 HTTP 认证选项）：
 
@@ -99,7 +99,7 @@ ai_code_review_push:
   "model": {
     "provider": "http",
     "options": {
-      "endpoint": "$AI_HTTP_ENDPOINT",
+      "baseURL": "$AI_HTTP_BASE_URL",
       "apiKey": "$AI_HTTP_TOKEN",
       "authHeaderPrefix": "$AI_HTTP_AUTH_PREFIX"
     }
@@ -131,4 +131,5 @@ ai_code_review_push:
 - 定时与时区：GitLab 计划任务使用你项目的时区配置；请在 `Settings -> General -> Localization` 中确认时区。
 - 增量审核：启用 `cache` 保存 `state/` 目录。若不使用缓存，每次会依赖 `REVIEW_MODE` 或 `REVIEW_SINCE` 控制范围。
 - 自定义窗口：对于 PR/MR 审核，可在运行前计算基线时间并传入 `REVIEW_SINCE`。
+- 请求大小与HTTP 413：工具默认仅发送“提取的片段”而非整份 `diff`。如仍遇到 413，请降低 `review.maxSnippetsPerCommit`/`maxLinesPerSnippet`，或提升服务端限额（例如 Nginx `client_max_body_size`）。
 - 文件缺失：确保 `Tool/AICodeReview/src/index.js` 与 `Tool/AICodeReview/rules/*.md` 已提交；`config/config.json` 可在流水线运行时生成。

@@ -76,6 +76,38 @@ jobs:
 
 > 注意：`cron` 使用 UTC 时间。若需要北京时间 18:00，请将 `cron` 调整为 `0 10 * * *`（UTC+0 的 10:00）。
 
+## 混元（OpenAI 兼容）配置示例
+你可以使用本工具的 `openai` provider 并通过 `baseURL` 对接腾讯混元的 OpenAI 兼容接口（`/v1`）：
+
+```yaml
+      - name: Write config for Hunyuan (OpenAI-compatible)
+        run: |
+          cat > config/config.json << 'EOF'
+          {
+            "repo": { "path": "${{ github.workspace }}" },
+            "model": {
+              "provider": "openai",
+              "options": {
+                "apiKey": "${{ secrets.AI_API_KEY }}",
+                "baseURL": "${{ secrets.AI_BASE_URL }}",  
+                "model": "${{ secrets.AI_MODEL }}"
+              }
+            },
+            "notifications": { "wecom": { "enabled": true, "webhook": "${{ secrets.WECOM_WEBHOOK }}" } },
+            "schedule": { "intervalMinutes": 0, "dailyTime": "", "cron": "" },
+            "review": { "maxSnippetsPerCommit": 2, "maxLinesPerSnippet": 20 }
+          }
+          EOF
+        working-directory: ./Tool/AICodeReview
+```
+
+Secrets 建议：
+- `AI_BASE_URL`: `https://api.hunyuan.cloud.tencent.com/v1`
+- `AI_API_KEY`: 混元密钥
+- `AI_MODEL`: 你的可用模型ID
+
+> 提示：使用 `openai` provider 时不需要设置 `endpoint` 或自定义认证头；SDK 会基于 `baseURL` 和 `apiKey` 自动生成请求。
+
 ## Push/PR 触发示例
 为HTTP模型增加密钥关键词配置示例（通过 Secrets 引用）：
 
@@ -84,7 +116,7 @@ jobs:
   "model": {
     "provider": "http",
     "options": {
-      "endpoint": "${{ secrets.AI_HTTP_ENDPOINT }}",
+      "baseURL": "${{ secrets.AI_HTTP_BASE_URL }}",
       "apiKey": "${{ secrets.AI_HTTP_TOKEN }}",
       "authHeaderPrefix": "${{ secrets.AI_HTTP_AUTH_PREFIX }}"
     }
@@ -95,6 +127,8 @@ jobs:
 在推送或 PR 时执行审核，并用提交时间作为窗口起点：
 
 ```yaml
+name: AI Code Review (Push/PR)
+
 on:
   push:
   pull_request:
@@ -103,23 +137,85 @@ jobs:
   review:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
-        with: { node-version: 18 }
-      - run: npm ci
+      - name: Checkout repo
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 18
+
+      - name: Restore state cache (optional)
+        uses: actions/cache@v4
+        with:
+          path: Tool/AICodeReview/state
+          key: ai-code-review-state-${{ github.ref }}
+
+      - name: Install dependencies
+        run: npm ci
         working-directory: ./Tool/AICodeReview
-      - run: |
+
+      - name: Write config from secrets
+        run: |
           cat > config/config.json << 'EOF'
-          { "repo": { "path": "${{ github.workspace }}" }, "model": { "provider": "http", "options": { "endpoint": "${{ secrets.AI_HTTP_ENDPOINT }}" } }, "notifications": { "wecom": { "enabled": true, "webhook": "${{ secrets.WECOM_WEBHOOK }}" } }, "schedule": { "intervalMinutes": 0, "dailyTime": "", "cron": "" }, "review": { "maxSnippetsPerCommit": 2, "maxLinesPerSnippet": 20 } }
+          {
+            "repo": { "path": "${{ github.workspace }}" },
+            "model": {
+              "provider": "http",
+              "options": {
+                "baseURL": "${{ secrets.AI_HTTP_BASE_URL }}",
+                "apiKey": "${{ secrets.AI_HTTP_TOKEN }}",
+                "authHeaderPrefix": "${{ secrets.AI_HTTP_AUTH_PREFIX }}"
+              }
+            },
+            "notifications": { "wecom": { "enabled": true, "webhook": "${{ secrets.WECOM_WEBHOOK }}" } },
+            "schedule": { "intervalMinutes": 0, "dailyTime": "", "cron": "" },
+            "review": { "maxSnippetsPerCommit": 2, "maxLinesPerSnippet": 20 }
+          }
           EOF
         working-directory: ./Tool/AICodeReview
+
       - name: Run review for push/PR
         env:
           ONE_SHOT: "true"
           REPO_PATH: ${{ github.workspace }}
-          REVIEW_SINCE: ${{ github.event.head_commit.timestamp }}
+          REVIEW_SINCE: ${{ github.event_name == 'pull_request' && github.event.pull_request.updated_at || github.event.head_commit.timestamp }}
         run: node src/index.js
         working-directory: ./Tool/AICodeReview
+
+## 混元（HTTP OpenAI Chat 兼容）配置示例
+如需保留 `provider: http`，可使用 OpenAI Chat 兼容负载：
+
+```yaml
+      - name: Write config for Hunyuan via HTTP (openai_chat)
+        run: |
+          cat > config/config.json << 'EOF'
+          {
+            "repo": { "path": "${{ github.workspace }}" },
+            "model": {
+              "provider": "http",
+              "options": {
+                "endpoint": "https://api.hunyuan.cloud.tencent.com/v1/chat/completions",
+                "payloadFormat": "openai_chat",
+                "apiKey": "${{ secrets.AI_HTTP_TOKEN }}",
+                "authHeaderPrefix": "Bearer ",
+                "model": "${{ secrets.AI_MODEL }}"
+              }
+            },
+            "notifications": { "wecom": { "enabled": true, "webhook": "${{ secrets.WECOM_WEBHOOK }}" } },
+            "schedule": { "intervalMinutes": 0, "dailyTime": "", "cron": "" },
+            "review": { "maxSnippetsPerCommit": 2, "maxLinesPerSnippet": 20 }
+          }
+          EOF
+        working-directory: ./Tool/AICodeReview
+```
+
+注意事项：
+- `endpoint` 必须指向 `.../v1/chat/completions`；否则会返回 404。
+- 必填 `options.model`；其值应为混元可用的模型ID。
+- 如认证非标准 Bearer，可改用 `options.headers` 自定义头（例如 `X-Api-Key`）。
 ```
 
 ## Secrets 与@作者映射
@@ -138,8 +234,8 @@ jobs:
   - 无需Secrets，但Runner机器需要预先安装并运行 `ollama serve`
   - 在配置中设置：`model.provider: ollama`、`options.endpoint`（如默认 `http://localhost:11434/api/generate`）与 `options.model`。
 - HTTP（私有/自建服务）：
-  - 新增 `AI_HTTP_ENDPOINT` 为Secrets，值为你的HTTP服务地址
-  - 在配置中设置：`model.provider: http`、`options.endpoint: ${{ secrets.AI_HTTP_ENDPOINT }}`
+  - 新增 `AI_HTTP_BASE_URL` 为Secrets，值为你的HTTP服务地址（原生协议直接为完整端点；OpenAI Chat 兼容为 `/v1` 根路径）
+  - 在配置中设置：`model.provider: http`、`options.baseURL: ${{ secrets.AI_HTTP_BASE_URL }}`
   - 可选：`AI_HTTP_TOKEN`（Masked）作为认证令牌；配置 `options.apiKey: ${{ secrets.AI_HTTP_TOKEN }}`
   - 可选：`AI_HTTP_AUTH_PREFIX` 自定义认证头前缀；配置 `options.authHeaderPrefix: ${{ secrets.AI_HTTP_AUTH_PREFIX }}`（默认 `Bearer `）
   - 如需额外自定义头，在生成 `config.json` 时写入 `options.headers`，例如：`{"X-Org": "${{ secrets.AI_HTTP_X_ORG }}"}`
@@ -168,4 +264,8 @@ jobs:
 - 定时与时区：GitHub 的 `cron` 使用 UTC。根据你的时区调整表达式。
 - 增量审核：启用 `actions/cache` 缓存 `state/` 目录；若不用缓存，每次会回退到默认窗口或 `REVIEW_MODE`/`REVIEW_SINCE`。
 - 推送事件的时间窗口：可用 `github.event.head_commit.timestamp` 作为起点，或自行计算基线时间。
+- 请求大小与HTTP 413：工具默认仅发送“提取的片段”而非整份 `diff`。如仍遇到 413，请降低 `review.maxSnippetsPerCommit`/`maxLinesPerSnippet`，或提升服务端限额（例如 Nginx `client_max_body_size`）。
 - 文件缺失：确保 `Tool/AICodeReview/src/index.js` 与 `Tool/AICodeReview/rules/*.md` 已提交；`config/config.json` 可在工作流运行时生成。
+ - 404/认证错误：
+   - 使用 `openai` provider 时，确认 `baseURL` 正确（混元应为 `https://api.hunyuan.cloud.tencent.com/v1`）且 `AI_MODEL` 存在。
+   - 使用 `http` provider 时，确认 `baseURL` 指向第三方 `/v1` 根路径并设置 `payloadFormat: openai_chat`；原生协议时确保 `baseURL` 为你的服务完整端点且返回 `{ review: "..." }`。

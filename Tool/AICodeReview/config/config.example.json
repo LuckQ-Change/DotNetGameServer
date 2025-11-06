@@ -28,7 +28,9 @@
         "pass": "YOUR_SMTP_PASSWORD"
       },
       "from": "AI Code Review <noreply@example.com>"
-    }
+    },
+    "reportStyle": "snippets_only",
+    "snippetFormat": "no_headers"
   },
   "mention_map": {
     "email_to_lark_open_id": {

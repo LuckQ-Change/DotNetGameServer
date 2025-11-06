@@ -14,9 +14,9 @@
   },
   "notifications": {
     "reportStyle" : "snippets_only",
-    "wecom": {
+    "lark": {
       "enabled": true,
-      "webhook": "${{ secrets.WECOM_WEBHOOK }}"
+      "webhook": "${{ secrets.LARK_WEBHOOK }}"
     }
   },
   "review": {

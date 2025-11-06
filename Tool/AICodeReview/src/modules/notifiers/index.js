@@ -1,15 +1,18 @@
 import { sendToLark } from './lark.js';
 import { sendToWeCom } from './wecom.js';
 import { sendEmail } from './email.js';
+import { formatSnippets } from '../utils/snippet-format.js';
 
 function buildMessage(result, config) {
   const c = result.commit;
   const style = config.notifications?.reportStyle || 'full';
   const snippets = result.snippets || [];
-  const snippetsText = snippets.map((s, i) => `片段${i + 1}:\n${s}`).join('\n\n');
+  const snippetFormat = config.notifications?.snippetFormat || 'raw';
+  const formatted = formatSnippets(snippets, snippetFormat);
+  const snippetsText = formatted.map((s, i) => `片段${i + 1}:\n${s}`).join('\n\n');
 
   if (style === 'snippets_only') {
-    const plain = snippets.join('\n\n').trim();
+    const plain = formatted.join('\n\n').trim();
     return plain || '（未提取到片段）';
   }
 

@@ -6,15 +6,11 @@ using Microsoft.Extensions.Logging;
 
 namespace BattleServer;
 
-public class BattleGameServer : BaseGameServer
+public class BattleGameServer(ILogger<BattleGameServer> logger) : BaseGameServer(nameof(BattleGameServer), logger)
 {
-    public BattleGameServer(ILogger<BattleGameServer> logger) : base("Battle", logger)
-    {
-    }
-
     public override async Task StartAsync(int port)
     {
-        RegisterStrongMessageHandler<StartBattleRequest, StartBattleResponse>(new StartBattleMessageHandler());
+        RegisterStrongMessageHandler(new StartBattleMessageHandler());
         RegisterStrongMessageHandler<AttackRequest, AttackResponse>(new AttackMessageHandler());
 
         var ecs = new EcsWorldComponent();

@@ -7,9 +7,11 @@ export async function reviewCommits({ config, rules, model, commits }) {
 
   for (const c of commits) {
     const snippets = extractSnippets(c.diff, maxSnippets, maxLines);
+    // 为避免请求体过大（导致HTTP 413等），仅将提取的片段传给模型，而非整份diff
+    const compactDiff = (snippets && snippets.length) ? snippets.join('\n\n') : (c.diff || '');
     const reviewText = await model.review({
       rulesText: rules.text,
-      diff: c.diff,
+      diff: compactDiff,
       context: {
         message: c.message,
         authorName: c.authorName,

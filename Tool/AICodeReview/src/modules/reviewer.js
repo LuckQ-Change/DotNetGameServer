@@ -1,0 +1,29 @@
+import { extractSnippets } from './utils/snippets.js';
+
+export async function reviewCommits({ config, rules, model, commits }) {
+  const results = [];
+  const maxSnippets = config.review?.maxSnippetsPerCommit ?? 2;
+  const maxLines = config.review?.maxLinesPerSnippet ?? 20;
+
+  for (const c of commits) {
+    const snippets = extractSnippets(c.diff, maxSnippets, maxLines);
+    const reviewText = await model.review({
+      rulesText: rules.text,
+      diff: c.diff,
+      context: {
+        message: c.message,
+        authorName: c.authorName,
+        authorEmail: c.authorEmail,
+        hash: c.hash,
+        date: c.date
+      }
+    });
+
+    results.push({
+      commit: c,
+      reviewText,
+      snippets
+    });
+  }
+  return results;
+}

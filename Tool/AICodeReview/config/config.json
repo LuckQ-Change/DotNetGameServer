@@ -1,31 +1,34 @@
 {
   "repo": {
-    "path": "/TTT/YourRepoHere" 
+    "path": "${{ github.workspace }}"
   },
   "model": {
-    "provider": "ollama",
+    "provider": "http",
     "options": {
-      "endpoint": "http://localhost:11434/api/generate",
-      "model": "qwen2.5-coder:latest"
+      "endpoint": "${{ secrets.AI_HTTP_ENDPOINT }}",
+      "apiKey": "${{ secrets.AI_HTTP_TOKEN }}",
+      "authHeaderPrefix": "${{ secrets.AI_HTTP_AUTH_PREFIX }}"
     }
   },
   "notifications": {
-    "lark": { "enabled": false, "webhook": "" },
-    "wecom": { "enabled": true, "webhook": "https://qyapi.weixin.qq.com/cgi-bin/webhook/send?key=c7ea9b33-ed58-4644-a18a-7f089687614b" },
-    "email": {
-      "enabled": false,
-      "smtp": { "host": "", "port": 465, "secure": true, "user": "", "pass": "" },
-      "from": "AI Code Review <noreply@example.com>"
+    "wecom": {
+      "enabled": true,
+      "webhook": "${{ secrets.WECOM_WEBHOOK }}"
     }
   },
-  "mention_map": {
-    "email_to_lark_open_id": {},
-    "email_to_wecom_userid": {
-      "wujiaqing2020w@163.com" : "武家庆"
-    }
+  "schedule": {
+    "intervalMinutes": 0,
+    "dailyTime": "",
+    "cron": ""
   },
   "review": {
     "maxSnippetsPerCommit": 2,
     "maxLinesPerSnippet": 20
-  }
+  },
+  "mention_map": {
+    "email_to_lark_open_id": {},
+    "email_to_wecom_userid": {
+      "wujiaqing2020w@163.com": "武家庆"
+    }
+  },
 }

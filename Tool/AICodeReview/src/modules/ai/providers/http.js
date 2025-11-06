@@ -1,9 +1,6 @@
 import axios from 'axios';
 
 export function createHttpClient(options) {
-  const endpoint = options.endpoint;
-  if (!endpoint) throw new Error('HTTP模型需要配置options.endpoint');
-
   // 可选：超时与自定义请求头；支持Bearer令牌或自定义认证头
   const timeout = options.timeout || 30000;
   const headers = { 'Content-Type': 'application/json', ...(options.headers || {}) };
@@ -17,6 +14,20 @@ export function createHttpClient(options) {
   const payloadFormat = options.payloadFormat || 'native'; // 'native' | 'openai_chat'
   const model = options.model; // openai_chat 需要
   const temperature = options.temperature ?? 0.2;
+
+  // 额外校验：当使用 openai_chat 负载时，endpoint 必须指向 /v1/chat/completions
+  if (payloadFormat === 'openai_chat') {
+    const isChatCompletions = /\/v1\/chat\/completions(\?.*)?$/i.test(endpoint);
+    if (!isChatCompletions) {
+      throw new Error(`HTTP(openai_chat) 需要 options.endpoint 指向 /v1/chat/completions；当前为: ${endpoint}`);
+    }
+  } else {
+    // 友好提示：若使用 native 负载但 endpoint 指向 chat/completions，建议切换为 openai_chat
+    if (/\/chat\/completions(\?.*)?$/i.test(endpoint)) {
+      // 仅警告不抛错，避免影响已自建兼容层的场景
+      console.warn('[AICodeReview] 检测到 payloadFormat=native 但 endpoint 指向 chat/completions，建议设置 payloadFormat:"openai_chat" 以避免协议不匹配。');
+    }
+  }
 
   function buildPayload({ rulesText, diff, context }) {
     if (payloadFormat === 'openai_chat') {

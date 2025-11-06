@@ -1,65 +1,80 @@
-  - name: Setup Node.js
-    uses: actions/setup-node@v4
-    with:
-      node-version: 18
+name: AI Code Review (Push/PR)
 
-  - name: Restore state cache (optional)
-    uses: actions/cache@v4
-    with:
-      path: Tool/AICodeReview/state
-      key: ai-code-review-state-${{ github.ref }}
+on:
+  push:
+  pull_request:
 
-  - name: Install dependencies
-    run: npm ci
-    working-directory: ./Tool/AICodeReview
+jobs:
+  review:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
-  - name: "Guard: ensure required secrets are set"
-    shell: bash
-    env:
-      AI_BASE_URL: ${{ secrets.AI_BASE_URL }}
-      AI_API_KEY: ${{ secrets.AI_API_KEY }}
-      AI_MODEL: ${{ secrets.AI_MODEL }}
-    run: |
-      if [ -z "$AI_BASE_URL" ] || [ -z "$AI_API_KEY" ] || [ -z "$AI_MODEL" ]; then
-        echo "Required secrets (AI_BASE_URL, AI_API_KEY, AI_MODEL) are missing or unavailable (fork PRs hide secrets)."
-        exit 1
-      fi
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 18
 
-  - name: Write config from secrets
-    shell: bash
-    env:
-      AI_BASE_URL: ${{ secrets.AI_BASE_URL }}
-      AI_API_KEY: ${{ secrets.AI_API_KEY }}
-      AI_MODEL: ${{ secrets.AI_MODEL }}
-      WECOM_WEBHOOK: ${{ secrets.WECOM_WEBHOOK }}
-    run: |
-      cat > config/config.json << EOF
-      {
-        "repo": { "path": "${GITHUB_WORKSPACE}" },
-        "model": {
-          "provider": "openai",
-          "options": {
-            "baseURL": "${AI_BASE_URL}",
-            "apiKey": "${AI_API_KEY}",
-            "model": "${AI_MODEL}"
+      - name: Restore state cache (optional)
+        uses: actions/cache@v4
+        with:
+          path: Tool/AICodeReview/state
+          key: ai-code-review-state-${{ github.ref }}
+
+      - name: Install dependencies
+        run: npm ci
+        working-directory: ./Tool/AICodeReview
+
+      - name: "Guard: ensure required secrets are set"
+        shell: bash
+        env:
+          AI_BASE_URL: ${{ secrets.AI_BASE_URL }}
+          AI_API_KEY: ${{ secrets.AI_API_KEY }}
+          AI_MODEL: ${{ secrets.AI_MODEL }}
+        run: |
+          if [ -z "$AI_BASE_URL" ] || [ -z "$AI_API_KEY" ] || [ -z "$AI_MODEL" ]; then
+            echo "Required secrets (AI_BASE_URL, AI_API_KEY, AI_MODEL) are missing or unavailable (fork PRs hide secrets)."
+            exit 1
+          fi
+
+      - name: Write config from secrets
+        shell: bash
+        env:
+          AI_BASE_URL: ${{ secrets.AI_BASE_URL }}
+          AI_API_KEY: ${{ secrets.AI_API_KEY }}
+          AI_MODEL: ${{ secrets.AI_MODEL }}
+          WECOM_WEBHOOK: ${{ secrets.WECOM_WEBHOOK }}
+        run: |
+          cat > config/config.json << EOF
+          {
+            "repo": { "path": "${GITHUB_WORKSPACE}" },
+            "model": {
+              "provider": "openai",
+              "options": {
+                "baseURL": "${AI_BASE_URL}",
+                "apiKey": "${AI_API_KEY}",
+                "model": "${AI_MODEL}"
+              }
+            },
+            "notifications": { "wecom": { "enabled": true, "webhook": "${WECOM_WEBHOOK}" } },
+            "schedule": { "intervalMinutes": 0, "dailyTime": "", "cron": "" },
+            "review": { "maxSnippetsPerCommit": 2, "maxLinesPerSnippet": 20 }
           }
-        },
-        "notifications": { "wecom": { "enabled": true, "webhook": "${WECOM_WEBHOOK}" } },
-        "schedule": { "intervalMinutes": 0, "dailyTime": "", "cron": "" },
-        "review": { "maxSnippetsPerCommit": 2, "maxLinesPerSnippet": 20 }
-      }
-      EOF
-    working-directory: ./Tool/AICodeReview
+          EOF
+        working-directory: ./Tool/AICodeReview
 
-  - name: Debug loaded config
-    run: |
-      node -e "const cfg=require('./config/config.json'); console.log('provider=', cfg.model.provider); console.log('baseURL=', cfg.model.options.baseURL); console.log('model=', cfg.model.options.model);"
-    working-directory: ./Tool/AICodeReview
+      - name: Debug loaded config
+        run: |
+          node -e "const cfg=require('./config/config.json'); console.log('provider=', cfg.model.provider); console.log('baseURL=', cfg.model.options.baseURL); console.log('model=', cfg.model.options.model);"
+        working-directory: ./Tool/AICodeReview
 
-  - name: Run review for push/PR
-    env:
-      ONE_SHOT: "true"
-      REPO_PATH: ${{ github.workspace }}
-      REVIEW_SINCE: ${{ github.event_name == 'pull_request' && github.event.pull_request.updated_at || github.event.head_commit.timestamp }}
-    run: node src/index.js
-    working-directory: ./Tool/AICodeReview
+      - name: Run review for push/PR
+        env:
+          ONE_SHOT: "true"
+          REPO_PATH: ${{ github.workspace }}
+          REVIEW_SINCE: ${{ github.event_name == 'pull_request' && github.event.pull_request.updated_at || github.event.head_commit.timestamp }}
+        run: node src/index.js
+        working-directory: ./Tool/AICodeReview

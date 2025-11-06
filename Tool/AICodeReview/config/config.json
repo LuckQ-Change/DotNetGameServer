@@ -7,7 +7,9 @@
     "options": {
       "baseURL": "${{ secrets.AI_BASE_URL }}",
       "apiKey": "${{ secrets.AI_API_KEY }}",
-      "model": "${{ secrets.AI_MODEL }}"
+      "model": "${{ secrets.AI_MODEL }}",
+      "authHeaderPrefix": "Bearer ",
+      "payloadFormat": "openai_chat"
     }
   },
   "notifications": {

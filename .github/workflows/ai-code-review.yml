@@ -28,7 +28,7 @@ jobs:
         run: npm ci
         working-directory: ./Tool/AICodeReview
 
-      - name: Guard: ensure AI secrets are set
+      - name: Guard ensure AI secrets are set
         shell: bash
         env:
           AI_BASE_URL: ${{ secrets.AI_BASE_URL }}

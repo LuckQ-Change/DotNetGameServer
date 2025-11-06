@@ -24,7 +24,7 @@ public abstract class BaseGameServer : IServerContext
     private readonly int _maxConcurrentConnections; // 可配置连接上限
     private readonly int _receiveTimeoutMs; // 收发超时（软限制）
     private readonly int _acceptBackoffMs; // 接受失败退避毫秒
-    private int _currentConnections;
+    private int _currentConnections; 
     private TcpListener? _listener;
     private CancellationTokenSource? _cts;
     // ECS 更新循环通过后台 Task 驱动，无需持有字段引用。

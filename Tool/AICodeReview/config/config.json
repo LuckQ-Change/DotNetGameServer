@@ -20,9 +20,8 @@
     }
   },
   "review": {
-    "include" : ["scr/**/*.cs"],
-    "maxSnippetsPerCommit": 2,
-    "maxLinesPerSnippet": 20
+    "maxSnippetsPerCommit": 20,
+    "maxLinesPerSnippet": 1000
   },
   "mention_map": {
     "email_to_lark_open_id": {},

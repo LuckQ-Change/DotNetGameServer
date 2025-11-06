@@ -64,9 +64,8 @@ jobs:
             },
             "schedule": { "intervalMinutes": 0, "dailyTime": "", "cron": "" },
             "review": { 
-              "include" : ["scr/**/*.cs"],
-              "maxSnippetsPerCommit": 2, 
-              "maxLinesPerSnippet": 20 
+              "maxSnippetsPerCommit": 20, 
+              "maxLinesPerSnippet": 2000 
             }
           }
           EOF

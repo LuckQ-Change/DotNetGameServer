@@ -59,7 +59,7 @@ jobs:
                 "model": "${AI_MODEL}"
               }
             },
-            "notifications": {   "wecom": { "enabled": false, "webhook": "${WECOM_WEBHOOK}" },   "lark": { "enabled": true, "webhook": "${LARK_WEBHOOK}" },   "email": { "enabled": false, "from": "", "smtp": { "host": "" } },   "reportStyle": "snippets_only",   "snippetFormat": "no_headers" }
+            "notifications": {  "lark": { "enabled": true, "webhook": "${LARK_WEBHOOK}" },  "reportStyle": "snippets_only",   "snippetFormat": "no_headers" },
             "schedule": { "intervalMinutes": 0, "dailyTime": "", "cron": "" },
             "review": { "maxSnippetsPerCommit": 2, "maxLinesPerSnippet": 20 }
           }

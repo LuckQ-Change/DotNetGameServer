@@ -3,7 +3,7 @@
     "path": "${{ github.workspace }}"
   },
   "model": {
-    "provider": "openai_chat",
+    "provider": "openai",
     "options": {
       "baseURL": "${{ secrets.AI_BASE_URL }}",
       "apiKey": "${{ secrets.AI_API_KEY }}",

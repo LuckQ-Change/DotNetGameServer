@@ -28,17 +28,24 @@ jobs:
         run: npm ci
         working-directory: ./Tool/AICodeReview
 
+      - name: Guard: ensure required secrets are set
+        run: |
+          if [ -z "${{ secrets.AI_BASE_URL }}" ] || [ -z "${{ secrets.AI_API_KEY }}" ] || [ -z "${{ secrets.AI_MODEL }}" ]; then
+            echo "Required secrets (AI_BASE_URL, AI_API_KEY, AI_MODEL) are missing or unavailable (fork PRs hide secrets)."
+            exit 1
+          fi
+
       - name: Write config from secrets
         run: |
           cat > config/config.json << 'EOF'
           {
             "repo": { "path": "${{ github.workspace }}" },
             "model": {
-              "provider": "http",
+              "provider": "openai",
               "options": {
-                "endpoint": "${{ secrets.AI_HTTP_ENDPOINT }}",
-                "apiKey": "${{ secrets.AI_HTTP_TOKEN }}",
-                "authHeaderPrefix": "${{ secrets.AI_HTTP_AUTH_PREFIX }}"
+                "baseURL": "${{ secrets.AI_BASE_URL }}",
+                "apiKey": "${{ secrets.AI_API_KEY }}",
+                "model": "${{ secrets.AI_MODEL }}"
               }
             },
             "notifications": { "wecom": { "enabled": true, "webhook": "${{ secrets.WECOM_WEBHOOK }}" } },
@@ -46,6 +53,11 @@ jobs:
             "review": { "maxSnippetsPerCommit": 2, "maxLinesPerSnippet": 20 }
           }
           EOF
+        working-directory: ./Tool/AICodeReview
+
+      - name: Debug loaded config
+        run: |
+          node -e "const cfg=require('./config/config.json'); console.log('provider=', cfg.model.provider); console.log('baseURL=', cfg.model.options.baseURL); console.log('model=', cfg.model.options.model);"
         working-directory: ./Tool/AICodeReview
 
       - name: Run review for push/PR

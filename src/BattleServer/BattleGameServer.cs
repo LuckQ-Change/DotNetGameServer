@@ -11,7 +11,7 @@ public class BattleGameServer(ILogger<BattleGameServer> logger) : BaseGameServer
     public override async Task StartAsync(int port)
     {
         RegisterStrongMessageHandler(new StartBattleMessageHandler());
-        RegisterStrongMessageHandler<AttackRequest, AttackResponse>(new AttackMessageHandler());
+        RegisterStrongMessageHandler(new AttackMessageHandler());
 
         var ecs = new EcsWorldComponent();
         AddComponent(ecs);

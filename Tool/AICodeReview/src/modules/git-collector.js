@@ -7,7 +7,8 @@ export async function collectCommitsSince(config, sinceTimestamp) {
   const git = simpleGit({ baseDir: repoPath });
 
   const sinceIso = new Date(sinceTimestamp).toISOString();
-  const logs = await git.log({ since: sinceIso });
+  // 使用正确的git参数键，确保生成 --since=<ISO>
+  const logs = await git.log({ '--since': sinceIso });
 
   const commits = [];
   for (const l of logs.all) {

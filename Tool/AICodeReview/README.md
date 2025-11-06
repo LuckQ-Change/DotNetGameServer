@@ -50,6 +50,12 @@
   - `issues_only`：仅输出审查建议（不含提交信息/片段）。
   - `issues_with_snippets`：只输出审查建议与片段（不含提交信息）。
   - 默认保护：当未提取到片段且用于审查的diff为空时，将自动跳过发送通知，避免“空话模板”。
+  - 发送开关：`notifications.skipWhenNoSnippets`（默认 `true`）。当未提取到任何片段时，直接不发送通知；如需在无片段时仍发送“仅问题”类消息，将此项设为 `false`。
+
+## 无代码变更的处理
+- 识别规则：当一次提交在路径过滤后未产生可审的 `@@` hunk（即未提取到任何片段），审查层会跳过模型调用（不走AI流程）。
+- 通知行为：与上述一致，默认不发送任何消息（受 `notifications.skipWhenNoSnippets` 控制，默认启用）。
+- 建议配置：通过 `review.include`/`review.exclude` 精确限定审核范围，例如只审 `scr/**/*.cs`，避免“非代码变更”触发审查。
  - 片段格式：通过 `notifications.snippetFormat` 精简片段内容，支持：
    - `raw`（默认）：保留原始diff片段
    - `no_headers`：去除 `diff --git`、`@@`、`---`、`+++` 等头部行

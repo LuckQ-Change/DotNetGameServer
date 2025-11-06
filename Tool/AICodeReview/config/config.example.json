@@ -30,7 +30,8 @@
       "from": "AI Code Review <noreply@example.com>"
     },
     "reportStyle": "issues_only",
-    "snippetFormat": "no_headers"
+    "snippetFormat": "no_headers",
+    "skipWhenNoSnippets": true
   },
   "mention_map": {
     "email_to_lark_open_id": {

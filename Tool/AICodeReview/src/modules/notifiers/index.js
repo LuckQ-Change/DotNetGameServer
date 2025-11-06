@@ -33,7 +33,18 @@ function buildMessage(result, config) {
 
 export async function notifyResults({ config, results }) {
   for (const r of results) {
-    // 跳过无内容的结果：当未提取到片段且用于审查的diff为空
+    // 识别审查层跳过标记：不发送通知
+    if (r.skipped) {
+      console.log('[notifiers] 跳过发送：审查层标记为未识别代码片段', r.commit?.hash);
+      continue;
+    }
+    const skipWhenNoSnippets = config.notifications?.skipWhenNoSnippets ?? true;
+    // 跳过：未提取到片段（可配置，默认启用）
+    if (skipWhenNoSnippets && (!r.snippets || r.snippets.length === 0)) {
+      console.log('[notifiers] 跳过发送：未提取到片段', r.commit?.hash);
+      continue;
+    }
+    // 兼容旧行为：当未提取到片段且用于审查的diff为空
     if ((!r.snippets || r.snippets.length === 0) && r.usedDiffEmpty) {
       console.log('[notifiers] 跳过发送：无片段且diff为空', r.commit?.hash);
       continue;

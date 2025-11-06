@@ -3,11 +3,11 @@
     "path": "${{ github.workspace }}"
   },
   "model": {
-    "provider": "http",
+    "provider": "openai",
     "options": {
-      "endpoint": "${{ secrets.AI_HTTP_ENDPOINT }}",
-      "apiKey": "${{ secrets.AI_HTTP_TOKEN }}",
-      "authHeaderPrefix": "${{ secrets.AI_HTTP_AUTH_PREFIX }}"
+      "baseURL": "${{ secrets.AI_BASE_URL }}",
+      "apiKey": "${{ secrets.AI_API_KEY }}",
+      "model": "${{ secrets.AI_MODEL }}"
     }
   },
   "notifications": {
@@ -30,5 +30,5 @@
     "email_to_wecom_userid": {
       "wujiaqing2020w@163.com": "武家庆"
     }
-  },
+  }
 }

@@ -1,3 +1,5 @@
+name: AI Code Review (Push/PR)
+
 on:
   push:
   pull_request:
@@ -6,20 +8,50 @@ jobs:
   review:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
-        with: { node-version: 18 }
-      - run: npm ci
+      - name: Checkout repo
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 18
+
+      - name: Restore state cache (optional)
+        uses: actions/cache@v4
+        with:
+          path: Tool/AICodeReview/state
+          key: ai-code-review-state-${{ github.ref }}
+
+      - name: Install dependencies
+        run: npm ci
         working-directory: ./Tool/AICodeReview
-      - run: |
+
+      - name: Write config from secrets
+        run: |
           cat > config/config.json << 'EOF'
-          { "repo": { "path": "${{ github.workspace }}" }, "model": { "provider": "http", "options": { "endpoint": "${{ secrets.AI_HTTP_ENDPOINT }}" } }, "notifications": { "wecom": { "enabled": true, "webhook": "${{ secrets.WECOM_WEBHOOK }}" } }, "schedule": { "intervalMinutes": 0, "dailyTime": "", "cron": "" }, "review": { "maxSnippetsPerCommit": 2, "maxLinesPerSnippet": 20 } }
+          {
+            "repo": { "path": "${{ github.workspace }}" },
+            "model": {
+              "provider": "http",
+              "options": {
+                "endpoint": "${{ secrets.AI_HTTP_ENDPOINT }}",
+                "apiKey": "${{ secrets.AI_HTTP_TOKEN }}",
+                "authHeaderPrefix": "${{ secrets.AI_HTTP_AUTH_PREFIX }}"
+              }
+            },
+            "notifications": { "wecom": { "enabled": true, "webhook": "${{ secrets.WECOM_WEBHOOK }}" } },
+            "schedule": { "intervalMinutes": 0, "dailyTime": "", "cron": "" },
+            "review": { "maxSnippetsPerCommit": 2, "maxLinesPerSnippet": 20 }
+          }
           EOF
         working-directory: ./Tool/AICodeReview
+
       - name: Run review for push/PR
         env:
           ONE_SHOT: "true"
           REPO_PATH: ${{ github.workspace }}
-          REVIEW_SINCE: ${{ github.event.head_commit.timestamp }}
+          REVIEW_SINCE: ${{ github.event_name == 'pull_request' && github.event.pull_request.updated_at || github.event.head_commit.timestamp }}
         run: node src/index.js
         working-directory: ./Tool/AICodeReview

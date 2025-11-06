@@ -1,5 +1,4 @@
 using Core;
-using DotNetGameServer;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Configuration;
 using Shared.Constants;
@@ -11,40 +10,7 @@ namespace DirectoryServer;
 /// </summary>
 public class DirectoryGameServer : BaseGameServer
 {
-    public DirectoryGameServer(Action<string> logger) : base("Directory", logger)
-    {
-        // 注册目录组件（内存注册表）
-        var registry = new Components.InMemoryServerRegistryComponent();
-        AddComponent<Components.IServerRegistryComponent>(registry);
-
-        // 注册指标组件（定期汇总）
-        var metrics = new Components.DirectoryMetricsComponent(message => Log(message), () => registry.ListServers().Count());
-        AddComponent<Components.DirectoryMetricsComponent>(metrics);
-
-        // 注册消息处理器（强类型）
-        RegisterStrongMessageHandler<QueryServersRequest, QueryServersResponse>(new Handlers.QueryServersMessageHandler());
-        RegisterStrongMessageHandler<QueryServerStatusRequest, QueryServerStatusResponse>(new Handlers.QueryServerStatusMessageHandler());
-        RegisterStrongMessageHandler<SwitchServerRequest, SwitchServerResponse>(new Handlers.SwitchServerMessageHandler());
-        RegisterStrongMessageHandler<VerifySwitchTokenRequest, VerifySwitchTokenResponse>(new Handlers.VerifySwitchTokenMessageHandler());
-        RegisterStrongMessageHandler<HeartbeatRequest, HeartbeatResponse>(new Handlers.HeartbeatMessageHandler());
-    }
-
-    public DirectoryGameServer(ILogger logger) : base("Directory", logger)
-    {
-        var registry = new Components.InMemoryServerRegistryComponent();
-        AddComponent<Components.IServerRegistryComponent>(registry);
-
-        var metrics = new Components.DirectoryMetricsComponent(message => Log(message), () => registry.ListServers().Count());
-        AddComponent<Components.DirectoryMetricsComponent>(metrics);
-
-        RegisterStrongMessageHandler<QueryServersRequest, QueryServersResponse>(new Handlers.QueryServersMessageHandler());
-        RegisterStrongMessageHandler<QueryServerStatusRequest, QueryServerStatusResponse>(new Handlers.QueryServerStatusMessageHandler());
-        RegisterStrongMessageHandler<SwitchServerRequest, SwitchServerResponse>(new Handlers.SwitchServerMessageHandler());
-        RegisterStrongMessageHandler<VerifySwitchTokenRequest, VerifySwitchTokenResponse>(new Handlers.VerifySwitchTokenMessageHandler());
-        RegisterStrongMessageHandler<HeartbeatRequest, HeartbeatResponse>(new Handlers.HeartbeatMessageHandler());
-    }
-
-    public DirectoryGameServer(ILogger logger, IConfiguration configuration) : base("Directory", logger)
+    public DirectoryGameServer(ILogger logger, IConfiguration configuration) : base(nameof(DirectoryGameServer), logger)
     {
         // 依据配置选择注册组件实现：优先 Redis，其次内存
         var mode = configuration[ConfigKeys.DirectoryRegistryMode] ??
@@ -107,15 +73,15 @@ public class DirectoryGameServer : BaseGameServer
         {
             registry = new Components.InMemoryServerRegistryComponent();
         }
-        AddComponent<Components.IServerRegistryComponent>(registry);
+        AddComponent(registry);
 
         var metrics = new Components.DirectoryMetricsComponent(message => Log(message), () => registry.ListServers().Count());
-        AddComponent<Components.DirectoryMetricsComponent>(metrics);
+        AddComponent(metrics);
 
-        RegisterStrongMessageHandler<QueryServersRequest, QueryServersResponse>(new Handlers.QueryServersMessageHandler());
-        RegisterStrongMessageHandler<QueryServerStatusRequest, QueryServerStatusResponse>(new Handlers.QueryServerStatusMessageHandler());
-        RegisterStrongMessageHandler<SwitchServerRequest, SwitchServerResponse>(new Handlers.SwitchServerMessageHandler());
-        RegisterStrongMessageHandler<VerifySwitchTokenRequest, VerifySwitchTokenResponse>(new Handlers.VerifySwitchTokenMessageHandler());
-        RegisterStrongMessageHandler<HeartbeatRequest, HeartbeatResponse>(new Handlers.HeartbeatMessageHandler());
+        RegisterStrongMessageHandler(new Handlers.QueryServersMessageHandler());
+        RegisterStrongMessageHandler(new Handlers.QueryServerStatusMessageHandler());
+        RegisterStrongMessageHandler(new Handlers.SwitchServerMessageHandler());
+        RegisterStrongMessageHandler(new Handlers.VerifySwitchTokenMessageHandler());
+        RegisterStrongMessageHandler(new Handlers.HeartbeatMessageHandler());
     }
 }

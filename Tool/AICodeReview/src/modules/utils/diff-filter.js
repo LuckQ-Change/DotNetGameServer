@@ -18,7 +18,8 @@ export function filterDiffByPaths(diffText, include = [], exclude = []) {
   if (!diffText) return '';
   const lines = diffText.split(/\r?\n/);
   const out = [];
-  let keep = true; // 默认保留（当没有include时）
+  // 仅在遇到匹配的 diff 块后才开始保留内容；避免在首部元数据阶段误保留
+  let keep = false;
   for (const line of lines) {
     if (line.startsWith('diff --git ')) {
       // 解析路径：例如 diff --git a/src/a.js b/src/a.js

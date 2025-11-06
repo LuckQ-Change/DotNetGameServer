@@ -1,34 +1,34 @@
 {
   "repo": {
-    "path": "${{ github.workspace }}"
+    "path": "C:/Users/Administrator/Desktop/TTT/YourRepoHere" 
   },
   "model": {
-    "provider": "openai",
+    "provider": "ollama",
     "options": {
-      "baseURL": "${{ secrets.AI_BASE_URL }}",
-      "apiKey": "${{ secrets.AI_API_KEY }}",
-      "model": "${{ secrets.AI_MODEL }}",
-      "authHeaderPrefix": "Bearer ",
-      "payloadFormat": "openai_chat"
+      "endpoint": "http://localhost:11434/api/generate",
+      "model": "qwen2.5-coder:latest"
     }
   },
   "notifications": {
-    "skipWhenNoSnippets": true,
-    "reportStyle": "snippets_only",
-    "lark": {
-      "enabled": true,
-      "webhook": "${{ secrets.LARK_WEBHOOK }}"
+    "lark": { "enabled": false, "webhook": "" },
+    "wecom": { "enabled": false, "webhook": "" },
+    "email": {
+      "enabled": false,
+      "smtp": { "host": "", "port": 465, "secure": true, "user": "", "pass": "" },
+      "from": "AI Code Review <noreply@example.com>"
     }
-  },
-  "review": {
-    "include": [
-      "scr/**/*.cs"
-    ],
-    "maxSnippetsPerCommit": 20,
-    "maxLinesPerSnippet": 1000
   },
   "mention_map": {
     "email_to_lark_open_id": {},
     "email_to_wecom_userid": {}
+  },
+  "schedule": {
+    "intervalMinutes": 60,
+    "dailyTime": "18:00",
+    "cron": ""
+  },
+  "review": {
+    "maxSnippetsPerCommit": 2,
+    "maxLinesPerSnippet": 20
   }
 }

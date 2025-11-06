@@ -65,7 +65,7 @@ jobs:
             },
             "schedule": { "intervalMinutes": 60, "dailyTime": "17:00", "cron": "" },
             "review": { 
-              "include" : ["scr/**/*.cs"],
+              "include" : ["src/**/*.cs"],
               "maxSnippetsPerCommit": 200, 
               "maxLinesPerSnippet": 20000
             }

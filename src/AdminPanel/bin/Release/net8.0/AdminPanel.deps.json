@@ -9,7 +9,8 @@
       "AdminPanel/1.0.0": {
         "dependencies": {
           "Microsoft.EntityFrameworkCore.Design": "9.0.10",
-          "Npgsql.EntityFrameworkCore.PostgreSQL": "9.0.4"
+          "Npgsql.EntityFrameworkCore.PostgreSQL": "9.0.4",
+          "SonarAnalyzer.CSharp": "9.10.0.77988"
         },
         "runtime": {
           "AdminPanel.dll": {}
@@ -532,6 +533,7 @@
           }
         }
       },
+      "SonarAnalyzer.CSharp/9.10.0.77988": {},
       "System.CodeDom/6.0.0": {
         "runtime": {
           "lib/net6.0/System.CodeDom.dll": {
@@ -855,6 +857,13 @@
       "sha512": "sha512-mw5vcY2IEc7L+IeGrxpp/J5OSnCcjkjAgJYCm/eD52wpZze8zsSifdqV7zXslSMmfJG2iIUGZyo3KuDtEFKwMQ==",
       "path": "npgsql.entityframeworkcore.postgresql/9.0.4",
       "hashPath": "npgsql.entityframeworkcore.postgresql.9.0.4.nupkg.sha512"
+    },
+    "SonarAnalyzer.CSharp/9.10.0.77988": {
+      "type": "package",
+      "serviceable": true,
+      "sha512": "sha512-R1ks7yLAq7A9n9nYKCVzvzvGH7JM92ZmcOQFC3a7z0QqqLpdnOV7a2Qm+jM3f85SthrahLptSjg20YVqxSo6/Q==",
+      "path": "sonaranalyzer.csharp/9.10.0.77988",
+      "hashPath": "sonaranalyzer.csharp.9.10.0.77988.nupkg.sha512"
     },
     "System.CodeDom/6.0.0": {
       "type": "package",

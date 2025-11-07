@@ -16,9 +16,8 @@ public class HeartbeatClientComponent : IServerComponent
     private readonly Func<int>? _playerCountProvider;
     private readonly Func<string>? _statusProvider;
     private CancellationTokenSource? _cts;
-    private Task? _loopTask;
 
-    private Config.SimpleConfigLoader.HeartbeatSettings _settings = new();
+    private readonly Config.SimpleConfigLoader.HeartbeatSettings _settings;
     private readonly string _type;
     private readonly string _idPrefix;
     private volatile int _lastResolvedPort;
@@ -44,7 +43,7 @@ public class HeartbeatClientComponent : IServerComponent
         _portProvider = portProvider;
         _playerCountProvider = playerCountProvider;
         _statusProvider = statusProvider;
-        _settings = Config.SimpleConfigLoader.LoadHeartbeatSettings(baseDir);
+        _settings = Config.SimpleConfigLoader.LoadHeartbeatSettings(baseDir) ?? new Config.SimpleConfigLoader.HeartbeatSettings();
         _idPrefix = type; 
     }
 
@@ -54,7 +53,7 @@ public class HeartbeatClientComponent : IServerComponent
     public Task InitializeAsync()
     {
         _cts = new CancellationTokenSource();
-        _loopTask = Task.Run(() => HeartbeatLoop(_cts.Token));
+        _ = Task.Run(() => HeartbeatLoop(_cts.Token));
         return Task.CompletedTask;
     }
 
@@ -72,7 +71,6 @@ public class HeartbeatClientComponent : IServerComponent
         {
             // 非关键异常，忽略以完成销毁流程。
         }
-        _loopTask = null;
         _cts = null;
         return Task.CompletedTask;
     }

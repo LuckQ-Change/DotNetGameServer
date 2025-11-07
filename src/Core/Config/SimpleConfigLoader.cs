@@ -29,13 +29,11 @@ public static class SimpleConfigLoader
             using var stream = File.OpenRead(path);
             using var doc = JsonDocument.Parse(stream);
             var root = doc.RootElement;
-            if (root.TryGetProperty("directory", out var directory) && directory.ValueKind == JsonValueKind.Object)
+            if (root.TryGetProperty("directory", out var directory) && directory.ValueKind == JsonValueKind.Object
+                && directory.TryGetProperty("tokenSecret", out var secProp) && secProp.ValueKind == JsonValueKind.String)
             {
-                if (directory.TryGetProperty("tokenSecret", out var secProp) && secProp.ValueKind == JsonValueKind.String)
-                {
-                    var sec = secProp.GetString();
-                    if (!string.IsNullOrWhiteSpace(sec)) return sec;
-                }
+                var sec = secProp.GetString();
+                if (!string.IsNullOrWhiteSpace(sec)) return sec;
             }
         }
         catch (Exception)

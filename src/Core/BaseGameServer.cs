@@ -32,10 +32,10 @@ public abstract class BaseGameServer : IServerContext
     // 连接数指标通过 Meter 注册，无需持有字段引用。
     private readonly ConcurrentDictionary<string, IStrongHandlerInvoker> _typedHandlers = new();
     private readonly ConcurrentDictionary<Type, IServerComponent> _components = new();
-    // 网络鲁棒性：限速与黑名单
-    private readonly int _maxBytesPerSecond = 1_000_000; // 默认每连接 1MB/s
-    private readonly int _maxMessagesPerSecond = 200;    // 默认每连接 200 条/秒
-    private readonly int _idleTimeoutMs = 120_000;        // 默认空闲 120s 断开
+    // 网络鲁棒性：限速与黑名单（在构造函数中设定默认值，以满足分析器规则 S3604）
+    private readonly int _maxBytesPerSecond; // 默认每连接 1MB/s
+    private readonly int _maxMessagesPerSecond;    // 默认每连接 200 条/秒
+    private readonly int _idleTimeoutMs;        // 默认空闲 120s 断开
     private readonly ConcurrentDictionary<string, DateTime> _blacklist = new();
 
     /// <summary>
@@ -64,6 +64,10 @@ public abstract class BaseGameServer : IServerContext
         _receiveTimeoutMs = Math.Max(0, settings.ReceiveTimeoutMs);
         _acceptBackoffMs = Math.Max(0, settings.AcceptBackoffMs);
         CoreTelemetry.CreateConnectionsGauge(() => _currentConnections, ServerName);
+        // 设定默认网络限速与空闲超时
+        _maxBytesPerSecond = 1_000_000;
+        _maxMessagesPerSecond = 200;
+        _idleTimeoutMs = 120_000;
         // 若后续提供配置，可在此覆盖默认值（环境变量或配置）
         if (int.TryParse(Environment.GetEnvironmentVariable(Shared.Constants.ConfigKeys.ServerMaxBpsEnv), out var bps) && bps > 0)
             _maxBytesPerSecond = bps;
@@ -544,23 +548,31 @@ public abstract class BaseGameServer : IServerContext
     }
 }
 
-internal sealed class RequestServerContext(BaseGameServer server, string? token, string remote, string requestId)
-    : IServerContext
+internal sealed class RequestServerContext : IServerContext
 {
-    private readonly string _token = token ?? string.Empty;
+    private readonly BaseGameServer _server;
+    private readonly string _token;
     private AuthInfo? _auth;
-    private readonly string _requestId = string.IsNullOrWhiteSpace(requestId) ? Guid.NewGuid().ToString("N") : requestId;
+    private readonly string _requestId;
 
-    public string ServerName => server.ServerName;
+    public RequestServerContext(BaseGameServer server, string? token, string remote, string requestId)
+    {
+        _server = server;
+        _token = token ?? string.Empty;
+        RemoteAddress = remote;
+        _requestId = string.IsNullOrWhiteSpace(requestId) ? Guid.NewGuid().ToString("N") : requestId;
+    }
+
+    public string ServerName => _server.ServerName;
     public string AccessToken => _token;
-    public string RemoteAddress => remote;
+    public string RemoteAddress { get; }
     public string RequestId => _requestId;
     public AuthInfo? Auth => _auth;
 
-    public void Log(string message) => server.Log(message);
+    public void Log(string message) => _server.Log(message);
 
-    public void Log(string message, LogLevel level) => server.Log(message, level);
-    public T? GetComponent<T>() where T : class, IServerComponent => server.GetComponent<T>();
+    public void Log(string message, LogLevel level) => _server.Log(message, level);
+    public T? GetComponent<T>() where T : class, IServerComponent => _server.GetComponent<T>();
 
     /// <summary>
     /// 内部：设置鉴权后的身份信息。

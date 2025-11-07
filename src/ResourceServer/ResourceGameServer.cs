@@ -10,7 +10,6 @@ namespace ResourceServer;
 public class ResourceGameServer(ILogger<ResourceGameServer> logger, IConfiguration configuration)
     : BaseGameServer(nameof(ResourceGameServer), logger)
 {
-    private readonly IConfiguration? _configuration = configuration;
 
     public override async Task StartAsync(int port)
     {
@@ -18,7 +17,7 @@ public class ResourceGameServer(ILogger<ResourceGameServer> logger, IConfigurati
         RegisterStrongMessageHandler(new GetBundleMessageHandler());
 
         // 资源根目录可配置：优先读取 appsettings resource:root，其次环境变量 RESOURCE_ROOT，最后默认程序根目录下的 Resources
-        var resourceRoot = _configuration?[ConfigKeys.ResourceRootConfigKey] ?? Environment.GetEnvironmentVariable(ConfigKeys.ResourceRootEnv);
+        var resourceRoot = configuration[ConfigKeys.ResourceRootConfigKey] ?? Environment.GetEnvironmentVariable(ConfigKeys.ResourceRootEnv);
         if (string.IsNullOrWhiteSpace(resourceRoot))
         {
             resourceRoot = Path.Combine(AppContext.BaseDirectory, "Resources");

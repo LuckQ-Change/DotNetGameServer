@@ -13,18 +13,18 @@ public interface ITokenSecretProvider : IServerComponent
 
 public class TokenSecretProviderComponent(string? baseDir = null) : ITokenSecretProvider
 {
-    private readonly string _baseDir = baseDir ?? AppContext.BaseDirectory;
-    private string _secret = "dev-secret";
+    private string? _secret;
     public string Name => "TokenSecretProvider";
 
     public Task InitializeAsync()
     {
         // 启动时读取并缓存密钥；环境变量优先，其次配置文件；最后回退默认值。
-        _secret = SimpleConfigLoader.LoadDirectoryTokenSecret(_baseDir) ?? "dev-secret";
+        var dir = baseDir ?? AppContext.BaseDirectory;
+        _secret = SimpleConfigLoader.LoadDirectoryTokenSecret(dir) ?? "dev-secret";
         return Task.CompletedTask;
     }
 
     public Task DestroyAsync() => Task.CompletedTask;
 
-    public string GetSecret() => _secret;
+    public string GetSecret() => _secret ?? "dev-secret";
 }

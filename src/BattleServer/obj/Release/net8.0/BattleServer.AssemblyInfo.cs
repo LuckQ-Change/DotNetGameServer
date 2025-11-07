@@ -13,7 +13,7 @@ using System.Reflection;
 [assembly: System.Reflection.AssemblyCompanyAttribute("BattleServer")]
 [assembly: System.Reflection.AssemblyConfigurationAttribute("Release")]
 [assembly: System.Reflection.AssemblyFileVersionAttribute("1.0.0.0")]
-[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+944beeb75a494f16dd4e7c7a7ccabdfb93f08448")]
+[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+8a19abdce2021602555196cb09e95dc28f327765")]
 [assembly: System.Reflection.AssemblyProductAttribute("BattleServer")]
 [assembly: System.Reflection.AssemblyTitleAttribute("BattleServer")]
 [assembly: System.Reflection.AssemblyVersionAttribute("1.0.0.0")]

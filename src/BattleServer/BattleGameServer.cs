@@ -1,7 +1,7 @@
+using BattleServer.Handlers;
 using Core;
 using Core.Components;
 using Core.Ecs;
-using DotNetGameServer;
 using Microsoft.Extensions.Logging;
 
 namespace BattleServer;
@@ -15,7 +15,6 @@ public class BattleGameServer(ILogger<BattleGameServer> logger) : BaseGameServer
 
         var ecs = new EcsWorldComponent();
         AddComponent(ecs);
-        // Register the ECS system
         _ = ecs.World.RegisterSystemAsync(new Ecs.BattleGcSystem(TimeSpan.FromMinutes(30)));
 
         AddComponent(new HeartbeatClientComponent(

@@ -218,7 +218,7 @@ app.Run();
 namespace DotNetGameServer.AdminPanel
 {
     // 健康状态常量，避免魔法字符串（置于命名空间中以满足 S3903）
-    static class HealthStatus
+    internal static class HealthStatus
     {
         public const string Healthy = "Healthy";
         public const string Unhealthy = "Unhealthy";
@@ -229,7 +229,7 @@ namespace DotNetGameServer.AdminPanel
     public class ServerStatusResult
     {
         public string Name { get; set; } = string.Empty;
-        public string? Status { get; set; }
+        public string? Status { get; init; }
         public object? Checks { get; set; }
         public string? Description { get; set; }
         public string? Exception { get; set; }

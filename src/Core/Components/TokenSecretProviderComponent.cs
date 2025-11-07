@@ -8,19 +8,14 @@ namespace Core.Components;
 public interface ITokenSecretProvider : IServerComponent
 {
     /// <summary>获取当前签名密钥（若未配置则返回开发环境默认值）。</summary>
-    string GetSecret();
+    public string GetSecret();
 }
 
-public class TokenSecretProviderComponent : ITokenSecretProvider
+public class TokenSecretProviderComponent(string? baseDir = null) : ITokenSecretProvider
 {
-    private readonly string _baseDir;
+    private readonly string _baseDir = baseDir ?? AppContext.BaseDirectory;
     private string _secret = "dev-secret";
     public string Name => "TokenSecretProvider";
-
-    public TokenSecretProviderComponent(string? baseDir = null)
-    {
-        _baseDir = baseDir ?? AppContext.BaseDirectory;
-    }
 
     public Task InitializeAsync()
     {

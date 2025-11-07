@@ -2,15 +2,9 @@ using Core.Ecs;
 
 namespace BattleServer.Ecs;
 
-public class BattleGcSystem : ISystem
+public class BattleGcSystem(TimeSpan ttl) : ISystem
 {
     public string Name => "BattleGc";
-    private readonly TimeSpan _ttl;
-
-    public BattleGcSystem(TimeSpan ttl)
-    {
-        _ttl = ttl;
-    }
 
     public Task InitializeAsync(World world)
     {
@@ -30,7 +24,7 @@ public class BattleGcSystem : ISystem
             var comp = entity.GetComponent<BattleStateComponent>();
             if (comp == null) continue;
 
-            var expired = !comp.IsActive || (now - comp.LastActiveUtc) > _ttl;
+            var expired = !comp.IsActive || (now - comp.LastActiveUtc) > ttl;
             if (expired)
             {
                 // 移除战斗实体

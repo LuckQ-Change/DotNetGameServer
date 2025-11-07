@@ -1,11 +1,9 @@
-using Core;
-using DotNetGameServer;
-using Google.Protobuf;
-using Core.Ecs;
-using System;
 using BattleServer.Ecs;
+using Core;
+using Core.Ecs;
+using DotNetGameServer;
 
-namespace BattleServer;
+namespace BattleServer.Handlers;
 
 /// <summary>
 /// 开始战斗消息处理器
@@ -17,13 +15,18 @@ public class StartBattleMessageHandler : IStrongMessageHandler<StartBattleReques
         // 统一鉴权示例：基于 context.Auth 的访问控制
         if (context.Auth == null)
         {
-            context.Log($"[战斗][AUTH] 访问拒绝: remote={context.RemoteAddress} player={request.PlayerId} code=AUTH_REQUIRED");
-            return Task.FromResult<StartBattleResponse?>(new StartBattleResponse { Success = false, Message = "AUTH_REQUIRED" });
+            context.Log(
+                $"[战斗][AUTH] 访问拒绝: remote={context.RemoteAddress} player={request.PlayerId} code=AUTH_REQUIRED");
+            return Task.FromResult<StartBattleResponse?>(new StartBattleResponse
+                { Success = false, Message = "AUTH_REQUIRED" });
         }
+
         if (!string.Equals(context.Auth.UserId, request.PlayerId, StringComparison.Ordinal))
         {
-            context.Log($"[战斗][AUTH] 用户不匹配: remote={context.RemoteAddress} player={request.PlayerId} authed={context.Auth.UserId} code=FORBIDDEN");
-            return Task.FromResult<StartBattleResponse?>(new StartBattleResponse { Success = false, Message = "FORBIDDEN" });
+            context.Log(
+                $"[战斗][AUTH] 用户不匹配: remote={context.RemoteAddress} player={request.PlayerId} authed={context.Auth.UserId} code=FORBIDDEN");
+            return Task.FromResult<StartBattleResponse?>(new StartBattleResponse
+                { Success = false, Message = "FORBIDDEN" });
         }
 
         var ecs = context.GetComponent<EcsWorldComponent>();
@@ -41,7 +44,8 @@ public class StartBattleMessageHandler : IStrongMessageHandler<StartBattleReques
 
         // 维护玩家到战斗的索引，便于查询与管理
         var playerEntity = ecs.World.GetOrCreateEntity(request.PlayerId);
-        var index = playerEntity.GetComponent<PlayerBattlesComponent>() ?? playerEntity.AddComponent(new PlayerBattlesComponent());
+        var index = playerEntity.GetComponent<PlayerBattlesComponent>() ??
+                    playerEntity.AddComponent(new PlayerBattlesComponent());
         index.Add(battleId);
 
         context.Log($"[战斗][ECS] 玩家={request.PlayerId} 开始战斗，类型: {request.BattleType}, battleId={comp.BattleId}");

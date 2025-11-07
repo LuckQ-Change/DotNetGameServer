@@ -3,7 +3,6 @@ using System.Net;
 using System.Net.Sockets;
 using DotNetGameServer;
 using Google.Protobuf;
-using Microsoft.Extensions.DependencyInjection;
 using System.Diagnostics;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
@@ -53,18 +52,13 @@ public abstract class BaseGameServer : IServerContext
     /// <summary>
     /// 当前监听端口；未启动或已停止时为 <c>null</c>。
     /// </summary>
-    public int? ListeningPort { get; private set; }
+    protected int? ListeningPort { get; private set; }
 
-    protected BaseGameServer(string serverName, Action<string> log)
-        : this(serverName, new DelegateLogger(log, serverName))
-    {
-    }
-
-    protected BaseGameServer(string serverName, ILogger logger)
+    protected BaseGameServer(string serverName, ILogger? logger)
     {
         ServerName = serverName;
         _logger = logger ?? new DelegateLogger(Console.WriteLine, serverName);
-        var settings = Core.Config.SimpleConfigLoader.LoadServerSettings(AppContext.BaseDirectory);
+        var settings = Config.SimpleConfigLoader.LoadServerSettings(AppContext.BaseDirectory);
         _maxMessageSize = Math.Max(1024, settings.MaxMessageSizeBytes);
         _maxConcurrentConnections = Math.Max(1, settings.MaxConcurrentConnections);
         _receiveTimeoutMs = Math.Max(0, settings.ReceiveTimeoutMs);
@@ -95,7 +89,7 @@ public abstract class BaseGameServer : IServerContext
     /// </summary>
     /// <typeparam name="T">组件接口或具体类型。</typeparam>
     /// <param name="component">组件实例，必须实现 <see cref="IServerComponent"/>。</param>
-    public void AddComponent<T>(T component) where T : class, IServerComponent
+    protected void AddComponent<T>(T component) where T : class, IServerComponent
     {
         _components[typeof(T)] = component;
     }
@@ -119,7 +113,7 @@ public abstract class BaseGameServer : IServerContext
     /// <typeparam name="TReq">请求消息类型。</typeparam>
     /// <typeparam name="TResp">响应消息类型。</typeparam>
     /// <param name="handler">强类型消息处理器。</param>
-    public void RegisterStrongMessageHandler<TReq, TResp>(IStrongMessageHandler<TReq, TResp> handler)
+    protected void RegisterStrongMessageHandler<TReq, TResp>(IStrongMessageHandler<TReq, TResp> handler)
         where TReq : class, IMessage<TReq>, new()
         where TResp : class, IMessage<TResp>, new()
     {
@@ -150,7 +144,7 @@ public abstract class BaseGameServer : IServerContext
         _listener.Start();
         ListeningPort = port;
 
-        // Start health check endpoint
+        // 健康检查连接
         try
         {
             _webHost = new WebHostBuilder()
@@ -258,7 +252,7 @@ public abstract class BaseGameServer : IServerContext
                     currentBackoffMs = _acceptBackoffMs;
                     continue;
                 }
-                var connCount = System.Threading.Volatile.Read(ref _currentConnections);
+                var connCount = Volatile.Read(ref _currentConnections);
                 // 连接数限制：超过并发上限直接拒绝
                 if (connCount >= _maxConcurrentConnections)
                 {
@@ -312,7 +306,7 @@ public abstract class BaseGameServer : IServerContext
 
         using (client)
         {
-            System.Threading.Interlocked.Increment(ref _currentConnections);
+            Interlocked.Increment(ref _currentConnections);
             var stream = client.GetStream();
             try
             {
@@ -325,22 +319,22 @@ public abstract class BaseGameServer : IServerContext
                 Log($"设置接收/发送超时失败: {ex.Message}");
             }
             // 每连接滑动限速：100ms 子桶近似 1s 滑窗
-            const int BucketCount = 10;
-            const int BucketMs = 100;
+            const int bucketCount = 10;
+            const int bucketMs = 100;
             int currentBucketIndex = 0;
             long bucketWindowStartTicks = Stopwatch.GetTimestamp();
-            int[] messageBuckets = new int[BucketCount];
-            int[] byteBuckets = new int[BucketCount];
+            int[] messageBuckets = new int[bucketCount];
+            int[] byteBuckets = new int[bucketCount];
 
             void AdvanceBucketsIfNeeded()
             {
                 var elapsedMs = (Stopwatch.GetTimestamp() - bucketWindowStartTicks) * 1000.0 / Stopwatch.Frequency;
-                if (elapsedMs >= BucketMs)
+                if (elapsedMs >= bucketMs)
                 {
-                    var steps = (int)(elapsedMs / BucketMs);
-                    for (var i = 0; i < Math.Min(steps, BucketCount); i++)
+                    var steps = (int)(elapsedMs / bucketMs);
+                    for (var i = 0; i < Math.Min(steps, bucketCount); i++)
                     {
-                        currentBucketIndex = (currentBucketIndex + 1) % BucketCount;
+                        currentBucketIndex = (currentBucketIndex + 1) % bucketCount;
                         messageBuckets[currentBucketIndex] = 0;
                         byteBuckets[currentBucketIndex] = 0;
                     }
@@ -353,7 +347,7 @@ public abstract class BaseGameServer : IServerContext
                 AdvanceBucketsIfNeeded();
                 byteBuckets[currentBucketIndex] += bytes;
                 var sum = 0;
-                for (var i = 0; i < BucketCount; i++) sum += byteBuckets[i];
+                for (var i = 0; i < bucketCount; i++) sum += byteBuckets[i];
                 return sum;
             }
 
@@ -362,11 +356,11 @@ public abstract class BaseGameServer : IServerContext
                 AdvanceBucketsIfNeeded();
                 messageBuckets[currentBucketIndex] += inc;
                 var sum = 0;
-                for (var i = 0; i < BucketCount; i++) sum += messageBuckets[i];
+                for (var i = 0; i < bucketCount; i++) sum += messageBuckets[i];
                 return sum;
             }
             int badPacketCount = 0;
-            const int BlacklistThreshold = 3;
+            const int blacklistThreshold = 3;
             try
             {
                 while (!token.IsCancellationRequested)
@@ -387,7 +381,7 @@ public abstract class BaseGameServer : IServerContext
                     {
                         Log($"非法或过大消息长度: {length}，断开连接");
                         badPacketCount++;
-                        if (badPacketCount >= BlacklistThreshold)
+                        if (badPacketCount >= blacklistThreshold)
                         {
                             AddToBlacklist(remote, TimeSpan.FromMinutes(5), "bad_packet_length");
                         }
@@ -408,11 +402,11 @@ public abstract class BaseGameServer : IServerContext
                     {
                         envelope = Envelope.Parser.ParseFrom(buf);
                     }
-                    catch (Google.Protobuf.InvalidProtocolBufferException ipbe)
+                    catch (InvalidProtocolBufferException ipbe)
                     {
                         Log($"协议解析异常(Envelope): {ipbe.Message}，断开");
                         badPacketCount++;
-                        if (badPacketCount >= BlacklistThreshold)
+                        if (badPacketCount >= blacklistThreshold)
                         {
                             AddToBlacklist(remote, TimeSpan.FromMinutes(5), "protocol_parse_error");
                         }
@@ -464,7 +458,7 @@ public abstract class BaseGameServer : IServerContext
             }
 
             Log($"客户端断开: {remote}");
-            System.Threading.Interlocked.Decrement(ref _currentConnections);
+            Interlocked.Decrement(ref _currentConnections);
         }
     }
 
@@ -480,7 +474,7 @@ public abstract class BaseGameServer : IServerContext
         {
             try
             {
-                var ecs = GetComponent<Core.Ecs.EcsWorldComponent>();
+                var ecs = GetComponent<Ecs.EcsWorldComponent>();
                 if (ecs != null)
                 {
                     await ecs.World.UpdateAsync(interval);
@@ -550,32 +544,23 @@ public abstract class BaseGameServer : IServerContext
     }
 }
 
-internal sealed class RequestServerContext : IServerContext
+internal sealed class RequestServerContext(BaseGameServer server, string? token, string remote, string requestId)
+    : IServerContext
 {
-    private readonly BaseGameServer _server;
-    private readonly string _token;
-    private readonly string _remote;
+    private readonly string _token = token ?? string.Empty;
     private AuthInfo? _auth;
-    private readonly string _requestId;
+    private readonly string _requestId = string.IsNullOrWhiteSpace(requestId) ? Guid.NewGuid().ToString("N") : requestId;
 
-    public RequestServerContext(BaseGameServer server, string token, string remote, string requestId)
-    {
-        _server = server;
-        _token = token ?? string.Empty;
-        _remote = remote ?? string.Empty;
-        _requestId = string.IsNullOrWhiteSpace(requestId) ? Guid.NewGuid().ToString("N") : requestId;
-    }
-
-    public string ServerName => _server.ServerName;
+    public string ServerName => server.ServerName;
     public string AccessToken => _token;
-    public string RemoteAddress => _remote;
+    public string RemoteAddress => remote;
     public string RequestId => _requestId;
     public AuthInfo? Auth => _auth;
 
-    public void Log(string message) => _server.Log(message);
+    public void Log(string message) => server.Log(message);
 
-    public void Log(string message, LogLevel level) => _server.Log(message, level);
-    public T? GetComponent<T>() where T : class, IServerComponent => _server.GetComponent<T>();
+    public void Log(string message, LogLevel level) => server.Log(message, level);
+    public T? GetComponent<T>() where T : class, IServerComponent => server.GetComponent<T>();
 
     /// <summary>
     /// 内部：设置鉴权后的身份信息。

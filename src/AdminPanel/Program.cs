@@ -129,7 +129,9 @@ app.MapGet("/api/server-status/stream", async (IHttpClientFactory httpClientFact
 
         var results = await Task.WhenAll(tasks);
         var overallStatus = Array.Exists(results, r => r.Status != HealthStatus.Healthy) ? HealthStatus.Unhealthy : HealthStatus.Healthy;
-        var payload = JsonSerializer.Serialize(new { status = overallStatus, checks = results });
+        // 保持与 Minimal API 的命名策略一致（camelCase），避免 SSE 返回的 PascalCase 导致前端取不到字段（出现 undefined/未知）
+        var jsonOptions = new JsonSerializerOptions(JsonSerializerDefaults.Web);
+        var payload = JsonSerializer.Serialize(new { status = overallStatus, checks = results }, jsonOptions);
 
         await context.Response.WriteAsync($"data: {payload}\n\n", cancellation);
         await context.Response.Body.FlushAsync(cancellation);

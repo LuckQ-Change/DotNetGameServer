@@ -1,5 +1,3 @@
-using Core;
-
 namespace Core.Ecs;
 
 public class EcsWorldComponent : IServerComponent

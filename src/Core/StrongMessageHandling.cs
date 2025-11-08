@@ -39,7 +39,7 @@ internal sealed class StrongHandlerInvoker<TReq, TResp> : IStrongHandlerInvoker
     where TReq : class, IMessage<TReq>, new()
     where TResp : class, IMessage<TResp>, new()
 {
-    // 常量化常用标签与状态，移除重复的魔法字符串（满足 S1192）
+    // 常量化常用标签与状态，移除重复的魔法字符串
     private const string TagServerName = "server_name";
     private const string TagClientIp = "client_ip";
     private const string TagUserId = "user_id";

@@ -18,7 +18,7 @@ public class HeartbeatClientComponent : IServerComponent
     private readonly Func<string>? _statusProvider;
     private CancellationTokenSource? _cts;
 
-    private readonly Config.SimpleConfigLoader.HeartbeatSettings _settings;
+    private readonly SimpleConfigLoader.HeartbeatSettings _settings;
     private readonly string _type;
     private readonly string _idPrefix;
     private volatile int _lastResolvedPort;
@@ -45,7 +45,7 @@ public class HeartbeatClientComponent : IServerComponent
         _portProvider = portProvider;
         _playerCountProvider = playerCountProvider;
         _statusProvider = statusProvider;
-        _settings = Config.SimpleConfigLoader.LoadHeartbeatSettings(baseDir) ?? new Config.SimpleConfigLoader.HeartbeatSettings();
+        _settings = SimpleConfigLoader.LoadHeartbeatSettings(baseDir) ?? new Config.SimpleConfigLoader.HeartbeatSettings();
         _idPrefix = type; 
     }
 

@@ -28,28 +28,28 @@ if not defined DIRECTORY_TOKEN_SECRET set DIRECTORY_TOKEN_SECRET=local-dev-%RAND
 rem Use parent environment to set service-specific variables, then start child windows without problematic quote escaping
 set SERVICE__TYPE=directory
 set SERVICE__PORT=5500
-set SERVICE__HEALTHCHECKURL=http://*:5101
-start "Directory Server" cmd /k dotnet exec "%DLL_PATH%" -- --service=directory --port=5500 --healthCheckUrl=http://*:5101
+set SERVICE__HEALTHCHECKURL=http://localhost:5101
+start "Directory Server" cmd /k dotnet exec "%DLL_PATH%" -- --service=directory --port=5500 --healthCheckUrl=http://localhost:5101
 
 set SERVICE__TYPE=login
 set SERVICE__PORT=5501
-set SERVICE__HEALTHCHECKURL=http://*:5102
-start "Login Server"     cmd /k dotnet exec "%DLL_PATH%" -- --service=login     --port=5501 --healthCheckUrl=http://*:5102
+set SERVICE__HEALTHCHECKURL=http://localhost:5102
+start "Login Server"     cmd /k dotnet exec "%DLL_PATH%" -- --service=login     --port=5501 --healthCheckUrl=http://localhost:5102
 
 set SERVICE__TYPE=resource
 set SERVICE__PORT=5502
-set SERVICE__HEALTHCHECKURL=http://*:5103
-start "Resource Server"  cmd /k dotnet exec "%DLL_PATH%" -- --service=resource  --port=5502 --healthCheckUrl=http://*:5103
+set SERVICE__HEALTHCHECKURL=http://localhost:5103
+start "Resource Server"  cmd /k dotnet exec "%DLL_PATH%" -- --service=resource  --port=5502 --healthCheckUrl=http://localhost:5103
 
 set SERVICE__TYPE=battle
 set SERVICE__PORT=5503
-set SERVICE__HEALTHCHECKURL=http://*:5104
-start "Battle Server"    cmd /k dotnet exec "%DLL_PATH%" -- --service=battle    --port=5503 --healthCheckUrl=http://*:5104
+set SERVICE__HEALTHCHECKURL=http://localhost:5104
+start "Battle Server"    cmd /k dotnet exec "%DLL_PATH%" -- --service=battle    --port=5503 --healthCheckUrl=http://localhost:5104
 
 set SERVICE__TYPE=logic
 set SERVICE__PORT=5504
-set SERVICE__HEALTHCHECKURL=http://*:5105
-start "Logic Server"     cmd /k dotnet exec "%DLL_PATH%" -- --service=logic     --port=5504 --healthCheckUrl=http://*:5105
+set SERVICE__HEALTHCHECKURL=http://localhost:5105
+start "Logic Server"     cmd /k dotnet exec "%DLL_PATH%" -- --service=logic     --port=5504 --healthCheckUrl=http://localhost:5105
 
 echo All server instances have been launched in new windows.
 goto :eof

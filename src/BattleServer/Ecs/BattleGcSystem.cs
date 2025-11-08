@@ -4,7 +4,7 @@ namespace BattleServer.Ecs;
 
 public class BattleGcSystem(TimeSpan ttl) : ISystem
 {
-    public string Name => "BattleGc";
+    public string Name => nameof(BattleGcSystem);
 
     public Task InitializeAsync(World world)
     {

@@ -60,3 +60,5 @@ lcov.info
 # Local secrets or environment overrides (optional; use sample files instead)
 appsettings.Local.json
 *.local.json
+/dist
+/.idea

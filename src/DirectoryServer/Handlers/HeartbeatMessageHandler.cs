@@ -14,9 +14,18 @@ public class HeartbeatMessageHandler : IStrongMessageHandler<HeartbeatRequest, H
         var metrics = context.GetComponent<DirectoryServer.Components.DirectoryMetricsComponent>();
         try
         {
-            // 校验心跳签名令牌
+            // 校验心跳签名令牌（统一通过 TokenSecretProvider 获取密钥）
             var token = context.AccessToken ?? string.Empty;
-            var secret = SimpleConfigLoader.LoadDirectoryTokenSecret(AppContext.BaseDirectory) ?? "dev-secret";
+            var secretProvider = context.GetComponent<Core.Components.ITokenSecretProvider>();
+            var secret = secretProvider?.GetSecret() ?? SimpleConfigLoader.LoadDirectoryTokenSecret(AppContext.BaseDirectory);
+            if (string.IsNullOrWhiteSpace(secret))
+            {
+                if (IsDevelopment()) secret = "dev-secret"; else {
+                    metrics?.RecordHeartbeat(false);
+                    context.Log("[目录] 心跳被拒绝：未配置目录令牌密钥");
+                    return Task.FromResult<HeartbeatResponse?>(new HeartbeatResponse { Accepted = false });
+                }
+            }
             var ok = !string.IsNullOrWhiteSpace(token) && TokenSigner.TryVerifyHeartbeat(token, req.Id, secret, out var _, out var _);
             if (!ok)
             {
@@ -46,5 +55,13 @@ public class HeartbeatMessageHandler : IStrongMessageHandler<HeartbeatRequest, H
             var resp = new HeartbeatResponse { Accepted = false };
             return Task.FromResult<HeartbeatResponse?>(resp);
         }
+    }
+
+    private static bool IsDevelopment()
+    {
+        var env = Environment.GetEnvironmentVariable("DOTNET_ENVIRONMENT")
+                  ?? Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT")
+                  ?? string.Empty;
+        return string.Equals(env, "Development", StringComparison.OrdinalIgnoreCase);
     }
 }

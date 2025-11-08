@@ -1,5 +1,6 @@
 using Core.Config;
 using Shared;
+using System;
 
 namespace ResourceServer;
 
@@ -8,8 +9,28 @@ namespace ResourceServer;
 /// </summary>
 public class UrlSignerComponent : Core.IServerComponent
 {
+    private string? _secret;
     public string Name => "UrlSigner";
-    public Task InitializeAsync() => Task.CompletedTask;
+    public Task InitializeAsync()
+    {
+        var sec = SimpleConfigLoader.LoadDirectoryTokenSecret(AppContext.BaseDirectory);
+        if (string.IsNullOrWhiteSpace(sec))
+        {
+            if (IsDevelopment())
+            {
+                _secret = "dev-secret";
+            }
+            else
+            {
+                throw new InvalidOperationException("UrlSignerComponent 需要配置目录密钥 (directory.tokenSecret)。");
+            }
+        }
+        else
+        {
+            _secret = sec;
+        }
+        return Task.CompletedTask;
+    }
     public Task DestroyAsync() => Task.CompletedTask;
 
     /// <summary>
@@ -20,7 +41,7 @@ public class UrlSignerComponent : Core.IServerComponent
     /// <param name="ttl">有效期。</param>
     public string Sign(string baseUrl, string serverId, TimeSpan ttl)
     {
-        var secret = SimpleConfigLoader.LoadDirectoryTokenSecret(AppContext.BaseDirectory) ?? "dev-secret";
+        var secret = _secret ?? "dev-secret"; // 开发环境允许默认值
         var tokenId = Guid.NewGuid().ToString("N");
         var expireSec = new DateTimeOffset(DateTime.UtcNow.Add(ttl)).ToUnixTimeSeconds();
         // 使用空用户ID，为资源下载场景生成仅绑定服务与过期时间的签名。
@@ -28,5 +49,13 @@ public class UrlSignerComponent : Core.IServerComponent
         var signed = TokenSigner.ComposeSigned(tokenId, expireSec, sig);
         var separator = baseUrl.Contains('?') ? '&' : '?';
         return $"{baseUrl}{separator}token={Uri.EscapeDataString(signed)}&sid={Uri.EscapeDataString(serverId)}&exp={expireSec}";
+    }
+
+    private static bool IsDevelopment()
+    {
+        var env = Environment.GetEnvironmentVariable("DOTNET_ENVIRONMENT")
+                  ?? Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT")
+                  ?? string.Empty;
+        return string.Equals(env, "Development", StringComparison.OrdinalIgnoreCase);
     }
 }

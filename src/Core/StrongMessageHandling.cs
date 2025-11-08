@@ -99,13 +99,28 @@ internal sealed class StrongHandlerInvoker<TReq, TResp> : IStrongHandlerInvoker
             if (!string.IsNullOrWhiteSpace(token) && !string.IsNullOrWhiteSpace(userId) && !string.IsNullOrWhiteSpace(serverId))
             {
                 var secretProvider = context.GetComponent<ITokenSecretProvider>();
-                var secret = secretProvider?.GetSecret() ?? SimpleConfigLoader.LoadDirectoryTokenSecret(AppContext.BaseDirectory) ?? "dev-secret";
-                if (TokenSigner.TryVerify(token!, userId!, serverId!, secret, out var tokenId, out var exp)
+                var secret = secretProvider?.GetSecret() ?? SimpleConfigLoader.LoadDirectoryTokenSecret(AppContext.BaseDirectory);
+                bool canVerify = true;
+                if (string.IsNullOrWhiteSpace(secret))
+                {
+                    if (!IsDevelopment())
+                    {
+                        // 生产环境未配置密钥：跳过认证校验并记录一次轻量日志
+                        context.Log("认证密钥缺失，跳过令牌校验（生产环境请配置 DIRECTORY_TOKEN_SECRET 或 config.json: directory.tokenSecret）");
+                        canVerify = false;
+                    }
+                    else
+                    {
+                        secret = "dev-secret";
+                    }
+                }
+                if (canVerify && TokenSigner.TryVerify(token!, userId!, serverId!, secret!, out var tokenId, out var exp)
                     && context is RequestServerContext rctx)
                 {
                     rctx.SetAuth(new AuthInfo { UserId = userId!, TokenId = tokenId, ExpireUnixSeconds = exp });
                 }
             }
+
         }
         catch (Exception ex)
         {
@@ -220,5 +235,13 @@ internal sealed class StrongHandlerInvoker<TReq, TResp> : IStrongHandlerInvoker
             // 兼容响应对象不含约定字段的情况，保持默认 status/code。
         }
         return (status, code);
+    }
+
+    private static bool IsDevelopment()
+    {
+        var env = Environment.GetEnvironmentVariable("DOTNET_ENVIRONMENT")
+                  ?? Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT")
+                  ?? string.Empty;
+        return string.Equals(env, "Development", StringComparison.OrdinalIgnoreCase);
     }
 }

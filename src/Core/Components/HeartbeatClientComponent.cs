@@ -3,6 +3,7 @@ using Google.Protobuf;
 using Shared;
 using Core.Config;
 using DotNetGameServer;
+using System;
 
 namespace Core.Components;
 
@@ -21,6 +22,7 @@ public class HeartbeatClientComponent : IServerComponent
     private readonly string _type;
     private readonly string _idPrefix;
     private volatile int _lastResolvedPort;
+    private string? _secret;
 
     /// <summary>
     /// 组件名称，用于日志与诊断标识。
@@ -53,6 +55,23 @@ public class HeartbeatClientComponent : IServerComponent
     public Task InitializeAsync()
     {
         _cts = new CancellationTokenSource();
+        // 缓存密钥：环境变量优先，其次配置文件；非开发环境不允许使用默认密钥
+        var sec = SimpleConfigLoader.LoadDirectoryTokenSecret(AppContext.BaseDirectory);
+        if (string.IsNullOrWhiteSpace(sec))
+        {
+            if (IsDevelopment())
+            {
+                _secret = "dev-secret";
+            }
+            else
+            {
+                throw new InvalidOperationException("HeartbeatClient 需要配置目录密钥 (directory.tokenSecret)。");
+            }
+        }
+        else
+        {
+            _secret = sec;
+        }
         _ = Task.Run(() => HeartbeatLoop(_cts.Token));
         return Task.CompletedTask;
     }
@@ -128,7 +147,7 @@ public class HeartbeatClientComponent : IServerComponent
     /// <summary>
     /// 通过 TCP 发送心跳信封到目录服务器。
     /// </summary>
-    private static async Task SendHeartbeatAsync(string host, int port, HeartbeatRequest req, CancellationToken ct)
+    private async Task SendHeartbeatAsync(string host, int port, HeartbeatRequest req, CancellationToken ct)
     {
         using var client = new TcpClient();
         await client.ConnectAsync(host, port, ct);
@@ -137,7 +156,7 @@ public class HeartbeatClientComponent : IServerComponent
         // 生成心跳签名令牌（绑定到 serverId）
         try
         {
-            var secret = SimpleConfigLoader.LoadDirectoryTokenSecret(AppContext.BaseDirectory) ?? "dev-secret";
+            var secret = _secret ?? "dev-secret"; // 若异常情况下为空，在开发模式仍允许默认值
             env.Token = TokenSigner.ComposeHeartbeatToken(req.Id, secret, 300);
         }
         catch (Exception)
@@ -183,5 +202,13 @@ public class HeartbeatClientComponent : IServerComponent
         var port = _portProvider?.Invoke() ?? _lastResolvedPort;
         if (port <= 0 || port > 65535) return null;
         return _idPrefix + ":" + port;
+    }
+
+    private static bool IsDevelopment()
+    {
+        var env = Environment.GetEnvironmentVariable("DOTNET_ENVIRONMENT")
+                  ?? Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT")
+                  ?? string.Empty;
+        return string.Equals(env, "Development", StringComparison.OrdinalIgnoreCase);
     }
 }

@@ -13,7 +13,7 @@ using System.Reflection;
 [assembly: System.Reflection.AssemblyCompanyAttribute("AdminPanel")]
 [assembly: System.Reflection.AssemblyCopyrightAttribute(" ")]
 [assembly: System.Reflection.AssemblyFileVersionAttribute("1.0.0.0")]
-[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+8a19abdce2021602555196cb09e95dc28f327765")]
+[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+d9e58e4d4f8301dc3fd1b802ba2bbcc5e6a7f6a7")]
 [assembly: System.Reflection.AssemblyProductAttribute("AdminPanel")]
 [assembly: System.Reflection.AssemblyTitleAttribute("AdminPanel")]
 [assembly: System.Reflection.AssemblyVersionAttribute("1.0.0.0")]

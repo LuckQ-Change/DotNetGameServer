@@ -19,7 +19,11 @@ public class VerifySwitchTokenMessageHandler : IStrongMessageHandler<VerifySwitc
 
             // 校验签名与过期
             var secretProvider = context.GetComponent<Core.Components.ITokenSecretProvider>();
-            var secret = secretProvider?.GetSecret() ?? Core.Config.SimpleConfigLoader.LoadDirectoryTokenSecret(AppContext.BaseDirectory) ?? "dev-secret";
+            var secret = secretProvider?.GetSecret() ?? Core.Config.SimpleConfigLoader.LoadDirectoryTokenSecret(AppContext.BaseDirectory);
+            if (string.IsNullOrWhiteSpace(secret))
+            {
+                if (IsDevelopment()) secret = "dev-secret"; else return Task.FromResult<VerifySwitchTokenResponse?>(new VerifySwitchTokenResponse { Valid = false, Message = "目录令牌密钥未配置" });
+            }
             if (!Shared.TokenSigner.TryVerify(req.Token, req.UserId, req.ServerId, secret, out var tokenId, out var expSec))
             {
                 metrics?.RecordSwitch(false);
@@ -51,5 +55,13 @@ public class VerifySwitchTokenMessageHandler : IStrongMessageHandler<VerifySwitc
             context.Log($"[目录] 令牌验证异常: {ex.Message}");
             return Task.FromResult<VerifySwitchTokenResponse?>(new VerifySwitchTokenResponse { Valid = false, Message = "内部错误" });
         }
+    }
+
+    private static bool IsDevelopment()
+    {
+        var env = Environment.GetEnvironmentVariable("DOTNET_ENVIRONMENT")
+                  ?? Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT")
+                  ?? string.Empty;
+        return string.Equals(env, "Development", StringComparison.OrdinalIgnoreCase);
     }
 }

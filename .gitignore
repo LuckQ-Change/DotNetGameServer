@@ -62,3 +62,20 @@ appsettings.Local.json
 *.local.json
 /dist
 /.idea
+ 
+# Global build directories at any depth
+**/[Bb]uild*/
+**/[Bb]in/
+**/[Oo]bj/
+**/[Pp]ublish*/
+
+# Global dist/out folders
+**/dist/
+**/out/
+
+# Compiled binaries (defensive)
+**/*.dll
+**/*.exe
+**/*.so
+**/*.dylib
+**/*.a

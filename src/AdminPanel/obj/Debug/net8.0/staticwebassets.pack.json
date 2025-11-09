@@ -1,35 +1,35 @@
 {
   "Files": [
     {
-      "Id": "D:\\Study and Job\\NewServerGame\\DotNetGameServer\\src\\AdminPanel\\wwwroot\\app.css",
+      "Id": "D:\\NewProject\\src\\AdminPanel\\wwwroot\\app.css",
       "PackagePath": "staticwebassets\\app.css"
     },
     {
-      "Id": "D:\\Study and Job\\NewServerGame\\DotNetGameServer\\src\\AdminPanel\\wwwroot\\bootstrap\\bootstrap.min.css",
+      "Id": "D:\\NewProject\\src\\AdminPanel\\wwwroot\\bootstrap\\bootstrap.min.css",
       "PackagePath": "staticwebassets\\bootstrap\\bootstrap.min.css"
     },
     {
-      "Id": "D:\\Study and Job\\NewServerGame\\DotNetGameServer\\src\\AdminPanel\\wwwroot\\bootstrap\\bootstrap.min.css.map",
+      "Id": "D:\\NewProject\\src\\AdminPanel\\wwwroot\\bootstrap\\bootstrap.min.css.map",
       "PackagePath": "staticwebassets\\bootstrap\\bootstrap.min.css.map"
     },
     {
-      "Id": "D:\\Study and Job\\NewServerGame\\DotNetGameServer\\src\\AdminPanel\\wwwroot\\favicon.png",
+      "Id": "D:\\NewProject\\src\\AdminPanel\\wwwroot\\favicon.png",
       "PackagePath": "staticwebassets\\favicon.png"
     },
     {
-      "Id": "D:\\Study and Job\\NewServerGame\\DotNetGameServer\\src\\AdminPanel\\wwwroot\\monitoring\\app.js",
+      "Id": "D:\\NewProject\\src\\AdminPanel\\wwwroot\\monitoring\\app.js",
       "PackagePath": "staticwebassets\\monitoring\\app.js"
     },
     {
-      "Id": "D:\\Study and Job\\NewServerGame\\DotNetGameServer\\src\\AdminPanel\\wwwroot\\monitoring\\status.html",
+      "Id": "D:\\NewProject\\src\\AdminPanel\\wwwroot\\monitoring\\status.html",
       "PackagePath": "staticwebassets\\monitoring\\status.html"
     },
     {
-      "Id": "D:\\Study and Job\\NewServerGame\\DotNetGameServer\\src\\AdminPanel\\wwwroot\\monitoring\\style.css",
+      "Id": "D:\\NewProject\\src\\AdminPanel\\wwwroot\\monitoring\\style.css",
       "PackagePath": "staticwebassets\\monitoring\\style.css"
     },
     {
-      "Id": "D:\\Study and Job\\NewServerGame\\DotNetGameServer\\src\\AdminPanel\\wwwroot\\resource-management.html",
+      "Id": "D:\\NewProject\\src\\AdminPanel\\wwwroot\\resource-management.html",
       "PackagePath": "staticwebassets\\resource-management.html"
     },
     {

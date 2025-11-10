@@ -1,14 +1,19 @@
-# OS / IDE
+###############################################
+# OS / IDE caches
+###############################################
 .DS_Store
 Thumbs.db
 .vs/
 .idea/
+.vscode/
 *.suo
 *.user
 *.userosscache
 *.sln.docstates
 
-# Build outputs
+###############################################
+# .NET build outputs
+###############################################
 [Bb]in/
 [Oo]bj/
 [Ll]og/
@@ -19,7 +24,17 @@ out/
 publish/
 dist/
 
-# Dotnet / NuGet
+# Global build directories at any depth
+**/[Bb]uild*/
+**/[Bb]in/
+**/[Oo]bj/
+**/[Pp]ublish*/
+**/dist/
+**/out/
+
+###############################################
+# DotNet / NuGet
+###############################################
 packages/
 *.nupkg
 *.snupkg
@@ -28,7 +43,9 @@ project.lock.json
 *.deps.json
 *.runtimeconfig.json
 
-# Symbols / caches
+###############################################
+# Symbols / caches / logs / test artifacts
+###############################################
 *.pdb
 *.mdb
 *.cache
@@ -37,45 +54,42 @@ project.lock.json
 TestResults/
 *.trx
 
-# Generated code (keep sources like proto files, ignore generated C#)
-src/**/obj/**
-src/**/bin/**
-
+###############################################
 # Node.js (Tooling)
+###############################################
 node_modules/
 **/node_modules/
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
 
+###############################################
 # Rider / ReSharper
+###############################################
 _ReSharper*/
 *.[Rr]e[Ss]harper
 *.DotSettings.user
 
+###############################################
 # Coverage
+###############################################
 coverage/
 lcov.info
 
-# Local secrets or environment overrides (optional; use sample files instead)
+###############################################
+# Local secrets or environment overrides (optional)
+###############################################
 appsettings.Local.json
 *.local.json
-/dist
-/.idea
- 
-# Global build directories at any depth
-**/[Bb]uild*/
-**/[Bb]in/
-**/[Oo]bj/
-**/[Pp]ublish*/
 
-# Global dist/out folders
-**/dist/
-**/out/
-
+###############################################
 # Compiled binaries (defensive)
+###############################################
 **/*.dll
 **/*.exe
 **/*.so
 **/*.dylib
 **/*.a
+
+# 永远跟踪所有 .proto 文件（即使位于被忽略的目录中）
+!**/*.proto

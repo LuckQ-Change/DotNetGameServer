@@ -770,7 +770,10 @@
           "Core": "1.0.0"
         },
         "runtime": {
-          "BattleServer.dll": {}
+          "BattleServer.dll": {
+            "assemblyVersion": "1.0.0.0",
+            "fileVersion": "1.0.0.0"
+          }
         }
       },
       "Core/1.0.0": {
@@ -783,7 +786,10 @@
           "Shared": "1.0.0"
         },
         "runtime": {
-          "Core.dll": {}
+          "Core.dll": {
+            "assemblyVersion": "1.0.0.0",
+            "fileVersion": "1.0.0.0"
+          }
         }
       },
       "DirectoryServer/1.0.0": {
@@ -794,7 +800,10 @@
           "StackExchange.Redis": "2.7.33"
         },
         "runtime": {
-          "DirectoryServer.dll": {}
+          "DirectoryServer.dll": {
+            "assemblyVersion": "1.0.0.0",
+            "fileVersion": "1.0.0.0"
+          }
         }
       },
       "LogicServer/1.0.0": {
@@ -803,7 +812,10 @@
           "Shared": "1.0.0"
         },
         "runtime": {
-          "LogicServer.dll": {}
+          "LogicServer.dll": {
+            "assemblyVersion": "1.0.0.0",
+            "fileVersion": "1.0.0.0"
+          }
         }
       },
       "LoginServer/1.0.0": {
@@ -811,7 +823,10 @@
           "Core": "1.0.0"
         },
         "runtime": {
-          "LoginServer.dll": {}
+          "LoginServer.dll": {
+            "assemblyVersion": "1.0.0.0",
+            "fileVersion": "1.0.0.0"
+          }
         }
       },
       "ResourceServer/1.0.0": {
@@ -819,7 +834,10 @@
           "Core": "1.0.0"
         },
         "runtime": {
-          "ResourceServer.dll": {}
+          "ResourceServer.dll": {
+            "assemblyVersion": "1.0.0.0",
+            "fileVersion": "1.0.0.0"
+          }
         }
       },
       "Shared/1.0.0": {
@@ -828,7 +846,10 @@
           "Grpc.Net.Client": "2.59.0"
         },
         "runtime": {
-          "Shared.dll": {}
+          "Shared.dll": {
+            "assemblyVersion": "1.0.0.0",
+            "fileVersion": "1.0.0.0"
+          }
         }
       }
     }

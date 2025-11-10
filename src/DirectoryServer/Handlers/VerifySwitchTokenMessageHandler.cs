@@ -19,12 +19,25 @@ public class VerifySwitchTokenMessageHandler : IStrongMessageHandler<VerifySwitc
 
             // 校验签名与过期
             var secretProvider = context.GetComponent<Core.Components.ITokenSecretProvider>();
-            var secret = secretProvider?.GetSecret() ?? Core.Config.SimpleConfigLoader.LoadDirectoryTokenSecret(AppContext.BaseDirectory);
-            if (string.IsNullOrWhiteSpace(secret))
+            var primary = secretProvider?.GetSecret();
+            if (string.IsNullOrWhiteSpace(primary))
             {
-                if (IsDevelopment()) secret = "dev-secret"; else return Task.FromResult<VerifySwitchTokenResponse?>(new VerifySwitchTokenResponse { Valid = false, Message = "目录令牌密钥未配置" });
+                return Task.FromResult<VerifySwitchTokenResponse?>(new VerifySwitchTokenResponse { Valid = false, Message = "目录令牌密钥不可用" });
             }
-            if (!Shared.TokenSigner.TryVerify(req.Token, req.UserId, req.ServerId, secret, out var tokenId, out var expSec))
+            string? tokenId = null;
+            long expSec = 0;
+            bool verified = false;
+            foreach (var s in secretProvider!.GetVerifySecrets())
+            {
+                if (!string.IsNullOrWhiteSpace(s) && Shared.TokenSigner.TryVerify(req.Token, req.UserId, req.ServerId, s, out var tid, out var e))
+                {
+                    verified = true;
+                    tokenId = tid;
+                    expSec = e;
+                    break;
+                }
+            }
+            if (!verified || tokenId == null)
             {
                 metrics?.RecordSwitch(false);
                 context.Log($"[目录] 令牌签名或过期校验失败 user={req.UserId}, server={req.ServerId}");

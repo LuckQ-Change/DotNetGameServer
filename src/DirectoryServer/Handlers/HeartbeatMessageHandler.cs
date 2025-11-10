@@ -17,16 +17,27 @@ public class HeartbeatMessageHandler : IStrongMessageHandler<HeartbeatRequest, H
             // 校验心跳签名令牌（统一通过 TokenSecretProvider 获取密钥）
             var token = context.AccessToken ?? string.Empty;
             var secretProvider = context.GetComponent<Core.Components.ITokenSecretProvider>();
-            var secret = secretProvider?.GetSecret() ?? SimpleConfigLoader.LoadDirectoryTokenSecret(AppContext.BaseDirectory);
-            if (string.IsNullOrWhiteSpace(secret))
+            var primary = secretProvider?.GetSecret();
+            if (string.IsNullOrWhiteSpace(primary))
             {
-                if (IsDevelopment()) secret = "dev-secret"; else {
-                    metrics?.RecordHeartbeat(false);
-                    context.Log("[目录] 心跳被拒绝：未配置目录令牌密钥");
-                    return Task.FromResult<HeartbeatResponse?>(new HeartbeatResponse { Accepted = false });
+                // 生产环境下 Provider 初始化已阻止服务启动；此处作为双保险直接拒绝
+                metrics?.RecordHeartbeat(false);
+                context.Log("[目录] 心跳被拒绝：目录令牌密钥不可用");
+                return Task.FromResult<HeartbeatResponse?>(new HeartbeatResponse { Accepted = false });
+            }
+            var ok = false;
+            if (!string.IsNullOrWhiteSpace(token))
+            {
+                var candidates = secretProvider!.GetVerifySecrets();
+                foreach (var s in candidates)
+                {
+                    if (!string.IsNullOrWhiteSpace(s) && TokenSigner.TryVerifyHeartbeat(token, req.Id, s, out var _, out var _))
+                    {
+                        ok = true;
+                        break;
+                    }
                 }
             }
-            var ok = !string.IsNullOrWhiteSpace(token) && TokenSigner.TryVerifyHeartbeat(token, req.Id, secret, out var _, out var _);
             if (!ok)
             {
                 metrics?.RecordHeartbeat(false);

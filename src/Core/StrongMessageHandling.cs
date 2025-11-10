@@ -98,26 +98,38 @@ internal sealed class StrongHandlerInvoker<TReq, TResp> : IStrongHandlerInvoker
             // 合并条件，避免嵌套 if (S1066)，当无法提取用户或服务器 ID 时按未认证继续处理。
             if (!string.IsNullOrWhiteSpace(token) && !string.IsNullOrWhiteSpace(userId) && !string.IsNullOrWhiteSpace(serverId))
             {
+                // 统一通过 TokenSecretProvider 获取密钥；生产环境缺失会在 Provider 初始化时抛错并阻止启动
                 var secretProvider = context.GetComponent<ITokenSecretProvider>();
-                var secret = secretProvider?.GetSecret() ?? SimpleConfigLoader.LoadDirectoryTokenSecret(AppContext.BaseDirectory);
-                bool canVerify = true;
-                if (string.IsNullOrWhiteSpace(secret))
+                var secret = secretProvider?.GetSecret();
+                if (!string.IsNullOrWhiteSpace(secret))
                 {
-                    if (!IsDevelopment())
+                    bool verified = false;
+                    string? tokenId = null;
+                    long exp = 0;
+                    var verifySecrets = secretProvider?.GetVerifySecrets() ?? new[] { secret! };
+                    foreach (var s in verifySecrets)
                     {
-                        // 生产环境未配置密钥：跳过认证校验并记录一次轻量日志
-                        context.Log("认证密钥缺失，跳过令牌校验（生产环境请配置 DIRECTORY_TOKEN_SECRET 或 config.json: directory.tokenSecret）");
-                        canVerify = false;
+                        if (!string.IsNullOrWhiteSpace(s) && TokenSigner.TryVerify(token!, userId!, serverId!, s, out var tid, out var e))
+                        {
+                            verified = true;
+                            tokenId = tid;
+                            exp = e;
+                            break;
+                        }
                     }
-                    else
+                    if (verified && tokenId != null)
                     {
-                        secret = "dev-secret";
+                        // 撤销列表检查：命中则视为未认证
+                        var revocation = context.GetComponent<ITokenRevocationStore>();
+                        if (revocation != null && revocation.IsRevoked(tokenId))
+                        {
+                            context.Log("令牌已被撤销，按未认证处理。");
+                        }
+                        else if (context is RequestServerContext rctx)
+                        {
+                            rctx.SetAuth(new AuthInfo { UserId = userId!, TokenId = tokenId, ExpireUnixSeconds = exp });
+                        }
                     }
-                }
-                if (canVerify && TokenSigner.TryVerify(token!, userId!, serverId!, secret!, out var tokenId, out var exp)
-                    && context is RequestServerContext rctx)
-                {
-                    rctx.SetAuth(new AuthInfo { UserId = userId!, TokenId = tokenId, ExpireUnixSeconds = exp });
                 }
             }
 

@@ -11,6 +11,7 @@ using MessagePack;
 using System.Security.Cryptography.X509Certificates;
 using System.Net.Security;
 using Shared.Constants;
+using Shared.Time;
 
 namespace DirectoryServer.Components;
 
@@ -141,11 +142,11 @@ public class RedisServerRegistryComponent : IServerRegistryComponent
         if (_db == null) return;
         RedisExec("upsert_heartbeat", () =>
         {
-            var rec = new ServerRecord(id, type, region, host, port, playerCount, capacity, status, DateTime.UtcNow, avgRttMs);
+            var rec = new ServerRecord(id, type, region, host, port, playerCount, capacity, status, TimeManager.UtcNow, avgRttMs);
             var key1 = ServerKey(id);
             var zkey = ServersZSetKey();
             var payload = SerializeRecord(rec);
-            var nowSec = DateTimeOffset.UtcNow.ToUnixTimeSeconds();
+            var nowSec = TimeManager.UnixSeconds;
             // 使用 Lua 原子地写入记录（带 TTL）并更新 Sorted Set 的时间戳
             // KEYS[1] = server record key, KEYS[2] = servers zset key
             // ARGV[1] = payload, ARGV[2] = now epoch seconds, ARGV[3] = remove ttl seconds, ARGV[4] = server id
@@ -158,7 +159,7 @@ public class RedisServerRegistryComponent : IServerRegistryComponent
     {
         if (_db == null) yield break;
         PurgeExpired();
-        var now = DateTimeOffset.UtcNow.ToUnixTimeSeconds();
+        var now = TimeManager.UnixSeconds;
         var entries = RedisExec("zrange_active", () => _db.SortedSetRangeByScoreWithScores(ServersZSetKey(), now - (long)_removeTtl.TotalSeconds, double.PositiveInfinity));
         if (entries == null || entries.Length == 0) yield break;
         // 批量读取记录值
@@ -184,14 +185,14 @@ public class RedisServerRegistryComponent : IServerRegistryComponent
         if (rec == null) return null;
         // 通过 ZSET 分数判断在线状态
         var score = RedisExec("zscore", () => _db.SortedSetScore(ServersZSetKey(), id));
-        var isOnline = score.HasValue && (DateTimeOffset.UtcNow.ToUnixTimeSeconds() - (long)score.Value) <= (long)_offlineTtl.TotalSeconds;
+        var isOnline = score.HasValue && (TimeManager.UnixSeconds - (long)score.Value) <= (long)_offlineTtl.TotalSeconds;
         return isOnline ? rec : rec with { Status = "offline" };
     }
 
     public SwitchToken IssueSwitchToken(string userId, ServerRecord target, TimeSpan ttl)
     {
         var token = Guid.NewGuid().ToString("N");
-        var expire = DateTime.UtcNow.Add(ttl);
+        var expire = TimeManager.UtcNow.Add(ttl);
         if (_db != null)
         {
             RedisExec("issue_switch_token", () =>
@@ -255,7 +256,7 @@ public class RedisServerRegistryComponent : IServerRegistryComponent
         if (_db == null) return;
         RedisExec("purge_expired", () =>
         {
-            var cutoff = DateTimeOffset.UtcNow.ToUnixTimeSeconds() - (long)_removeTtl.TotalSeconds;
+            var cutoff = TimeManager.UnixSeconds - (long)_removeTtl.TotalSeconds;
             _db.SortedSetRemoveRangeByScore(ServersZSetKey(), double.NegativeInfinity, cutoff);
             // String 值已设置 EX TTL，会自行过期，无需逐个删除 Key
         });

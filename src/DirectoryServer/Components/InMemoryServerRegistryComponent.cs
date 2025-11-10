@@ -1,6 +1,7 @@
 using System.Collections.Concurrent;
 using System.Diagnostics.Metrics;
 using Core.Telemetry;
+using Shared.Time;
 
 namespace DirectoryServer.Components;
 
@@ -45,14 +46,14 @@ public class InMemoryServerRegistryComponent : IServerRegistryComponent
 
     public void UpsertHeartbeat(string id, string type, string region, string host, int port, int playerCount, int capacity, string status, int avgRttMs)
     {
-        var rec = new ServerRecord(id, type, region, host, port, playerCount, capacity, status, DateTime.UtcNow, avgRttMs);
+        var rec = new ServerRecord(id, type, region, host, port, playerCount, capacity, status, TimeManager.UtcNow, avgRttMs);
         _servers[id] = rec;
     }
 
     public IEnumerable<ServerRecord> ListServers()
     {
         PurgeExpired();
-        var now = DateTime.UtcNow;
+        var now = TimeManager.UtcNow;
         foreach (var rec in _servers.Values)
         {
             var isOnline = (now - rec.LastHeartbeatUtc) <= _offlineTtl;
@@ -64,7 +65,7 @@ public class InMemoryServerRegistryComponent : IServerRegistryComponent
     {
         PurgeExpired();
         if (!_servers.TryGetValue(id, out var rec)) return null;
-        var now = DateTime.UtcNow;
+        var now = TimeManager.UtcNow;
         var isOnline = (now - rec.LastHeartbeatUtc) <= _offlineTtl;
         return isOnline ? rec : rec with { Status = "offline" };
     }
@@ -73,7 +74,7 @@ public class InMemoryServerRegistryComponent : IServerRegistryComponent
     {
         // 简单令牌：随机值 + 过期时间（实际可HMAC签名）
         var token = Guid.NewGuid().ToString("N");
-        var expire = DateTime.UtcNow.Add(ttl);
+        var expire = TimeManager.UtcNow.Add(ttl);
         var st = new SwitchToken(token, expire);
         _tokens[$"{userId}:{target.Id}"] = st;
         _switchTokenIssueTotal.Add(1,
@@ -87,7 +88,7 @@ public class InMemoryServerRegistryComponent : IServerRegistryComponent
         PurgeExpired();
         var key = $"{userId}:{serverId}";
         if (!_tokens.TryGetValue(key, out var st)) return false;
-        if (st.ExpireAtUtc <= DateTime.UtcNow) { _tokens.TryRemove(key, out _); return false; }
+        if (st.ExpireAtUtc <= TimeManager.UtcNow) { _tokens.TryRemove(key, out _); return false; }
         var ok = string.Equals(st.Token, tokenId, StringComparison.Ordinal);
         if (ok && consume) _tokens.TryRemove(key, out _);
         _switchTokenCheckTotal.Add(1,
@@ -100,7 +101,7 @@ public class InMemoryServerRegistryComponent : IServerRegistryComponent
 
     private void PurgeExpired()
     {
-        var now = DateTime.UtcNow;
+        var now = TimeManager.UtcNow;
         // 清理过期令牌
         foreach (var kv in _tokens)
         {

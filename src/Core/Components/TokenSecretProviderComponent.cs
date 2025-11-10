@@ -9,11 +9,14 @@ public interface ITokenSecretProvider : IServerComponent
 {
     /// <summary>获取当前签名密钥（若未配置则返回开发环境默认值）。</summary>
     public string GetSecret();
+    /// <summary>获取用于校验的全部候选密钥（主/备），用于密钥轮换过渡期。</summary>
+    public IEnumerable<string> GetVerifySecrets();
 }
 
 public class TokenSecretProviderComponent(string? baseDir = null) : ITokenSecretProvider
 {
     private string? _secret;
+    private string? _secondarySecret;
     public string Name => "TokenSecretProvider";
 
     public Task InitializeAsync()
@@ -21,6 +24,8 @@ public class TokenSecretProviderComponent(string? baseDir = null) : ITokenSecret
         // 启动时读取并缓存密钥；环境变量优先，其次配置文件。
         var dir = baseDir ?? AppContext.BaseDirectory;
         var sec = SimpleConfigLoader.LoadDirectoryTokenSecret(dir);
+        // 允许通过环境变量提供备用密钥以支持轮换（不写入配置文件）
+        var secondaryEnv = Environment.GetEnvironmentVariable("DIRECTORY_TOKEN_SECRET_SECONDARY");
         if (string.IsNullOrWhiteSpace(sec))
         {
             if (IsDevelopment())
@@ -38,6 +43,10 @@ public class TokenSecretProviderComponent(string? baseDir = null) : ITokenSecret
         {
             _secret = sec;
         }
+        if (!string.IsNullOrWhiteSpace(secondaryEnv))
+        {
+            _secondarySecret = secondaryEnv;
+        }
         return Task.CompletedTask;
     }
 
@@ -52,6 +61,13 @@ public class TokenSecretProviderComponent(string? baseDir = null) : ITokenSecret
             throw new InvalidOperationException("Token secret 不可用。请检查服务启动日志与配置。");
         }
         return _secret!;
+    }
+
+    public IEnumerable<string> GetVerifySecrets()
+    {
+        if (!string.IsNullOrWhiteSpace(_secret)) yield return _secret!;
+        if (!string.IsNullOrWhiteSpace(_secondarySecret)) yield return _secondarySecret!;
+        if (string.IsNullOrWhiteSpace(_secret) && IsDevelopment()) yield return "dev-secret";
     }
 
     private static bool IsDevelopment()

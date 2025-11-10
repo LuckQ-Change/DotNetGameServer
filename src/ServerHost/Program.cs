@@ -7,12 +7,13 @@ using Core.Db;
 using Microsoft.EntityFrameworkCore;
 using ServerHost.HealthChecks;
 using Microsoft.AspNetCore.Builder;
-using Microsoft.AspNetCore.Diagnostics.HealthChecks;
+
 using Microsoft.AspNetCore.Http;
-using System.Text.Json;
+
 using LoginServer.Components;
 using OpenTelemetry.Resources;
 using OpenTelemetry.Metrics;
+using OpenTelemetry.Trace;
 using Core.Telemetry;
 using ServerHost; // 访问命名空间中的类型（HostingUtilities、GameServerService）
 
@@ -65,11 +66,27 @@ if (metricsEnabled)
                     otlpOptions.Protocol = OpenTelemetry.Exporter.OtlpExportProtocol.HttpProtobuf;
                 });
             }
+        })
+        .WithTracing(tb =>
+        {
+            tb.AddSource(CoreTelemetry.ActivitySource.Name);
+            var endpoint = builder.Configuration[Shared.Constants.ConfigKeys.TelemetryMetricsOtlpEndpointKeyLower]
+                ?? Environment.GetEnvironmentVariable(Shared.Constants.ConfigKeys.OtlpEndpointEnv);
+            if (!string.IsNullOrWhiteSpace(endpoint))
+            {
+                tb.AddOtlpExporter(otlpOptions =>
+                {
+                    otlpOptions.Endpoint = new Uri(endpoint);
+                    otlpOptions.Protocol = OpenTelemetry.Exporter.OtlpExportProtocol.HttpProtobuf;
+                });
+            }
         });
 }
 
 builder.Services.AddHostedService<GameServerService>();
-builder.Services.AddHealthChecks().AddCheck<ServerHealthCheck>("server_health_check");
+builder.Services.AddHealthChecks()
+    .AddCheck<ServerHealthCheck>("liveness", tags: new[] { "liveness" })
+    .AddCheck<ReadinessHealthCheck>("readiness", tags: new[] { "readiness" });
 
 // Logging
 builder.Logging.ClearProviders();
@@ -90,9 +107,31 @@ if (!string.IsNullOrWhiteSpace(healthUrl))
 // Seed the database in development environment
 HostingUtilities.SeedDevelopmentDatabase(app.Services);
 
-// Map health checks endpoint
+// Map health checks endpoint（liveness）
 app.MapHealthChecks("/health", new Microsoft.AspNetCore.Diagnostics.HealthChecks.HealthCheckOptions
 {
+    ResponseWriter = async (context, report) =>
+    {
+        context.Response.ContentType = "application/json";
+        var payload = new
+        {
+            status = report.Status.ToString(),
+            checks = report.Entries.Select(e => new
+            {
+                name = e.Key,
+                status = e.Value.Status.ToString(),
+                description = e.Value.Description,
+                duration = e.Value.Duration.TotalMilliseconds
+            })
+        };
+        await context.Response.WriteAsync(System.Text.Json.JsonSerializer.Serialize(payload));
+    }
+});
+
+// Map readiness endpoint（只包含 readiness 标签的检查）
+app.MapHealthChecks("/ready", new Microsoft.AspNetCore.Diagnostics.HealthChecks.HealthCheckOptions
+{
+    Predicate = r => r.Tags.Contains("readiness"),
     ResponseWriter = async (context, report) =>
     {
         context.Response.ContentType = "application/json";

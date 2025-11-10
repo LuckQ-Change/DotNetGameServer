@@ -37,6 +37,10 @@ public abstract class BaseGameServer : IServerContext
     private readonly int _maxMessagesPerSecond;    // 默认每连接 200 条/秒
     private readonly int _idleTimeoutMs;        // 默认空闲 120s 断开
     private readonly ConcurrentDictionary<string, DateTime> _blacklist = new();
+    // 新增：按 IP 聚合的滑动窗口限流（全局维度）
+    private readonly ConcurrentDictionary<string, IpSlidingRate> _ipRates = new();
+    private readonly int _ipMaxBytesPerSecond; // 0 表示禁用
+    private readonly int _ipMaxMessagesPerSecond; // 0 表示禁用
 
     /// <summary>
     /// 服务器名称，用于日志前缀与标识。
@@ -75,11 +79,16 @@ public abstract class BaseGameServer : IServerContext
             _maxMessagesPerSecond = mps;
         if (int.TryParse(Environment.GetEnvironmentVariable(Shared.Constants.ConfigKeys.ServerIdleMsEnv), out var idle) && idle > 0)
             _idleTimeoutMs = idle;
+        // 按 IP 的聚合限流阈值（可选）：未设置或 <=0 则禁用
+        _ipMaxBytesPerSecond = int.TryParse(Environment.GetEnvironmentVariable("SERVER_IP_MAX_BPS"), out var ipBps) && ipBps > 0 ? ipBps : 0;
+        _ipMaxMessagesPerSecond = int.TryParse(Environment.GetEnvironmentVariable("SERVER_IP_MAX_MSGS"), out var ipMps) && ipMps > 0 ? ipMps : 0;
 
         // 集中密钥提供组件：统一加载并缓存鉴权密钥
         try
         {
             AddComponent<ITokenSecretProvider>(new TokenSecretProviderComponent(AppContext.BaseDirectory));
+            // 令牌撤销列表（内存实现）。如需分布式，可在具体服务中替换为 Redis 实现。
+            AddComponent<ITokenRevocationStore>(new InMemoryTokenRevocationStore());
         }
         catch (Exception ex)
         {
@@ -373,6 +382,18 @@ public abstract class BaseGameServer : IServerContext
                     var read = await ReadExactAsync(stream, lenBuf, 0, 4, token, _receiveTimeoutMs);
                     if (read == 0) break;
                     var bps = AddBytesAndGetRate(read);
+                    // 全局 IP 字节速率检查
+                    if (_ipMaxBytesPerSecond > 0)
+                    {
+                        var ipRate = _ipRates.GetOrAdd(remote, _ => new IpSlidingRate());
+                        var ipBpsNow = ipRate.AddBytesAndGetRate(read);
+                        if (ipBpsNow > _ipMaxBytesPerSecond)
+                        {
+                            Log($"[IP限速-字节] {remote} {ipBpsNow}B/s > {_ipMaxBytesPerSecond}B/s，断开");
+                            AddToBlacklist(remote, TimeSpan.FromMinutes(2), "ip_bytes_rate_limit_exceeded");
+                            break;
+                        }
+                    }
                     if (bps > _maxBytesPerSecond)
                     {
                         Log($"限速超限(字节): {remote} {bps}B/s > {_maxBytesPerSecond}B/s，断开");
@@ -394,6 +415,17 @@ public abstract class BaseGameServer : IServerContext
                     var buf = new byte[length];
                     await ReadExactAsync(stream, buf, 0, length, token, _receiveTimeoutMs);
                     bps = AddBytesAndGetRate(length);
+                    if (_ipMaxBytesPerSecond > 0)
+                    {
+                        var ipRate = _ipRates.GetOrAdd(remote, _ => new IpSlidingRate());
+                        var ipBpsNow = ipRate.AddBytesAndGetRate(length);
+                        if (ipBpsNow > _ipMaxBytesPerSecond)
+                        {
+                            Log($"[IP限速-字节] {remote} {ipBpsNow}B/s > {_ipMaxBytesPerSecond}B/s，断开");
+                            AddToBlacklist(remote, TimeSpan.FromMinutes(2), "ip_bytes_rate_limit_exceeded");
+                            break;
+                        }
+                    }
                     if (bps > _maxBytesPerSecond)
                     {
                         Log($"限速超限(字节): {remote} {bps}B/s > {_maxBytesPerSecond}B/s，断开");
@@ -421,6 +453,17 @@ public abstract class BaseGameServer : IServerContext
 
                     // 频率限流：按消息条数
                     var mps = AddMessagesAndGetRate(1);
+                    if (_ipMaxMessagesPerSecond > 0)
+                    {
+                        var ipRate = _ipRates.GetOrAdd(remote, _ => new IpSlidingRate());
+                        var ipMpsNow = ipRate.AddMessagesAndGetRate(1);
+                        if (ipMpsNow > _ipMaxMessagesPerSecond)
+                        {
+                            Log($"[IP限速-频率] {remote} {ipMpsNow}/s > {_ipMaxMessagesPerSecond}/s，断开");
+                            AddToBlacklist(remote, TimeSpan.FromMinutes(2), "ip_message_rate_limit_exceeded");
+                            break;
+                        }
+                    }
                     if (mps > _maxMessagesPerSecond)
                     {
                         Log($"限速超限(频率): {remote} {mps}/s > {_maxMessagesPerSecond}/s，断开");
@@ -441,6 +484,7 @@ public abstract class BaseGameServer : IServerContext
                     else
                     {
                         Log($"未知消息类型: {envelope.Type}");
+                        CoreTelemetry.RecordUnknown(ServerName, envelope.Type);
                     }
                 }
             }
@@ -545,6 +589,50 @@ public abstract class BaseGameServer : IServerContext
     {
         _blacklist[remote] = DateTime.UtcNow.Add(duration);
         Log($"加入黑名单: {remote} 原因={reason} 时长={duration}");
+    }
+
+    private sealed class IpSlidingRate
+    {
+        private const int BucketCount = 10;
+        private const int BucketMs = 100;
+        private int _currentBucketIndex = 0;
+        private long _bucketWindowStartTicks = Stopwatch.GetTimestamp();
+        private readonly int[] _messageBuckets = new int[BucketCount];
+        private readonly int[] _byteBuckets = new int[BucketCount];
+
+        private void AdvanceBucketsIfNeeded()
+        {
+            var elapsedMs = (Stopwatch.GetTimestamp() - _bucketWindowStartTicks) * 1000.0 / Stopwatch.Frequency;
+            if (elapsedMs >= BucketMs)
+            {
+                var steps = (int)(elapsedMs / BucketMs);
+                for (var i = 0; i < Math.Min(steps, BucketCount); i++)
+                {
+                    _currentBucketIndex = (_currentBucketIndex + 1) % BucketCount;
+                    _messageBuckets[_currentBucketIndex] = 0;
+                    _byteBuckets[_currentBucketIndex] = 0;
+                }
+                _bucketWindowStartTicks = Stopwatch.GetTimestamp();
+            }
+        }
+
+        public int AddBytesAndGetRate(int bytes)
+        {
+            AdvanceBucketsIfNeeded();
+            _byteBuckets[_currentBucketIndex] += bytes;
+            var sum = 0;
+            for (var i = 0; i < BucketCount; i++) sum += _byteBuckets[i];
+            return sum;
+        }
+
+        public int AddMessagesAndGetRate(int inc)
+        {
+            AdvanceBucketsIfNeeded();
+            _messageBuckets[_currentBucketIndex] += inc;
+            var sum = 0;
+            for (var i = 0; i < BucketCount; i++) sum += _messageBuckets[i];
+            return sum;
+        }
     }
 }
 

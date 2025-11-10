@@ -1,7 +1,6 @@
 using Core;
 using Core.Components;
 using Core.Ecs;
-using LogicServer.SignIn.Handlers;
 using Microsoft.Extensions.Logging;
 
 namespace LogicServer;
@@ -10,9 +9,6 @@ public class LogicGameServer(ILogger<LogicGameServer> logger) : BaseGameServer(n
 {
     public override async Task StartAsync(int port)
     {
-        RegisterStrongMessageHandler(new QuerySignInStatusMessageHandler());
-        RegisterStrongMessageHandler(new ClaimSignInRewardMessageHandler());
-
         AddComponent(new EcsWorldComponent());
         AddComponent(new HeartbeatClientComponent(
             message => Log(message),

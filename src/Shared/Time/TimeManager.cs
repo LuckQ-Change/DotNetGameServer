@@ -1,6 +1,3 @@
-using System;
-using System.Threading;
-
 namespace Shared.Time;
 
 /// <summary>
@@ -8,10 +5,10 @@ namespace Shared.Time;
 /// </summary>
 public interface ITimeProvider
 {
-	DateTime UtcNow { get; }
-	DateTime Now { get; }
-	long UnixSeconds { get; }
-	long UnixMilliseconds { get; }
+	public DateTime UtcNow { get; }
+	public DateTime Now { get; }
+	public long UnixSeconds { get; }
+	public long UnixMilliseconds { get; }
 }
 
 /// <summary>

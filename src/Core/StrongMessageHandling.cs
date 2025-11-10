@@ -3,7 +3,6 @@ using System.Diagnostics;
 using Google.Protobuf;
 using Shared;
 using Core.Components;
-using Core.Config;
 using Core.Telemetry;
 
 namespace Core;
@@ -247,13 +246,5 @@ internal sealed class StrongHandlerInvoker<TReq, TResp> : IStrongHandlerInvoker
             // 兼容响应对象不含约定字段的情况，保持默认 status/code。
         }
         return (status, code);
-    }
-
-    private static bool IsDevelopment()
-    {
-        var env = Environment.GetEnvironmentVariable("DOTNET_ENVIRONMENT")
-                  ?? Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT")
-                  ?? string.Empty;
-        return string.Equals(env, "Development", StringComparison.OrdinalIgnoreCase);
     }
 }

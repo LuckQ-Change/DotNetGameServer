@@ -23,7 +23,7 @@ public abstract class BaseGameServer : IServerContext
     private readonly int _maxConcurrentConnections; // 可配置连接上限
     private readonly int _receiveTimeoutMs; // 收发超时（软限制）
     private readonly int _acceptBackoffMs; // 接受失败退避毫秒
-    private int _currentConnections; 
+    private int _currentConnections;
     private TcpListener? _listener;
     private CancellationTokenSource? _cts;
     // ECS 更新循环通过后台 Task 驱动，无需持有字段引用。
@@ -234,6 +234,11 @@ public abstract class BaseGameServer : IServerContext
         _logger.LogInformation("[{Server}] {Message}", ServerName, message);
     }
 
+    /// <summary>
+    /// 写入一条日志，自动加上服务器名称前缀。
+    /// </summary>
+    /// <param name="message">日志消息。</param>
+    /// <param name="level">日志级别。</param>
     public void Log(string message, LogLevel level)
     {
         _logger.Log(level, "[{Server}] {Message}", ServerName, message);
@@ -339,6 +344,9 @@ public abstract class BaseGameServer : IServerContext
             int[] messageBuckets = new int[bucketCount];
             int[] byteBuckets = new int[bucketCount];
 
+            /// <summary>
+            /// 滑动窗口限流器：如果时间跨度超过 100ms，则移动到下一个桶
+            /// </summary>
             void AdvanceBucketsIfNeeded()
             {
                 var elapsedMs = (Stopwatch.GetTimestamp() - bucketWindowStartTicks) * 1000.0 / Stopwatch.Frequency;
@@ -355,6 +363,11 @@ public abstract class BaseGameServer : IServerContext
                 }
             }
 
+            /// <summary>
+            /// 添加字节并获取速率
+            /// </summary>
+            /// <param name="bytes">字节数。</param>
+            /// <returns>速率。</returns>
             int AddBytesAndGetRate(int bytes)
             {
                 AdvanceBucketsIfNeeded();
@@ -364,6 +377,11 @@ public abstract class BaseGameServer : IServerContext
                 return sum;
             }
 
+            /// <summary>
+            /// 添加消息并获取速率
+            /// </summary>
+            /// <param name="inc">消息数。</param>
+            /// <returns>速率。</returns>
             int AddMessagesAndGetRate(int inc)
             {
                 AdvanceBucketsIfNeeded();
@@ -591,6 +609,9 @@ public abstract class BaseGameServer : IServerContext
         Log($"加入黑名单: {remote} 原因={reason} 时长={duration}");
     }
 
+    /// <summary>
+    /// IP 滑动窗口限流器
+    /// </summary>
     private sealed class IpSlidingRate
     {
         private const int BucketCount = 10;

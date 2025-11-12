@@ -2,6 +2,8 @@ using Core;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Configuration;
 using Shared.Constants;
+using System.Security.Cryptography.X509Certificates;
+using System.Net.Security;
 
 namespace DirectoryServer;
 
@@ -12,72 +14,140 @@ public class DirectoryGameServer : BaseGameServer
 {
     public DirectoryGameServer(ILogger logger, IConfiguration configuration) : base(nameof(DirectoryGameServer), logger)
     {
-        // 依据配置选择注册组件实现：优先 Redis，其次内存
-        var mode = configuration[ConfigKeys.DirectoryRegistryMode] ??
-                   Environment.GetEnvironmentVariable(ConfigKeys.DirectoryRegistryEnv) ?? "memory";
-        Components.IServerRegistryComponent registry;
-        if (string.Equals(mode, "redis", StringComparison.OrdinalIgnoreCase))
-        {
-            var conn = configuration[ConfigKeys.DirectoryRegistryRedisConnectionString] ??
-                       Environment.GetEnvironmentVariable(ConfigKeys.RedisConnectionEnv) ?? "localhost:6379";
-            // 外部化参数：离线 TTL、清理 TTL、清理轮询间隔（秒）
-            TimeSpan? offlineTtl = null, removeTtl = null, cleanupInterval = null;
-            if (int.TryParse(configuration[ConfigKeys.DirectoryRegistryRedisOfflineTtlSeconds], out var offlineSec) && offlineSec > 0)
-                offlineTtl = TimeSpan.FromSeconds(offlineSec);
-            else if (int.TryParse(Environment.GetEnvironmentVariable(ConfigKeys.DirectoryRegistryOfflineTtlSecondsEnv), out var offlineEnv) && offlineEnv > 0)
-                offlineTtl = TimeSpan.FromSeconds(offlineEnv);
-
-            if (int.TryParse(configuration[ConfigKeys.DirectoryRegistryRedisRemoveTtlSeconds], out var removeSec) && removeSec > 0)
-                removeTtl = TimeSpan.FromSeconds(removeSec);
-            else if (int.TryParse(Environment.GetEnvironmentVariable(ConfigKeys.DirectoryRegistryRemoveTtlSecondsEnv), out var removeEnv) && removeEnv > 0)
-                removeTtl = TimeSpan.FromSeconds(removeEnv);
-
-            if (int.TryParse(configuration[ConfigKeys.DirectoryRegistryRedisCleanupIntervalSeconds], out var cleanupSec) && cleanupSec > 0)
-                cleanupInterval = TimeSpan.FromSeconds(cleanupSec);
-            else if (int.TryParse(Environment.GetEnvironmentVariable(ConfigKeys.DirectoryRegistryCleanupIntervalSecondsEnv), out var cleanupEnv) && cleanupEnv > 0)
-                cleanupInterval = TimeSpan.FromSeconds(cleanupEnv);
-
-            // TLS/mTLS 配置（低优先级增强）：支持 Ssl、SslHost、客户端证书路径/密码
-            var sslOpt = configuration[ConfigKeys.DirectoryRegistryRedisSsl];
-            var sslHostOpt = configuration[ConfigKeys.DirectoryRegistryRedisSslHost];
-            var certPathOpt = configuration[ConfigKeys.DirectoryRegistryRedisClientCertPath];
-            var certPwdOpt = configuration[ConfigKeys.DirectoryRegistryRedisClientCertPassword];
-            var validateServerCertOpt = configuration[ConfigKeys.DirectoryRegistryRedisValidateServerCertificate];
-
-            // 证书构造拆分，避免嵌套三元表达式（S3358）
-            System.Security.Cryptography.X509Certificates.X509Certificate2? clientCert = null;
-            if (!string.IsNullOrWhiteSpace(certPathOpt))
-            {
-                clientCert = string.IsNullOrWhiteSpace(certPwdOpt)
-                    ? new System.Security.Cryptography.X509Certificates.X509Certificate2(certPathOpt)
-                    : new System.Security.Cryptography.X509Certificates.X509Certificate2(certPathOpt, certPwdOpt);
-            }
-
-            var securityOptions = new Components.RedisServerRegistryComponent.RedisSecurityOptions
-            {
-                Ssl = bool.TryParse(sslOpt, out var sslParsed) ? sslParsed : (bool?)null,
-                SslHost = string.IsNullOrWhiteSpace(sslHostOpt) ? null : sslHostOpt,
-                ClientCertificate = clientCert,
-                CertificateValidationOverride = bool.TryParse(validateServerCertOpt, out var validateFlag)
-                    ? ((sender, certificate, chain, errors) =>
-                    {
-                        if (validateFlag) return errors == System.Net.Security.SslPolicyErrors.None;
-                        return true;
-                    })
-                    : null
-            };
-
-            registry = new Components.RedisServerRegistryComponent(conn, "registry", offlineTtl, removeTtl, cleanupInterval, securityOptions);
-        }
-        else
-        {
-            registry = new Components.InMemoryServerRegistryComponent();
-        }
+        var registry = CreateServerRegistry(configuration);
         AddComponent(registry);
 
-        var metrics = new Components.DirectoryMetricsComponent(message => Log(message), () => registry.ListServers().Count());
+        var metrics =
+            new Components.DirectoryMetricsComponent(message => Log(message), () => registry.ListServers().Count());
         AddComponent(metrics);
 
+        RegisterMessageHandlers();
+    }
+
+    /// <summary>
+    /// 创建服务器注册组件
+    /// </summary>
+    /// <param name="configuration"></param>
+    /// <returns></returns>
+    private Components.IServerRegistryComponent CreateServerRegistry(IConfiguration configuration)
+    {
+        var mode = configuration[ConfigKeys.DirectoryRegistryMode] ??
+                   Environment.GetEnvironmentVariable(ConfigKeys.DirectoryRegistryEnv) ?? "memory";
+
+        return mode.Equals("redis", StringComparison.OrdinalIgnoreCase)
+            ? CreateRedisServerRegistry(configuration)
+            : new Components.InMemoryServerRegistryComponent();
+    }
+
+    /// <summary>
+    /// 创建Redis服务器注册组件
+    /// </summary>
+    /// <param name="configuration"></param>
+    /// <returns></returns>
+    private Components.IServerRegistryComponent CreateRedisServerRegistry(IConfiguration configuration)
+    {
+        var connectionString = configuration[ConfigKeys.DirectoryRegistryRedisConnectionString] ??
+                               Environment.GetEnvironmentVariable(ConfigKeys.RedisConnectionEnv) ?? "localhost:6379";
+
+        var (offlineTtl, removeTtl, cleanupInterval) = ParseRedisTtlConfiguration(configuration);
+        var securityOptions = BuildRedisSecurityOptions(configuration);
+
+        return new Components.RedisServerRegistryComponent(
+            connectionString,
+            "registry",
+            offlineTtl,
+            removeTtl,
+            cleanupInterval,
+            securityOptions);
+    }
+
+    /// <summary>
+    /// 解析Redis TTL配置
+    /// </summary>
+    private (TimeSpan? offlineTtl, TimeSpan? removeTtl, TimeSpan? cleanupInterval) ParseRedisTtlConfiguration(
+        IConfiguration configuration)
+    {
+        TimeSpan? offlineTtl = ParseTimeSpanSeconds(
+            configuration[ConfigKeys.DirectoryRegistryRedisOfflineTtlSeconds],
+            ConfigKeys.DirectoryRegistryOfflineTtlSecondsEnv);
+
+        TimeSpan? removeTtl = ParseTimeSpanSeconds(
+            configuration[ConfigKeys.DirectoryRegistryRedisRemoveTtlSeconds],
+            ConfigKeys.DirectoryRegistryRemoveTtlSecondsEnv);
+
+        TimeSpan? cleanupInterval = ParseTimeSpanSeconds(
+            configuration[ConfigKeys.DirectoryRegistryRedisCleanupIntervalSeconds],
+            ConfigKeys.DirectoryRegistryCleanupIntervalSecondsEnv);
+
+        return (offlineTtl, removeTtl, cleanupInterval);
+    }
+
+    /// <summary>
+    /// 解析时间间隔
+    /// </summary>
+    private TimeSpan? ParseTimeSpanSeconds(string? configValue, string environmentVariableKey)
+    {
+        if (int.TryParse(configValue, out var seconds) && seconds > 0)
+            return TimeSpan.FromSeconds(seconds);
+
+        var envValue = Environment.GetEnvironmentVariable(environmentVariableKey);
+        if (int.TryParse(envValue, out var envSeconds) && envSeconds > 0)
+            return TimeSpan.FromSeconds(envSeconds);
+
+        return null;
+    }
+
+    /// <summary>
+    /// 创建Redis安全选项
+    /// </summary>
+    private Components.RedisServerRegistryComponent.RedisSecurityOptions BuildRedisSecurityOptions(
+        IConfiguration configuration)
+    {
+        var sslOption = configuration[ConfigKeys.DirectoryRegistryRedisSsl];
+        var sslHostOption = configuration[ConfigKeys.DirectoryRegistryRedisSslHost];
+        var certPathOption = configuration[ConfigKeys.DirectoryRegistryRedisClientCertPath];
+        var certPasswordOption = configuration[ConfigKeys.DirectoryRegistryRedisClientCertPassword];
+        var validateServerCertOption = configuration[ConfigKeys.DirectoryRegistryRedisValidateServerCertificate];
+
+        X509Certificate2? clientCertificate = null;
+        if (!string.IsNullOrWhiteSpace(certPathOption))
+        {
+            clientCertificate = string.IsNullOrWhiteSpace(certPasswordOption)
+                ? new X509Certificate2(certPathOption)
+                : new X509Certificate2(certPathOption, certPasswordOption);
+        }
+
+        return new Components.RedisServerRegistryComponent.RedisSecurityOptions
+        {
+            Ssl = bool.TryParse(sslOption, out var sslValue) ? sslValue : (bool?)null,
+            SslHost = string.IsNullOrWhiteSpace(sslHostOption) ? null : sslHostOption,
+            ClientCertificate = clientCertificate,
+            CertificateValidationOverride = CreateCertificateValidationCallback(validateServerCertOption)
+        };
+    }
+
+    /// <summary>
+    /// 创建服务器证书验证回调
+    /// </summary>
+    /// <param name="validateServerCertOption"></param>
+    /// <returns></returns>
+    private RemoteCertificateValidationCallback? CreateCertificateValidationCallback(string? validateServerCertOption)
+    {
+        if (bool.TryParse(validateServerCertOption, out var validateFlag))
+        {
+            return (sender, certificate, chain, errors) =>
+            {
+                if (validateFlag)
+                    return errors == SslPolicyErrors.None;
+                return true;
+            };
+        }
+
+        return null;
+    }
+
+    private void RegisterMessageHandlers()
+    {
         RegisterStrongMessageHandler(new Handlers.QueryServersMessageHandler());
         RegisterStrongMessageHandler(new Handlers.QueryServerStatusMessageHandler());
         RegisterStrongMessageHandler(new Handlers.SwitchServerMessageHandler());

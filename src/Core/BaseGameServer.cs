@@ -25,19 +25,27 @@ public abstract class BaseGameServer : IServerContext
     private readonly int _acceptBackoffMs; // 接受失败退避毫秒
     private int _currentConnections;
     private TcpListener? _listener;
-    private CancellationTokenSource? _cts;
+
+    private CancellationTokenSource? _cts; // 用于取消监听
+
     // ECS 更新循环通过后台 Task 驱动，无需持有字段引用。
-    private IWebHost? _webHost; // For health checks
-    private readonly ILogger _logger;
+    private IWebHost? _webHost; // 用于后台监控
+
+    private readonly ILogger _logger; // 日志
+
     // 连接数指标通过 Meter 注册，无需持有字段引用。
     private readonly ConcurrentDictionary<string, IStrongHandlerInvoker> _typedHandlers = new();
+
     private readonly ConcurrentDictionary<Type, IServerComponent> _components = new();
-    // 网络鲁棒性：限速与黑名单（在构造函数中设定默认值，以满足分析器规则 S3604）
+
+    // 网络鲁棒性：限速与黑名单
     private readonly int _maxBytesPerSecond; // 默认每连接 1MB/s
-    private readonly int _maxMessagesPerSecond;    // 默认每连接 200 条/秒
-    private readonly int _idleTimeoutMs;        // 默认空闲 120s 断开
+    private readonly int _maxMessagesPerSecond; // 默认每连接 200 条/秒
+    private readonly int _idleTimeoutMs; // 默认空闲 120s 断开
+
     private readonly ConcurrentDictionary<string, DateTime> _blacklist = new();
-    // 新增：按 IP 聚合的滑动窗口限流（全局维度）
+
+    // 聚合的滑动窗口限流
     private readonly ConcurrentDictionary<string, IpSlidingRate> _ipRates = new();
     private readonly int _ipMaxBytesPerSecond; // 0 表示禁用
     private readonly int _ipMaxMessagesPerSecond; // 0 表示禁用
@@ -73,15 +81,24 @@ public abstract class BaseGameServer : IServerContext
         _maxMessagesPerSecond = 200;
         _idleTimeoutMs = 120_000;
         // 若后续提供配置，可在此覆盖默认值（环境变量或配置）
-        if (int.TryParse(Environment.GetEnvironmentVariable(Shared.Constants.ConfigKeys.ServerMaxBpsEnv), out var bps) && bps > 0)
+        if (int.TryParse(Environment.GetEnvironmentVariable(Shared.Constants.ConfigKeys.ServerMaxBpsEnv),
+                out var bps) && bps > 0)
             _maxBytesPerSecond = bps;
-        if (int.TryParse(Environment.GetEnvironmentVariable(Shared.Constants.ConfigKeys.ServerMaxMsgsEnv), out var mps) && mps > 0)
+        if (int.TryParse(Environment.GetEnvironmentVariable(Shared.Constants.ConfigKeys.ServerMaxMsgsEnv),
+                out var mps) && mps > 0)
             _maxMessagesPerSecond = mps;
-        if (int.TryParse(Environment.GetEnvironmentVariable(Shared.Constants.ConfigKeys.ServerIdleMsEnv), out var idle) && idle > 0)
+        if (int.TryParse(Environment.GetEnvironmentVariable(Shared.Constants.ConfigKeys.ServerIdleMsEnv),
+                out var idle) && idle > 0)
             _idleTimeoutMs = idle;
         // 按 IP 的聚合限流阈值（可选）：未设置或 <=0 则禁用
-        _ipMaxBytesPerSecond = int.TryParse(Environment.GetEnvironmentVariable("SERVER_IP_MAX_BPS"), out var ipBps) && ipBps > 0 ? ipBps : 0;
-        _ipMaxMessagesPerSecond = int.TryParse(Environment.GetEnvironmentVariable("SERVER_IP_MAX_MSGS"), out var ipMps) && ipMps > 0 ? ipMps : 0;
+        _ipMaxBytesPerSecond =
+            int.TryParse(Environment.GetEnvironmentVariable("SERVER_IP_MAX_BPS"), out var ipBps) && ipBps > 0
+                ? ipBps
+                : 0;
+        _ipMaxMessagesPerSecond =
+            int.TryParse(Environment.GetEnvironmentVariable("SERVER_IP_MAX_MSGS"), out var ipMps) && ipMps > 0
+                ? ipMps
+                : 0;
 
         // 集中密钥提供组件：统一加载并缓存鉴权密钥
         try
@@ -116,7 +133,6 @@ public abstract class BaseGameServer : IServerContext
     {
         return _components.TryGetValue(typeof(T), out var component) ? component as T : null;
     }
-
 
 
     /// <summary>
@@ -195,24 +211,36 @@ public abstract class BaseGameServer : IServerContext
     /// </summary>
     public async Task StopAsync()
     {
-        try { _cts?.Cancel(); }
+        try
+        {
+            _cts?.Cancel();
+        }
         catch (Exception ex)
         {
             // 取消令牌可能已释放或已取消，记录后继续关停流程。
             Log($"取消服务器运行令牌失败: {ex.Message}");
         }
-        try { _listener?.Stop(); }
+
+        try
+        {
+            _listener?.Stop();
+        }
         catch (Exception ex)
         {
             // 监听器停止失败不影响后续资源释放，记录后继续。
             Log($"停止 TCP 监听器失败: {ex.Message}");
         }
-        try { _webHost?.StopAsync().Wait(); }
+
+        try
+        {
+            _webHost?.StopAsync().Wait();
+        }
         catch (Exception ex)
         {
             // WebHost 停止失败时继续执行组件销毁，避免阻塞关机。
             Log($"停止健康检查端点失败: {ex.Message}");
         }
+
         _listener = null;
         ListeningPort = null;
 
@@ -266,10 +294,12 @@ public abstract class BaseGameServer : IServerContext
                         // 关闭黑名单连接失败不影响服务稳定性，记录后继续。
                         Log($"关闭黑名单连接失败: {ex.Message}");
                     }
+
                     // 成功接受一次连接，重置退避
                     currentBackoffMs = _acceptBackoffMs;
                     continue;
                 }
+
                 var connCount = Volatile.Read(ref _currentConnections);
                 // 连接数限制：超过并发上限直接拒绝
                 if (connCount >= _maxConcurrentConnections)
@@ -284,8 +314,10 @@ public abstract class BaseGameServer : IServerContext
                         // 关闭超限连接失败不影响服务稳定性，记录后继续。
                         Log($"关闭超限连接失败: {ex.Message}");
                     }
+
                     continue;
                 }
+
                 // 异步处理客户端生命周期
                 _ = Task.Run(() => HandleClient(client, token));
                 // 成功接受连接后重置退避
@@ -302,7 +334,8 @@ public abstract class BaseGameServer : IServerContext
                 {
                     await Task.Delay(TimeSpan.FromMilliseconds(currentBackoffMs), token);
                     // 指数退避，上限 10s
-                    currentBackoffMs = Math.Min(currentBackoffMs <= 0 ? _acceptBackoffMs : currentBackoffMs * 2, 10_000);
+                    currentBackoffMs = Math.Min(currentBackoffMs <= 0 ? _acceptBackoffMs : currentBackoffMs * 2,
+                        10_000);
                 }
                 catch (OperationCanceledException)
                 {
@@ -336,6 +369,7 @@ public abstract class BaseGameServer : IServerContext
                 // 设置超时在某些平台/网络栈上可能抛出，但不影响后续处理，记录后继续。
                 Log($"设置接收/发送超时失败: {ex.Message}");
             }
+
             // 每连接滑动限速：100ms 子桶近似 1s 滑窗
             const int bucketCount = 10;
             const int bucketMs = 100;
@@ -344,11 +378,10 @@ public abstract class BaseGameServer : IServerContext
             int[] messageBuckets = new int[bucketCount];
             int[] byteBuckets = new int[bucketCount];
 
-            /// <summary>
-            /// 滑动窗口限流器：如果时间跨度超过 100ms，则移动到下一个桶
-            /// </summary>
+            // 滑动窗口限流器：如果时间跨度超过 100ms，则移动到下一个桶
             void AdvanceBucketsIfNeeded()
             {
+                // 计算使用了多少秒
                 var elapsedMs = (Stopwatch.GetTimestamp() - bucketWindowStartTicks) * 1000.0 / Stopwatch.Frequency;
                 if (elapsedMs >= bucketMs)
                 {
@@ -359,15 +392,12 @@ public abstract class BaseGameServer : IServerContext
                         messageBuckets[currentBucketIndex] = 0;
                         byteBuckets[currentBucketIndex] = 0;
                     }
+
                     bucketWindowStartTicks = Stopwatch.GetTimestamp();
                 }
             }
 
-            /// <summary>
-            /// 添加字节并获取速率
-            /// </summary>
-            /// <param name="bytes">字节数。</param>
-            /// <returns>速率。</returns>
+            // 添加字节并获取速率
             int AddBytesAndGetRate(int bytes)
             {
                 AdvanceBucketsIfNeeded();
@@ -377,11 +407,7 @@ public abstract class BaseGameServer : IServerContext
                 return sum;
             }
 
-            /// <summary>
-            /// 添加消息并获取速率
-            /// </summary>
-            /// <param name="inc">消息数。</param>
-            /// <returns>速率。</returns>
+            // 添加消息并获取速率
             int AddMessagesAndGetRate(int inc)
             {
                 AdvanceBucketsIfNeeded();
@@ -390,34 +416,88 @@ public abstract class BaseGameServer : IServerContext
                 for (var i = 0; i < bucketCount; i++) sum += messageBuckets[i];
                 return sum;
             }
+
+            // 统一的字节速率检查方法
+            bool CheckByteRateLimit(int bytes, string remoteEndpoint, out string reason)
+            {
+                reason = "";
+                var bps = AddBytesAndGetRate(bytes);
+
+                // 全局 IP 字节速率检查
+                if (_ipMaxBytesPerSecond > 0)
+                {
+                    var ipRate = _ipRates.GetOrAdd(remoteEndpoint, _ => new IpSlidingRate());
+                    var ipBpsNow = ipRate.AddBytesAndGetRate(bytes);
+                    if (ipBpsNow > _ipMaxBytesPerSecond)
+                    {
+                        reason = "ip_bytes_rate_limit_exceeded";
+                        Log($"[IP限速-字节] {remoteEndpoint} {ipBpsNow}B/s > {_ipMaxBytesPerSecond}B/s，断开");
+                        AddToBlacklist(remoteEndpoint, TimeSpan.FromMinutes(2), reason);
+                        return false;
+                    }
+                }
+
+                // 连接字节速率检查
+                if (bps > _maxBytesPerSecond)
+                {
+                    reason = "bytes_rate_limit_exceeded";
+                    Log($"限速超限(字节): {remoteEndpoint} {bps}B/s > {_maxBytesPerSecond}B/s，断开");
+                    AddToBlacklist(remoteEndpoint, TimeSpan.FromMinutes(2), reason);
+                    return false;
+                }
+
+                return true;
+            }
+
+            // 统一的消息频率检查方法
+            bool CheckMessageRateLimit(string remoteEndpoint, out string reason)
+            {
+                reason = "";
+                var mps = AddMessagesAndGetRate(1);
+
+                // 全局 IP 消息频率检查
+                if (_ipMaxMessagesPerSecond > 0)
+                {
+                    var ipRate = _ipRates.GetOrAdd(remoteEndpoint, _ => new IpSlidingRate());
+                    var ipMpsNow = ipRate.AddMessagesAndGetRate(1);
+                    if (ipMpsNow > _ipMaxMessagesPerSecond)
+                    {
+                        reason = "ip_message_rate_limit_exceeded";
+                        Log($"[IP限速-频率] {remoteEndpoint} {ipMpsNow}/s > {_ipMaxMessagesPerSecond}/s，断开");
+                        AddToBlacklist(remoteEndpoint, TimeSpan.FromMinutes(2), reason);
+                        return false;
+                    }
+                }
+
+                // 连接消息频率检查
+                if (mps > _maxMessagesPerSecond)
+                {
+                    reason = "message_rate_limit_exceeded";
+                    Log($"限速超限(频率): {remoteEndpoint} {mps}/s > {_maxMessagesPerSecond}/s，断开");
+                    AddToBlacklist(remoteEndpoint, TimeSpan.FromMinutes(2), reason);
+                    return false;
+                }
+
+                return true;
+            }
+
+            // 验证一下 多次请求超包是否会被拉入黑名单
             int badPacketCount = 0;
+            // 超包黑名单阈值
             const int blacklistThreshold = 3;
             try
             {
                 while (!token.IsCancellationRequested)
                 {
+                    // 包头处理
                     var lenBuf = new byte[4];
                     var read = await ReadExactAsync(stream, lenBuf, 0, 4, token, _receiveTimeoutMs);
                     if (read == 0) break;
-                    var bps = AddBytesAndGetRate(read);
-                    // 全局 IP 字节速率检查
-                    if (_ipMaxBytesPerSecond > 0)
-                    {
-                        var ipRate = _ipRates.GetOrAdd(remote, _ => new IpSlidingRate());
-                        var ipBpsNow = ipRate.AddBytesAndGetRate(read);
-                        if (ipBpsNow > _ipMaxBytesPerSecond)
-                        {
-                            Log($"[IP限速-字节] {remote} {ipBpsNow}B/s > {_ipMaxBytesPerSecond}B/s，断开");
-                            AddToBlacklist(remote, TimeSpan.FromMinutes(2), "ip_bytes_rate_limit_exceeded");
-                            break;
-                        }
-                    }
-                    if (bps > _maxBytesPerSecond)
-                    {
-                        Log($"限速超限(字节): {remote} {bps}B/s > {_maxBytesPerSecond}B/s，断开");
-                        AddToBlacklist(remote, TimeSpan.FromMinutes(2), "bytes_rate_limit_exceeded");
+
+                    // 执行字节速率检查
+                    if (!CheckByteRateLimit(read, remote, out var rateLimitReason))
                         break;
-                    }
+
                     var length = BitConverter.ToInt32(lenBuf, 0);
                     // 长度校验：防止过大或非法负载
                     if (length <= 0 || length > _maxMessageSize)
@@ -428,28 +508,17 @@ public abstract class BaseGameServer : IServerContext
                         {
                             AddToBlacklist(remote, TimeSpan.FromMinutes(5), "bad_packet_length");
                         }
+
                         break;
                     }
+
+                    // 包体处理
                     var buf = new byte[length];
                     await ReadExactAsync(stream, buf, 0, length, token, _receiveTimeoutMs);
-                    bps = AddBytesAndGetRate(length);
-                    if (_ipMaxBytesPerSecond > 0)
-                    {
-                        var ipRate = _ipRates.GetOrAdd(remote, _ => new IpSlidingRate());
-                        var ipBpsNow = ipRate.AddBytesAndGetRate(length);
-                        if (ipBpsNow > _ipMaxBytesPerSecond)
-                        {
-                            Log($"[IP限速-字节] {remote} {ipBpsNow}B/s > {_ipMaxBytesPerSecond}B/s，断开");
-                            AddToBlacklist(remote, TimeSpan.FromMinutes(2), "ip_bytes_rate_limit_exceeded");
-                            break;
-                        }
-                    }
-                    if (bps > _maxBytesPerSecond)
-                    {
-                        Log($"限速超限(字节): {remote} {bps}B/s > {_maxBytesPerSecond}B/s，断开");
-                        AddToBlacklist(remote, TimeSpan.FromMinutes(2), "bytes_rate_limit_exceeded");
+
+                    // 再次执行字节速率检查（针对消息体）
+                    if (!CheckByteRateLimit(length, remote, out rateLimitReason))
                         break;
-                    }
 
                     Envelope envelope;
                     try
@@ -464,30 +533,19 @@ public abstract class BaseGameServer : IServerContext
                         {
                             AddToBlacklist(remote, TimeSpan.FromMinutes(5), "protocol_parse_error");
                         }
-                        break;
-                    }
-                    var incomingReqId = string.IsNullOrWhiteSpace(envelope.RequestId) ? Guid.NewGuid().ToString("N") : envelope.RequestId;
-                    var reqContext = new RequestServerContext(this, envelope.Token ?? string.Empty, remote, incomingReqId);
 
-                    // 频率限流：按消息条数
-                    var mps = AddMessagesAndGetRate(1);
-                    if (_ipMaxMessagesPerSecond > 0)
-                    {
-                        var ipRate = _ipRates.GetOrAdd(remote, _ => new IpSlidingRate());
-                        var ipMpsNow = ipRate.AddMessagesAndGetRate(1);
-                        if (ipMpsNow > _ipMaxMessagesPerSecond)
-                        {
-                            Log($"[IP限速-频率] {remote} {ipMpsNow}/s > {_ipMaxMessagesPerSecond}/s，断开");
-                            AddToBlacklist(remote, TimeSpan.FromMinutes(2), "ip_message_rate_limit_exceeded");
-                            break;
-                        }
-                    }
-                    if (mps > _maxMessagesPerSecond)
-                    {
-                        Log($"限速超限(频率): {remote} {mps}/s > {_maxMessagesPerSecond}/s，断开");
-                        AddToBlacklist(remote, TimeSpan.FromMinutes(2), "message_rate_limit_exceeded");
                         break;
                     }
+
+                    var incomingReqId = string.IsNullOrWhiteSpace(envelope.RequestId)
+                        ? Guid.NewGuid().ToString("N")
+                        : envelope.RequestId;
+                    var reqContext =
+                        new RequestServerContext(this, envelope.Token ?? string.Empty, remote, incomingReqId);
+
+                    // 执行消息频率检查
+                    if (!CheckMessageRateLimit(remote, out var msgRateLimitReason))
+                        break;
 
                     // 优先强类型：按 Envelope.type 查找具体请求类型
                     if (_typedHandlers.TryGetValue(envelope.Type, out var strong))
@@ -496,7 +554,9 @@ public abstract class BaseGameServer : IServerContext
                         if (result != null)
                         {
                             // 写回响应信封（类型与载荷）
-                            await WriteEnvelopeAsync(stream, result.Value.responseType, result.Value.payload, envelope.RequestId, result.Value.errorCode, result.Value.errorMessage, token, _receiveTimeoutMs);
+                            await WriteEnvelopeAsync(stream, result.Value.responseType, result.Value.payload,
+                                envelope.RequestId, result.Value.errorCode, result.Value.errorMessage, token,
+                                _receiveTimeoutMs);
                         }
                     }
                     else
@@ -528,6 +588,7 @@ public abstract class BaseGameServer : IServerContext
         }
     }
 
+
     /// <summary>
     /// ECS 更新驱动循环：固定间隔调用世界更新。
     /// </summary>
@@ -550,16 +611,17 @@ public abstract class BaseGameServer : IServerContext
             {
                 Log($"ECS 更新异常: {ex.Message}");
             }
+
             await Task.Delay(interval, token);
         }
     }
 
 
-
     /// <summary>
     /// 从网络流精确读取指定长度的字节；若对端关闭则返回已读取长度。
     /// </summary>
-    private static async Task<int> ReadExactAsync(Stream stream, byte[] buffer, int offset, int count, CancellationToken token, int timeoutMs)
+    private static async Task<int> ReadExactAsync(Stream stream, byte[] buffer, int offset, int count,
+        CancellationToken token, int timeoutMs)
     {
         var total = 0;
         while (total < count)
@@ -570,13 +632,15 @@ public abstract class BaseGameServer : IServerContext
             if (n == 0) return total;
             total += n;
         }
+
         return total;
     }
 
     /// <summary>
     /// 将响应类型与载荷封装为信封并写入网络流。
     /// </summary>
-    private static async Task WriteEnvelopeAsync(Stream stream, string type, byte[] payload, string? requestId, int errorCode, string? errorMessage, CancellationToken token, int timeoutMs)
+    private static async Task WriteEnvelopeAsync(Stream stream, string type, byte[] payload, string? requestId,
+        int errorCode, string? errorMessage, CancellationToken token, int timeoutMs)
     {
         var env = new Envelope { Type = type, Payload = ByteString.CopyFrom(payload) };
         if (!string.IsNullOrWhiteSpace(requestId)) env.RequestId = requestId;
@@ -600,6 +664,7 @@ public abstract class BaseGameServer : IServerContext
             if (DateTime.UtcNow < until) return true;
             _blacklist.TryRemove(remote, out _);
         }
+
         return false;
     }
 
@@ -621,6 +686,7 @@ public abstract class BaseGameServer : IServerContext
         private readonly int[] _messageBuckets = new int[BucketCount];
         private readonly int[] _byteBuckets = new int[BucketCount];
 
+        // 检查并更新滑动窗口
         private void AdvanceBucketsIfNeeded()
         {
             var elapsedMs = (Stopwatch.GetTimestamp() - _bucketWindowStartTicks) * 1000.0 / Stopwatch.Frequency;
@@ -633,10 +699,12 @@ public abstract class BaseGameServer : IServerContext
                     _messageBuckets[_currentBucketIndex] = 0;
                     _byteBuckets[_currentBucketIndex] = 0;
                 }
+
                 _bucketWindowStartTicks = Stopwatch.GetTimestamp();
             }
         }
 
+        // 添加字节
         public int AddBytesAndGetRate(int bytes)
         {
             AdvanceBucketsIfNeeded();
@@ -646,6 +714,7 @@ public abstract class BaseGameServer : IServerContext
             return sum;
         }
 
+        // 添加消息
         public int AddMessagesAndGetRate(int inc)
         {
             AdvanceBucketsIfNeeded();
@@ -657,7 +726,10 @@ public abstract class BaseGameServer : IServerContext
     }
 }
 
-internal sealed class RequestServerContext : IServerContext
+/// <summary>
+/// 程序集内密封类，用于封装请求上下文信息
+/// </summary>
+internal class RequestServerContext : IServerContext
 {
     private readonly BaseGameServer _server;
     private readonly string _token;

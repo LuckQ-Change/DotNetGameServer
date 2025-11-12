@@ -7,14 +7,13 @@ using Core.Db;
 using Microsoft.EntityFrameworkCore;
 using ServerHost.HealthChecks;
 using Microsoft.AspNetCore.Builder;
-
 using Microsoft.AspNetCore.Http;
-
 using LoginServer.Components;
 using OpenTelemetry.Resources;
 using OpenTelemetry.Metrics;
 using OpenTelemetry.Trace;
 using Core.Telemetry;
+
 using ServerHost; // 访问命名空间中的类型（HostingUtilities、GameServerService）
 
 var builder = WebApplication.CreateBuilder(args);
@@ -44,7 +43,9 @@ builder.Services.AddScoped<IUserAuthComponent, DbUserAuthComponent>();
 
 // Telemetry: Metrics
 var metricsEnabled = builder.Configuration.GetValue<bool?>(Shared.Constants.ConfigKeys.TelemetryMetricsEnabledKeyLower)
-    ?? (bool.TryParse(Environment.GetEnvironmentVariable(Shared.Constants.ConfigKeys.TelemetryMetricsEnabledEnv), out var v) && v);
+                     ?? (bool.TryParse(
+                         Environment.GetEnvironmentVariable(Shared.Constants.ConfigKeys.TelemetryMetricsEnabledEnv),
+                         out var v) && v);
 
 if (metricsEnabled)
 {
@@ -57,7 +58,7 @@ if (metricsEnabled)
             mb.AddMeter(CoreTelemetry.Meter.Name);
 
             var endpoint = builder.Configuration[Shared.Constants.ConfigKeys.TelemetryMetricsOtlpEndpointKeyLower]
-                ?? Environment.GetEnvironmentVariable(Shared.Constants.ConfigKeys.OtlpEndpointEnv);
+                           ?? Environment.GetEnvironmentVariable(Shared.Constants.ConfigKeys.OtlpEndpointEnv);
             if (!string.IsNullOrWhiteSpace(endpoint))
             {
                 mb.AddOtlpExporter(otlpOptions =>
@@ -71,7 +72,7 @@ if (metricsEnabled)
         {
             tb.AddSource(CoreTelemetry.ActivitySource.Name);
             var endpoint = builder.Configuration[Shared.Constants.ConfigKeys.TelemetryMetricsOtlpEndpointKeyLower]
-                ?? Environment.GetEnvironmentVariable(Shared.Constants.ConfigKeys.OtlpEndpointEnv);
+                           ?? Environment.GetEnvironmentVariable(Shared.Constants.ConfigKeys.OtlpEndpointEnv);
             if (!string.IsNullOrWhiteSpace(endpoint))
             {
                 tb.AddOtlpExporter(otlpOptions =>
@@ -94,14 +95,21 @@ builder.Logging.AddConsole();
 
 // Health check HTTP URL
 var healthUrl = builder.Configuration[Shared.Constants.ConfigKeys.ServiceHealthCheckUrlKeyLower]
-               ?? Environment.GetEnvironmentVariable(Shared.Constants.ConfigKeys.ServiceHealthCheckUrlEnv)
-               ?? Environment.GetEnvironmentVariable(Shared.Constants.ConfigKeys.HealthCheckUrlEnv);
+                ?? Environment.GetEnvironmentVariable(Shared.Constants.ConfigKeys.ServiceHealthCheckUrlEnv)
+                ?? Environment.GetEnvironmentVariable(Shared.Constants.ConfigKeys.HealthCheckUrlEnv);
 
 var app = builder.Build();
 // Configure listening URL for the embedded HTTP server (health checks)
 if (!string.IsNullOrWhiteSpace(healthUrl))
 {
-    try { app.Urls.Add(healthUrl); } catch { /* ignore malformed url */ }
+    try
+    {
+        app.Urls.Add(healthUrl);
+    }
+    catch
+    {
+        /* ignore malformed url */
+    }
 }
 
 // Seed the database in development environment
@@ -176,98 +184,119 @@ namespace ServerHost
 
 namespace ServerHost
 {
-public class GameServerService : IHostedService
-{
-    private readonly ILogger<GameServerService> _logger;
-    private readonly IConfiguration _configuration;
-    private readonly IServiceProvider _serviceProvider;
-    private readonly IHostEnvironment _hostEnvironment;
-    private BaseGameServer? _server;
-
-    public GameServerService(ILogger<GameServerService> logger, IConfiguration configuration, IServiceProvider serviceProvider, IHostEnvironment hostEnvironment)
+    public class GameServerService : IHostedService
     {
-        _logger = logger;
-        _configuration = configuration;
-        _serviceProvider = serviceProvider;
-        _hostEnvironment = hostEnvironment;
-    }
+        private readonly ILogger<GameServerService> _logger;
+        private readonly IConfiguration _configuration;
+        private readonly IServiceProvider _serviceProvider;
+        private readonly IHostEnvironment _hostEnvironment;
+        private BaseGameServer? _server;
 
-    public async Task StartAsync(CancellationToken cancellationToken)
-    {
-        var service = _configuration[Shared.Constants.ConfigKeys.ServiceConfigKey] ?? Environment.GetEnvironmentVariable(Shared.Constants.ConfigKeys.ServiceEnv) ?? "directory";
-        var port = _configuration.GetValue<int?>("port") ??
-                   (int.TryParse(Environment.GetEnvironmentVariable(Shared.Constants.ConfigKeys.PortEnv), out var p) ? p : 5500);
-
-        // 启动提示（更明显的控制台输出）
-        _logger.LogInformation("[Host] 正在启动服务: {service} (port={port}, env={env})", service, port, _hostEnvironment.EnvironmentName);
-        Console.WriteLine($"[Host] 正在启动服务: {service} (port={port}, env={_hostEnvironment.EnvironmentName})");
-
-        // 配置链路校验与提示：记录 DirectoryTokenSecret 来源
-        Core.Config.ConfigurationBridge.ValidateAndLog(_configuration, _logger);
-
-        // 安全护栏：Production 环境下进行关键配置校验
-        if (_hostEnvironment.IsProduction())
+        public GameServerService(ILogger<GameServerService> logger, IConfiguration configuration,
+            IServiceProvider serviceProvider, IHostEnvironment hostEnvironment)
         {
-            ValidateProductionConfiguration();
+            _logger = logger;
+            _configuration = configuration;
+            _serviceProvider = serviceProvider;
+            _hostEnvironment = hostEnvironment;
         }
 
-        _server = service.ToLowerInvariant() switch
+        public async Task StartAsync(CancellationToken cancellationToken)
         {
-            "directory" => new DirectoryServer.DirectoryGameServer(_serviceProvider.GetRequiredService<ILogger<DirectoryServer.DirectoryGameServer>>(), _configuration),
-            "login" => new LoginServer.LoginGameServer(_serviceProvider.GetRequiredService<ILogger<LoginServer.LoginGameServer>>(), _serviceProvider.GetRequiredService<IUserAuthComponent>()),
-            "resource" => new ResourceServer.ResourceGameServer(_serviceProvider.GetRequiredService<ILogger<ResourceServer.ResourceGameServer>>(), _configuration),
-            "battle" => new BattleServer.BattleGameServer(_serviceProvider.GetRequiredService<ILogger<BattleServer.BattleGameServer>>()),
-            "logic" => new LogicServer.LogicGameServer(_serviceProvider.GetRequiredService<ILogger<LogicServer.LogicGameServer>>()),
-            _ => throw new ArgumentException($"未知服务类型: {service}")
-        };
+            var service = _configuration[Shared.Constants.ConfigKeys.ServiceConfigKey] ??
+                          Environment.GetEnvironmentVariable(Shared.Constants.ConfigKeys.ServiceEnv) ?? "directory";
+            var port = _configuration.GetValue<int?>("port") ??
+                       (int.TryParse(Environment.GetEnvironmentVariable(Shared.Constants.ConfigKeys.PortEnv), out var p)
+                           ? p
+                           : 5500);
 
-        await _server.StartAsync(port);
-        _logger.LogInformation("✅ 服务启动成功: {server} 正在监听 {port}, 环境={env}", _server.ServerName, port, _hostEnvironment.EnvironmentName);
-        Console.WriteLine($"✅ 服务启动成功: {_server.ServerName} 正在监听 {port}, 环境={_hostEnvironment.EnvironmentName}");
-        Console.WriteLine("按 Ctrl+C 退出该服务窗口，或关闭窗口以停止服务。");
-    }
+            // 启动提示（更明显的控制台输出）
+            _logger.LogInformation("[Host] 正在启动服务: {service} (port={port}, env={env})", service, port,
+                _hostEnvironment.EnvironmentName);
+            Console.WriteLine($"[Host] 正在启动服务: {service} (port={port}, env={_hostEnvironment.EnvironmentName})");
 
-    public async Task StopAsync(CancellationToken cancellationToken)
-    {
-        if (_server != null)
-        {
-            await _server.StopAsync();
-        }
-    }
-    private void ValidateProductionConfiguration()
-    {
-        // 目录令牌密钥校验：禁止使用默认 dev-secret/changeme
-        var secret = Core.Config.SimpleConfigLoader.LoadDirectoryTokenSecret(AppContext.BaseDirectory);
-        if (string.IsNullOrWhiteSpace(secret) || secret is "dev-secret" or "changeme" or "changeme-dev")
-        {
-            throw new InvalidOperationException("[Guard] 生产环境必须通过 Secret/环境变量提供非默认的 DIRECTORY_TOKEN_SECRET，当前值非法（dev-secret / changeme）。");
-        }
+            // 配置链路校验与提示：记录 DirectoryTokenSecret 来源
+            Core.Config.ConfigurationBridge.ValidateAndLog(_configuration, _logger);
 
-        // Redis 连接串校验（当目录注册模式为 redis）
-        var registryMode = (_configuration[Shared.Constants.ConfigKeys.DirectoryRegistryModeLower] ?? Environment.GetEnvironmentVariable(Shared.Constants.ConfigKeys.DirectoryRegistryEnv) ?? Shared.Constants.ConfigKeys.DirectoryRegistryModeValueMemory).ToLowerInvariant();
-        if (registryMode == Shared.Constants.ConfigKeys.DirectoryRegistryModeValueRedis)
-        {
-            var conn = _configuration[Shared.Constants.ConfigKeys.DirectoryRegistryRedisConnectionStringLower] ?? Environment.GetEnvironmentVariable(Shared.Constants.ConfigKeys.RedisConnectionEnv);
-            if (string.IsNullOrWhiteSpace(conn))
+            // 安全护栏：Production 环境下进行关键配置校验
+            if (_hostEnvironment.IsProduction())
             {
-                throw new InvalidOperationException("[Guard] 生产环境启用 Redis 注册表时必须提供 REDIS_CONNECTION（含密码/鉴权或采用 TLS），当前缺失。");
+                ValidateProductionConfiguration();
             }
-            if (conn.Contains("localhost", StringComparison.OrdinalIgnoreCase) || conn.Contains("changeme", StringComparison.OrdinalIgnoreCase))
+
+            _server = service.ToLowerInvariant() switch
             {
-                throw new InvalidOperationException("[Guard] 生产环境的 REDIS_CONNECTION 不应为 localhost 或包含默认口令（changeme）。请改为内网地址/域名并通过 Secret 注入强口令或证书。");
+                "directory" => new DirectoryServer.DirectoryGameServer(
+                    _serviceProvider.GetRequiredService<ILogger<DirectoryServer.DirectoryGameServer>>(),
+                    _configuration),
+                "login" => new LoginServer.LoginGameServer(
+                    _serviceProvider.GetRequiredService<ILogger<LoginServer.LoginGameServer>>(),
+                    _serviceProvider.GetRequiredService<IUserAuthComponent>()),
+                "resource" => new ResourceServer.ResourceGameServer(
+                    _serviceProvider.GetRequiredService<ILogger<ResourceServer.ResourceGameServer>>(), _configuration),
+                "battle" => new BattleServer.BattleGameServer(_serviceProvider
+                    .GetRequiredService<ILogger<BattleServer.BattleGameServer>>()),
+                "logic" => new LogicServer.LogicGameServer(_serviceProvider
+                    .GetRequiredService<ILogger<LogicServer.LogicGameServer>>()),
+                _ => throw new ArgumentException($"未知服务类型: {service}")
+            };
+
+            await _server.StartAsync(port);
+            _logger.LogInformation("服务启动成功: {server} 正在监听 {port}, 环境={env}", _server.ServerName, port,
+                _hostEnvironment.EnvironmentName);
+            Console.WriteLine($"服务启动成功: {_server.ServerName} 正在监听 {port}, 环境={_hostEnvironment.EnvironmentName}");
+            Console.WriteLine("按 Ctrl+C 退出该服务窗口，或关闭窗口以停止服务。");
+        }
+
+        public async Task StopAsync(CancellationToken cancellationToken)
+        {
+            if (_server != null)
+            {
+                await _server.StopAsync();
             }
         }
 
-        // 数据库连接串（如果不是内存）
-        if (!_hostEnvironment.IsDevelopment())
+        private void ValidateProductionConfiguration()
         {
-            var dbConn = _configuration.GetConnectionString("DefaultConnection");
-            if (string.IsNullOrWhiteSpace(dbConn))
+            // 目录令牌密钥校验：禁止使用默认 dev-secret/changeme
+            var secret = Core.Config.SimpleConfigLoader.LoadDirectoryTokenSecret(AppContext.BaseDirectory);
+            if (string.IsNullOrWhiteSpace(secret) || secret is "dev-secret" or "changeme" or "changeme-dev")
             {
-                throw new InvalidOperationException("[Guard] 生产环境需要有效的数据库连接串（DefaultConnection）。当前缺失。");
+                throw new InvalidOperationException(
+                    "[Guard] 生产环境必须通过 Secret/环境变量提供非默认的 DIRECTORY_TOKEN_SECRET，当前值非法（dev-secret / changeme）。");
+            }
+
+            // Redis 连接串校验（当目录注册模式为 redis）
+            var registryMode = (_configuration[Shared.Constants.ConfigKeys.DirectoryRegistryModeLower] ??
+                                Environment.GetEnvironmentVariable(Shared.Constants.ConfigKeys.DirectoryRegistryEnv) ??
+                                Shared.Constants.ConfigKeys.DirectoryRegistryModeValueMemory).ToLowerInvariant();
+            if (registryMode == Shared.Constants.ConfigKeys.DirectoryRegistryModeValueRedis)
+            {
+                var conn = _configuration[Shared.Constants.ConfigKeys.DirectoryRegistryRedisConnectionStringLower] ??
+                           Environment.GetEnvironmentVariable(Shared.Constants.ConfigKeys.RedisConnectionEnv);
+                if (string.IsNullOrWhiteSpace(conn))
+                {
+                    throw new InvalidOperationException(
+                        "[Guard] 生产环境启用 Redis 注册表时必须提供 REDIS_CONNECTION（含密码/鉴权或采用 TLS），当前缺失。");
+                }
+
+                if (conn.Contains("localhost", StringComparison.OrdinalIgnoreCase) ||
+                    conn.Contains("changeme", StringComparison.OrdinalIgnoreCase))
+                {
+                    throw new InvalidOperationException(
+                        "[Guard] 生产环境的 REDIS_CONNECTION 不应为 localhost 或包含默认口令（changeme）。请改为内网地址/域名并通过 Secret 注入强口令或证书。");
+                }
+            }
+
+            // 数据库连接串（如果不是内存）
+            if (!_hostEnvironment.IsDevelopment())
+            {
+                var dbConn = _configuration.GetConnectionString("DefaultConnection");
+                if (string.IsNullOrWhiteSpace(dbConn))
+                {
+                    throw new InvalidOperationException("[Guard] 生产环境需要有效的数据库连接串（DefaultConnection）。当前缺失。");
+                }
             }
         }
     }
 }
-}
-// NOTE: Using directives should appear at the top of the file. The previous attempt added them mid-file and caused CS1529.

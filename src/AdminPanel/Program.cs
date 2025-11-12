@@ -28,6 +28,9 @@ options.DefaultFileNames.Add("monitoring/status.html");
 app.UseDefaultFiles(options);
 app.UseStaticFiles();
 
+// 重定向根路径到监控页面
+app.MapGet("/", () => Results.Redirect("/monitoring/status.html"));
+
 
 
 // 定义要监控的服务器健康检查端点列表

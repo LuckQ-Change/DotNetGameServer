@@ -4,6 +4,7 @@ using Shared;
 using Core.Config;
 using DotNetGameServer;
 using System;
+using R3;
 
 namespace Core.Components;
 
@@ -17,6 +18,7 @@ public class HeartbeatClientComponent : IServerComponent
     private readonly Func<int>? _playerCountProvider;
     private readonly Func<string>? _statusProvider;
     private CancellationTokenSource? _cts;
+    private IDisposable? _hbSubscription;
 
     private readonly SimpleConfigLoader.HeartbeatSettings _settings;
     private readonly string _type;
@@ -72,7 +74,13 @@ public class HeartbeatClientComponent : IServerComponent
         {
             _secret = sec;
         }
-        _ = Task.Run(() => HeartbeatLoop(_cts.Token));
+        var interval = TimeSpan.FromSeconds(Math.Max(1, _settings.IntervalSeconds));
+        _hbSubscription = Observable.Interval(interval)
+            .Subscribe(_ =>
+            {
+                var token = _cts!.Token;
+                Task.Run(() => SendHeartbeatTickAsync(token));
+            });
         return Task.CompletedTask;
     }
 
@@ -90,6 +98,9 @@ public class HeartbeatClientComponent : IServerComponent
         {
             // 非关键异常，忽略以完成销毁流程。
         }
+        try { _hbSubscription?.Dispose(); }
+        catch { }
+        _hbSubscription = null;
         _cts = null;
         return Task.CompletedTask;
     }
@@ -142,6 +153,30 @@ public class HeartbeatClientComponent : IServerComponent
                 // 非关键异常，忽略以保持心跳循环。
             }
         }
+    }
+
+    private async Task SendHeartbeatTickAsync(CancellationToken token)
+    {
+        int port = _portProvider?.Invoke() ?? 0;
+        if (port <= 0 || port > 65535)
+        {
+            _log("[目录] 心跳等待：服务端口未就绪");
+            return;
+        }
+
+        _lastResolvedPort = port;
+        var req = new HeartbeatRequest
+        {
+            Id = _idPrefix + ":" + port,
+            Type = _type,
+            Region = _settings.Region,
+            Host = _settings.Host,
+            Port = port,
+            PlayerCount = _playerCountProvider?.Invoke() ?? 0,
+            Capacity = _settings.Capacity,
+            Status = _statusProvider?.Invoke() ?? "online"
+        };
+        await SendHeartbeatAsync(_settings.DirectoryHost, _settings.DirectoryPort, req, token);
     }
 
     /// <summary>
@@ -211,4 +246,5 @@ public class HeartbeatClientComponent : IServerComponent
                   ?? string.Empty;
         return string.Equals(env, "Development", StringComparison.OrdinalIgnoreCase);
     }
+
 }

@@ -1,12 +1,14 @@
 using System.Security.Cryptography;
 using System.Text;
+
 using Shared.Time;
 
 namespace Shared;
 
 public static class TokenSigner
 {
-    public static string ComputeSignature(string tokenId, long expireUnixSec, string userId, string serverId, string secret)
+    public static string ComputeSignature(string tokenId, long expireUnixSec, string userId, string serverId,
+        string secret)
     {
         var data = $"{tokenId}|{expireUnixSec}|{userId}|{serverId}";
         using var h = new HMACSHA256(Encoding.UTF8.GetBytes(secret));
@@ -19,7 +21,8 @@ public static class TokenSigner
         return $"{tokenId}:{expireUnixSec}:{signatureHex}";
     }
 
-    public static bool TryVerify(string signedToken, string userId, string serverId, string secret, out string tokenId, out long expireUnixSec)
+    public static bool TryVerify(string signedToken, string userId, string serverId, string secret, out string tokenId,
+        out long expireUnixSec)
     {
         tokenId = string.Empty;
         expireUnixSec = 0;
@@ -35,19 +38,21 @@ public static class TokenSigner
         var skew = GetAllowedSkewSeconds();
         if (expireUnixSec + skew < nowUnix) return false;
 
-        return CryptographicOperations.FixedTimeEquals(Encoding.UTF8.GetBytes(expected), Encoding.UTF8.GetBytes(sigHex));
+        return CryptographicOperations.FixedTimeEquals(Encoding.UTF8.GetBytes(expected),
+            Encoding.UTF8.GetBytes(sigHex));
     }
 
     // 心跳令牌辅助：固定 userId 为 "heartbeat"
     public static string ComposeHeartbeatToken(string serverId, string secret, int ttlSeconds = 300)
     {
-        var tokenId = "hb-" + serverId;
+        var tokenId = "hb-" + serverId.Replace(":", string.Empty);
         var exp = TimeManager.UnixSeconds + Math.Max(1, ttlSeconds);
         var sig = ComputeSignature(tokenId, exp, "heartbeat", serverId, secret);
         return ComposeSigned(tokenId, exp, sig);
     }
 
-    public static bool TryVerifyHeartbeat(string signedToken, string serverId, string secret, out string tokenId, out long expireUnixSec)
+    public static bool TryVerifyHeartbeat(string signedToken, string serverId, string secret, out string tokenId,
+        out long expireUnixSec)
     {
         return TryVerify(signedToken, "heartbeat", serverId, secret, out tokenId, out expireUnixSec);
     }

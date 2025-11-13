@@ -79,7 +79,7 @@ public class HeartbeatClientComponent : IServerComponent
             .Subscribe(_ =>
             {
                 var token = _cts!.Token;
-                Task.Run(() => SendHeartbeatTickAsync(token));
+                Task.Run(() => SendHeartbeatTickAsync(token), token);
             });
         return Task.CompletedTask;
     }
@@ -99,60 +99,13 @@ public class HeartbeatClientComponent : IServerComponent
             // 非关键异常，忽略以完成销毁流程。
         }
         try { _hbSubscription?.Dispose(); }
-        catch { }
+        catch
+        {
+            // 释放订阅失败可忽略：不影响销毁流程
+        }
         _hbSubscription = null;
         _cts = null;
         return Task.CompletedTask;
-    }
-
-    /// <summary>
-    /// 心跳发送主循环：按配置节拍向目录服务器发送 <see cref="HeartbeatRequest"/>。
-    /// </summary>
-    private async Task HeartbeatLoop(CancellationToken token)
-    {
-        var interval = TimeSpan.FromSeconds(Math.Max(1, _settings.IntervalSeconds));
-        while (!token.IsCancellationRequested)
-        {
-            try
-            {
-                int port = _portProvider?.Invoke() ?? 0;
-                if (port <= 0 || port > 65535)
-                {
-                    _log("[目录] 心跳等待：服务端口未就绪"); // 端口未就绪，暂不发送心跳
-                }
-                else
-                {
-                    _lastResolvedPort = port;
-                    var req = new HeartbeatRequest
-                    {
-                        Id = _idPrefix + ":" + port,
-                        Type = _type,
-                        Region = _settings.Region,
-                        Host = _settings.Host,
-                        Port = port,
-                        PlayerCount = _playerCountProvider?.Invoke() ?? 0,
-                        Capacity = _settings.Capacity,
-                        Status = _statusProvider?.Invoke() ?? "online"
-                    };
-                    await SendHeartbeatAsync(_settings.DirectoryHost, _settings.DirectoryPort, req, token);
-                }
-            }
-            catch (Exception ex)
-            {
-                _log($"[目录] 心跳发送异常: {ex.Message}");
-            }
-
-            try { await Task.Delay(interval, token); }
-            catch (OperationCanceledException)
-            {
-                // 取消心跳循环
-                break;
-            }
-            catch (Exception)
-            {
-                // 非关键异常，忽略以保持心跳循环。
-            }
-        }
     }
 
     private async Task SendHeartbeatTickAsync(CancellationToken token)
@@ -192,7 +145,7 @@ public class HeartbeatClientComponent : IServerComponent
         try
         {
             var secret = _secret ?? "dev-secret"; // 若异常情况下为空，在开发模式仍允许默认值
-            env.Token = TokenSigner.ComposeHeartbeatToken(req.Id, secret, 300);
+            env.Token = TokenSigner.ComposeHeartbeatToken(req.Id, secret);
         }
         catch (Exception)
         {
@@ -211,7 +164,6 @@ public class HeartbeatClientComponent : IServerComponent
         var respLen = BitConverter.ToInt32(lenBuf, 0);
         var buf = new byte[respLen];
         await ReadExactAsync(stream, buf, 0, respLen, ct);
-        // 可解析 HeartbeatResponse 但当前无需使用
     }
 
     /// <summary>

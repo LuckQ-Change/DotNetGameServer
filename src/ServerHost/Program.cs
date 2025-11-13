@@ -18,13 +18,55 @@ using ServerHost; // 访问命名空间中的类型（HostingUtilities、GameSer
 
 var builder = WebApplication.CreateBuilder(args);
 
+// 预解析命令行：统一抽取 service/port/healthCheckUrl 到配置键
+static IDictionary<string, string> PreParseArgs(string[] argv)
+{
+    var dict = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+    for (int i = 0; i < argv.Length; i++)
+    {
+        var a = argv[i];
+        if (string.IsNullOrWhiteSpace(a)) continue;
+        string key;
+        string? val = null;
+        if (a.StartsWith("--")) a = a.Substring(2);
+        var eq = a.IndexOf('=');
+        if (eq >= 0)
+        {
+            key = a.Substring(0, eq);
+            val = a.Substring(eq + 1);
+        }
+        else
+        {
+            key = a;
+            if (i + 1 < argv.Length && !argv[i + 1].StartsWith("--"))
+            {
+                val = argv[++i];
+            }
+        }
+        if (string.IsNullOrWhiteSpace(key) || val is null) continue;
+        if (string.Equals(key, "service", StringComparison.OrdinalIgnoreCase))
+            dict[Shared.Constants.ConfigKeys.ServiceConfigKey] = val;
+        else if (string.Equals(key, "port", StringComparison.OrdinalIgnoreCase))
+            dict["port"] = val;
+        else if (string.Equals(key, "healthCheckUrl", StringComparison.OrdinalIgnoreCase))
+            dict[Shared.Constants.ConfigKeys.ServiceHealthCheckUrlKeyLower] = val;
+    }
+    return dict;
+}
+builder.Configuration.AddInMemoryCollection(PreParseArgs(args));
+
 // Configuration
 builder.Configuration
     .SetBasePath(AppContext.BaseDirectory)
     .AddJsonFile("appsettings.json", optional: true, reloadOnChange: true)
     .AddJsonFile($"appsettings.{builder.Environment.EnvironmentName}.json", optional: true, reloadOnChange: true)
     .AddEnvironmentVariables()
-    .AddCommandLine(args);
+    .AddCommandLine(args, new Dictionary<string, string>
+    {
+        ["--service"] = Shared.Constants.ConfigKeys.ServiceConfigKey,
+        ["--port"] = "port",
+        ["--healthCheckUrl"] = Shared.Constants.ConfigKeys.ServiceHealthCheckUrlKeyLower
+    });
 
 // Services
 builder.Services.AddDbContext<GameDbContext>(options =>
@@ -191,6 +233,7 @@ namespace ServerHost
         private readonly IServiceProvider _serviceProvider;
         private readonly IHostEnvironment _hostEnvironment;
         private BaseGameServer? _server;
+        private IServiceScope? _loginScope;
 
         public GameServerService(ILogger<GameServerService> logger, IConfiguration configuration,
             IServiceProvider serviceProvider, IHostEnvironment hostEnvironment)
@@ -210,11 +253,6 @@ namespace ServerHost
                            ? p
                            : 5500);
 
-            // 启动提示（更明显的控制台输出）
-            _logger.LogInformation("[Host] 正在启动服务: {service} (port={port}, env={env})", service, port,
-                _hostEnvironment.EnvironmentName);
-            Console.WriteLine($"[Host] 正在启动服务: {service} (port={port}, env={_hostEnvironment.EnvironmentName})");
-
             // 配置链路校验与提示：记录 DirectoryTokenSecret 来源
             Core.Config.ConfigurationBridge.ValidateAndLog(_configuration, _logger);
 
@@ -229,11 +267,7 @@ namespace ServerHost
                 "directory" => new DirectoryServer.DirectoryGameServer(
                     _serviceProvider.GetRequiredService<ILogger<DirectoryServer.DirectoryGameServer>>(),
                     _configuration),
-                "login" => new LoginServer.LoginGameServer(
-                    _serviceProvider.GetRequiredService<ILogger<LoginServer.LoginGameServer>>(),
-                    _serviceProvider.GetRequiredService<IUserAuthComponent>()),
-                "resource" => new ResourceServer.ResourceGameServer(
-                    _serviceProvider.GetRequiredService<ILogger<ResourceServer.ResourceGameServer>>(), _configuration),
+                "login" => CreateLoginServer(),
                 "battle" => new BattleServer.BattleGameServer(_serviceProvider
                     .GetRequiredService<ILogger<BattleServer.BattleGameServer>>()),
                 "logic" => new LogicServer.LogicGameServer(_serviceProvider
@@ -245,7 +279,11 @@ namespace ServerHost
             _logger.LogInformation("服务启动成功: {server} 正在监听 {port}, 环境={env}", _server.ServerName, port,
                 _hostEnvironment.EnvironmentName);
             Console.WriteLine($"服务启动成功: {_server.ServerName} 正在监听 {port}, 环境={_hostEnvironment.EnvironmentName}");
-            Console.WriteLine("按 Ctrl+C 退出该服务窗口，或关闭窗口以停止服务。");
+            try { Console.Title = $"{_server.ServerName} : {port}"; }
+            catch
+            {
+                // 某些宿主环境不支持设置控制台标题，忽略即可
+            }
         }
 
         public async Task StopAsync(CancellationToken cancellationToken)
@@ -254,6 +292,17 @@ namespace ServerHost
             {
                 await _server.StopAsync();
             }
+            try { _loginScope?.Dispose(); } catch { }
+            _loginScope = null;
+        }
+
+        private BaseGameServer CreateLoginServer()
+        {
+            _loginScope = _serviceProvider.CreateScope();
+            var sp = _loginScope.ServiceProvider;
+            var logger = sp.GetRequiredService<ILogger<LoginServer.LoginGameServer>>();
+            var auth = sp.GetRequiredService<IUserAuthComponent>();
+            return new LoginServer.LoginGameServer(logger, auth);
         }
 
         private void ValidateProductionConfiguration()

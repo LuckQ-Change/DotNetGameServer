@@ -23,36 +23,51 @@ echo Launching server instances from %DLL_PATH% ...
 rem Ensure Development environment and provide a non-default DIRECTORY_TOKEN_SECRET to satisfy production guard if misconfigured
 set DOTNET_ENVIRONMENT=Development
 set ASPNETCORE_ENVIRONMENT=Development
-if not defined DIRECTORY_TOKEN_SECRET set DIRECTORY_TOKEN_SECRET=local-dev-%RANDOM%-%RANDOM%
+rem Align all services with appsettings.json: directory.tokenSecret = "changeme-dev"
+set DIRECTORY_TOKEN_SECRET=changeme-dev
 
-rem Use parent environment to set service-specific variables, then start child windows without problematic quote escaping
-set SERVICE__TYPE=directory
-set SERVICE__PORT=5500
-set SERVICE__HEALTHCHECKURL=http://localhost:5101
-start "Directory Server" cmd /k dotnet exec "%DLL_PATH%" -- --service=directory --port=5500 --healthCheckUrl=http://localhost:5101
+rem Auto-detect present servers by project file and start with incremental ports
+set BASE_PORT=5500
+set HEALTH_BASE=5101
 
-set SERVICE__TYPE=login
-set SERVICE__PORT=5501
-set SERVICE__HEALTHCHECKURL=http://localhost:5102
-start "Login Server"     cmd /k dotnet exec "%DLL_PATH%" -- --service=login     --port=5501 --healthCheckUrl=http://localhost:5102
+call :try_start "DirectoryServer" directory %BASE_PORT% %HEALTH_BASE%
+set /a BASE_PORT+=1
+set /a HEALTH_BASE+=1
 
-set SERVICE__TYPE=resource
-set SERVICE__PORT=5502
-set SERVICE__HEALTHCHECKURL=http://localhost:5103
-start "Resource Server"  cmd /k dotnet exec "%DLL_PATH%" -- --service=resource  --port=5502 --healthCheckUrl=http://localhost:5103
+call :try_start "LoginServer" login %BASE_PORT% %HEALTH_BASE%
+set /a BASE_PORT+=1
+set /a HEALTH_BASE+=1
 
-set SERVICE__TYPE=battle
-set SERVICE__PORT=5503
-set SERVICE__HEALTHCHECKURL=http://localhost:5104
-start "Battle Server"    cmd /k dotnet exec "%DLL_PATH%" -- --service=battle    --port=5503 --healthCheckUrl=http://localhost:5104
+call :try_start "BattleServer" battle %BASE_PORT% %HEALTH_BASE%
+set /a BASE_PORT+=1
+set /a HEALTH_BASE+=1
 
-set SERVICE__TYPE=logic
-set SERVICE__PORT=5504
-set SERVICE__HEALTHCHECKURL=http://localhost:5105
-start "Logic Server"     cmd /k dotnet exec "%DLL_PATH%" -- --service=logic     --port=5504 --healthCheckUrl=http://localhost:5105
+call :try_start "LogicGameServer" logic %BASE_PORT% %HEALTH_BASE%
 
-echo All server instances have been launched in new windows.
+echo Auto-detected servers have been launched in new windows.
 goto :eof
+
+:try_start
+rem %1=ProjectDirName %2=service %3=port %4=healthPort
+setlocal
+set "_PROJ=%~1"
+set "_SERVICE=%~2"
+set "_PORT=%~3"
+set "_HEALTH=%~4"
+
+set "_CSPROJ=%PROJECT_PATH%\src\%_PROJ%\%_PROJ%.csproj"
+if /I "%_PROJ%"=="LogicGameServer" set "_CSPROJ=%PROJECT_PATH%\src\LogicGameServer\LogicServer.csproj"
+if /I "%_PROJ%"=="BattleServer" set "_CSPROJ=%PROJECT_PATH%\src\BattleServer\BattleServer.csproj"
+if /I "%_PROJ%"=="LoginServer" set "_CSPROJ=%PROJECT_PATH%\src\LoginServer\LoginServer.csproj"
+if /I "%_PROJ%"=="DirectoryServer" set "_CSPROJ=%PROJECT_PATH%\src\DirectoryServer\DirectoryServer.csproj"
+
+if exist "%_CSPROJ%" (
+  echo Starting %_SERVICE% on port %_PORT% (health http://localhost:%_HEALTH%)
+  start "%_SERVICE%" cmd /k dotnet exec "%DLL_PATH%" -- --service=%_SERVICE% --port=%_PORT% --healthCheckUrl=http://localhost:%_HEALTH%
+) else (
+  echo Skipped %_SERVICE% (project not found: %_CSPROJ%)
+)
+endlocal & exit /b 0
 
 :fail
 echo Build failed. Aborting.

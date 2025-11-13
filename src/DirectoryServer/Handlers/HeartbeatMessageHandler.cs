@@ -11,7 +11,7 @@ public class HeartbeatMessageHandler : IStrongMessageHandler<HeartbeatRequest, H
 {
     public Task<HeartbeatResponse?> HandleAsync(HeartbeatRequest req, IServerContext context)
     {
-        var metrics = context.GetComponent<DirectoryServer.Components.DirectoryMetricsComponent>();
+        var metrics = context.GetComponent<DirectoryMetricsComponent>();
         try
         {
             // 校验心跳签名令牌（统一通过 TokenSecretProvider 获取密钥）
@@ -68,11 +68,4 @@ public class HeartbeatMessageHandler : IStrongMessageHandler<HeartbeatRequest, H
         }
     }
 
-    private static bool IsDevelopment()
-    {
-        var env = Environment.GetEnvironmentVariable("DOTNET_ENVIRONMENT")
-                  ?? Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT")
-                  ?? string.Empty;
-        return string.Equals(env, "Development", StringComparison.OrdinalIgnoreCase);
-    }
 }

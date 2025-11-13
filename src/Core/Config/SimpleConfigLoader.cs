@@ -22,23 +22,56 @@ public static class SimpleConfigLoader
         if (!string.IsNullOrWhiteSpace(env)) return env;
 
         var dir = baseDirectory ?? AppContext.BaseDirectory;
-        var path = Path.Combine(dir, DefaultFileName);
-        if (!File.Exists(path)) return null;
+        // 其次 appsettings.{Environment}.json / appsettings.json
         try
         {
-            using var stream = File.OpenRead(path);
-            using var doc = JsonDocument.Parse(stream);
-            var root = doc.RootElement;
-            if (root.TryGetProperty("directory", out var directory) && directory.ValueKind == JsonValueKind.Object
-                && directory.TryGetProperty("tokenSecret", out var secProp) && secProp.ValueKind == JsonValueKind.String)
+            var envName = Environment.GetEnvironmentVariable("DOTNET_ENVIRONMENT")
+                          ?? Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT")
+                          ?? string.Empty;
+            if (!string.IsNullOrWhiteSpace(envName))
             {
-                var sec = secProp.GetString();
+                var appEnv = Path.Combine(dir, $"appsettings.{envName}.json");
+                var sec = TryReadDirectoryTokenSecretFromJson(appEnv);
+                if (!string.IsNullOrWhiteSpace(sec)) return sec;
+            }
+
+            var appDefault = Path.Combine(dir, "appsettings.json");
+            {
+                var sec = TryReadDirectoryTokenSecretFromJson(appDefault);
                 if (!string.IsNullOrWhiteSpace(sec)) return sec;
             }
         }
         catch (Exception)
         {
-            // 配置解析失败时忽略并使用默认/环境变量值，避免启动流程被配置文件问题阻断。
+            // 保持容错：读取失败时继续尝试下一个来源。
+        }
+
+        // 最后兼容读取 config.json（旧配置文件名）
+        try
+        {
+            var path = Path.Combine(dir, DefaultFileName);
+            var sec = TryReadDirectoryTokenSecretFromJson(path);
+            if (!string.IsNullOrWhiteSpace(sec)) return sec;
+        }
+        catch (Exception)
+        {
+            // 忽略
+        }
+
+        return null;
+    }
+
+    private static string? TryReadDirectoryTokenSecretFromJson(string path)
+    {
+        if (!File.Exists(path)) return null;
+        using var stream = File.OpenRead(path);
+        using var doc = JsonDocument.Parse(stream);
+        var root = doc.RootElement;
+        if (root.TryGetProperty("directory", out var directory) && directory.ValueKind == JsonValueKind.Object
+            && directory.TryGetProperty("tokenSecret", out var secProp) && secProp.ValueKind == JsonValueKind.String)
+        {
+            var sec = secProp.GetString();
+            if (!string.IsNullOrWhiteSpace(sec)) return sec;
         }
         return null;
     }

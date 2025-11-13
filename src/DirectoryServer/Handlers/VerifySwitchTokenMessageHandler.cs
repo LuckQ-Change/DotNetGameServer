@@ -70,11 +70,4 @@ public class VerifySwitchTokenMessageHandler : IStrongMessageHandler<VerifySwitc
         }
     }
 
-    private static bool IsDevelopment()
-    {
-        var env = Environment.GetEnvironmentVariable("DOTNET_ENVIRONMENT")
-                  ?? Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT")
-                  ?? string.Empty;
-        return string.Equals(env, "Development", StringComparison.OrdinalIgnoreCase);
-    }
 }

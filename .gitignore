@@ -93,3 +93,4 @@ appsettings.Local.json
 
 # 永远跟踪所有 .proto 文件（即使位于被忽略的目录中）
 !**/*.proto
+/.vs

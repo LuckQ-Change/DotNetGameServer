@@ -3,13 +3,13 @@ services:
   directory:
     build: .
     environment:
-      ASPNETCORE_ENVIRONMENT: "Production"
+      ASPNETCORE_ENVIRONMENT: "Development"
       SERVICE: "directory"
       PORT: 5500
-      DIRECTORY_REGISTRY: "redis"
-      REDIS_PASSWORD: ${REDIS_PASSWORD:-changeme}
-      REDIS_CONNECTION: "redis:6379,password=${REDIS_PASSWORD:-changeme}"
-      DIRECTORY_TOKEN_SECRET: ${DIRECTORY_TOKEN_SECRET:-changeme}
+      DIRECTORY_REGISTRY: "memory"
+      REDIS_PASSWORD: ${REDIS_PASSWORD:-dev_password}
+      REDIS_CONNECTION: "redis:6379,password=${REDIS_PASSWORD:-dev_password}"
+      DIRECTORY_TOKEN_SECRET: ${DIRECTORY_TOKEN_SECRET:-dev-secret}
     ports:
       - "5500:5500"
     depends_on:
@@ -45,7 +45,7 @@ volumes:
   login:
     build: .
     environment:
-      ASPNETCORE_ENVIRONMENT: "Production"
+      ASPNETCORE_ENVIRONMENT: "Development"
       SERVICE: "login"
       PORT: 5501
       MYSQL_HOST: ${MYSQL_HOST:-mysql}
@@ -71,7 +71,7 @@ volumes:
   logic:
     build: .
     environment:
-      ASPNETCORE_ENVIRONMENT: "Production"
+      ASPNETCORE_ENVIRONMENT: "Development"
       SERVICE: "logic"
       PORT: 5502
     ports:
@@ -92,7 +92,7 @@ volumes:
   battle:
     build: .
     environment:
-      ASPNETCORE_ENVIRONMENT: "Production"
+      ASPNETCORE_ENVIRONMENT: "Development"
       SERVICE: "battle"
       PORT: 5503
     ports:
@@ -113,7 +113,7 @@ volumes:
   resource:
     build: .
     environment:
-      ASPNETCORE_ENVIRONMENT: "Production"
+      ASPNETCORE_ENVIRONMENT: "Development"
       SERVICE: "resource"
       PORT: 5504
     ports:

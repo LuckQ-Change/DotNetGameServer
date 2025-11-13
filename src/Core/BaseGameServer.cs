@@ -187,7 +187,7 @@ public abstract class BaseGameServer : IServerContext
                 {
                     app.Run(async context =>
                     {
-                        if (context.Request.Path == "/healthz")
+                        if (context.Request.Path == "/health")
                         {
                             context.Response.StatusCode = 200;
                             await context.Response.WriteAsync("Healthy");
@@ -236,7 +236,7 @@ public abstract class BaseGameServer : IServerContext
     {
         try
         {
-            _cts?.Cancel();
+            await _cts?.CancelAsync()!;
         }
         catch (Exception ex)
         {
@@ -268,9 +268,16 @@ public abstract class BaseGameServer : IServerContext
         ListeningPort = null;
 
         try { _ecsSubscription?.Dispose(); }
-        catch { }
+        catch
+        {
+            // 释放订阅失败可忽略：不影响关闭流程
+        }
         _ecsSubscription = null;
-        try { _rateSub?.Dispose(); } catch { }
+        try { _rateSub?.Dispose(); }
+        catch
+        {
+            // 释放订阅失败可忽略：不影响关闭流程
+        }
         _rateSub = null;
 
         // 逐个销毁组件，释放资源
@@ -288,7 +295,17 @@ public abstract class BaseGameServer : IServerContext
     /// <param name="message">日志消息。</param>
     public void Log(string message)
     {
-        _logger.LogInformation("[{Server}] {Message}", ServerName, message);
+        if (LogCenter.ShouldLog(LogLevel.Information))
+        {
+            _logger.LogInformation("[{Server}] {Message}", ServerName, message);
+            LogCenter.Publish(new LogEvent
+            {
+                Level = LogLevel.Information,
+                Category = ServerName,
+                Message = message,
+                Server = ServerName
+            });
+        }
     }
 
     /// <summary>
@@ -298,7 +315,17 @@ public abstract class BaseGameServer : IServerContext
     /// <param name="level">日志级别。</param>
     public void Log(string message, LogLevel level)
     {
-        _logger.Log(level, "[{Server}] {Message}", ServerName, message);
+        if (LogCenter.ShouldLog(level))
+        {
+            _logger.Log(level, "[{Server}] {Message}", ServerName, message);
+            LogCenter.Publish(new LogEvent
+            {
+                Level = level,
+                Category = ServerName,
+                Message = message,
+                Server = ServerName
+            });
+        }
     }
 
     private async Task AcceptLoop(CancellationToken token)
@@ -347,7 +374,7 @@ public abstract class BaseGameServer : IServerContext
                     continue;
                 }
 
-                _ = Task.Run(() => HandleClientR3(client, token));
+                _ = Task.Run(() => HandleClientR3(client, token), token);
                 // 成功接受连接后重置退避
                 currentBackoffMs = _acceptBackoffMs;
             }
@@ -372,279 +399,6 @@ public abstract class BaseGameServer : IServerContext
             }
         }
     }
-
-    /// <summary>
-    /// 处理单个客户端连接的消息读写与分发。
-    /// </summary>
-    /// <param name="client">TCP 客户端。</param>
-    /// <param name="token">取消令牌。</param>
-    private async Task HandleClient(TcpClient client, CancellationToken token)
-    {
-        var remote = client.Client.RemoteEndPoint?.ToString() ?? "未知";
-        Log($"客户端连接: {remote}");
-
-        using (client)
-        {
-            Interlocked.Increment(ref _currentConnections);
-            var stream = client.GetStream();
-            try
-            {
-                client.ReceiveTimeout = _idleTimeoutMs; // 使用空闲超时驱动断开
-                client.SendTimeout = _receiveTimeoutMs;
-            }
-            catch (Exception ex)
-            {
-                // 设置超时在某些平台/网络栈上可能抛出，但不影响后续处理，记录后继续。
-                Log($"设置接收/发送超时失败: {ex.Message}");
-            }
-
-            // 每连接滑动限速：100ms 子桶近似 1s 滑窗
-            const int bucketCount = 10;
-            const int bucketMs = 100;
-            int currentBucketIndex = 0;
-            long bucketWindowStartTicks = Stopwatch.GetTimestamp();
-            int[] messageBuckets = new int[bucketCount];
-            int[] byteBuckets = new int[bucketCount];
-
-            // 滑动窗口限流器：如果时间跨度超过 100ms，则移动到下一个桶
-            void AdvanceBucketsIfNeeded()
-            {
-                // 计算使用了多少秒
-                var elapsedMs = (Stopwatch.GetTimestamp() - bucketWindowStartTicks) * 1000.0 / Stopwatch.Frequency;
-                if (elapsedMs >= bucketMs)
-                {
-                    var steps = (int)(elapsedMs / bucketMs);
-                    for (var i = 0; i < Math.Min(steps, bucketCount); i++)
-                    {
-                        currentBucketIndex = (currentBucketIndex + 1) % bucketCount;
-                        messageBuckets[currentBucketIndex] = 0;
-                        byteBuckets[currentBucketIndex] = 0;
-                    }
-
-                    bucketWindowStartTicks = Stopwatch.GetTimestamp();
-                }
-            }
-
-            // 添加字节并获取速率
-            int AddBytesAndGetRate(int bytes)
-            {
-                AdvanceBucketsIfNeeded();
-                byteBuckets[currentBucketIndex] += bytes;
-                var sum = 0;
-                for (var i = 0; i < bucketCount; i++) sum += byteBuckets[i];
-                return sum;
-            }
-
-            // 添加消息并获取速率
-            int AddMessagesAndGetRate(int inc)
-            {
-                AdvanceBucketsIfNeeded();
-                messageBuckets[currentBucketIndex] += inc;
-                var sum = 0;
-                for (var i = 0; i < bucketCount; i++) sum += messageBuckets[i];
-                return sum;
-            }
-
-            // 统一的字节速率检查方法
-            bool CheckByteRateLimit(int bytes, string remoteEndpoint, out string reason)
-            {
-                reason = "";
-                var bps = AddBytesAndGetRate(bytes);
-
-                // 全局 IP 字节速率检查
-                if (_ipMaxBytesPerSecond > 0)
-                {
-                    var ipRate = _ipRates.GetOrAdd(remoteEndpoint, _ => new IpSlidingRate());
-                    var ipBpsNow = ipRate.AddBytesAndGetRate(bytes);
-                    if (ipBpsNow > _ipMaxBytesPerSecond)
-                    {
-                        reason = "ip_bytes_rate_limit_exceeded";
-                        Log($"[IP限速-字节] {remoteEndpoint} {ipBpsNow}B/s > {_ipMaxBytesPerSecond}B/s，断开");
-                        AddToBlacklist(remoteEndpoint, TimeSpan.FromMinutes(2), reason);
-                        return false;
-                    }
-                }
-
-                // 连接字节速率检查
-                if (bps > _maxBytesPerSecond)
-                {
-                    reason = "bytes_rate_limit_exceeded";
-                    Log($"限速超限(字节): {remoteEndpoint} {bps}B/s > {_maxBytesPerSecond}B/s，断开");
-                    AddToBlacklist(remoteEndpoint, TimeSpan.FromMinutes(2), reason);
-                    return false;
-                }
-
-                return true;
-            }
-
-            // 统一的消息频率检查方法
-            bool CheckMessageRateLimit(string remoteEndpoint, out string reason)
-            {
-                reason = "";
-                var mps = AddMessagesAndGetRate(1);
-
-                // 全局 IP 消息频率检查
-                if (_ipMaxMessagesPerSecond > 0)
-                {
-                    var ipRate = _ipRates.GetOrAdd(remoteEndpoint, _ => new IpSlidingRate());
-                    var ipMpsNow = ipRate.AddMessagesAndGetRate(1);
-                    if (ipMpsNow > _ipMaxMessagesPerSecond)
-                    {
-                        reason = "ip_message_rate_limit_exceeded";
-                        Log($"[IP限速-频率] {remoteEndpoint} {ipMpsNow}/s > {_ipMaxMessagesPerSecond}/s，断开");
-                        AddToBlacklist(remoteEndpoint, TimeSpan.FromMinutes(2), reason);
-                        return false;
-                    }
-                }
-
-                // 连接消息频率检查
-                if (mps > _maxMessagesPerSecond)
-                {
-                    reason = "message_rate_limit_exceeded";
-                    Log($"限速超限(频率): {remoteEndpoint} {mps}/s > {_maxMessagesPerSecond}/s，断开");
-                    AddToBlacklist(remoteEndpoint, TimeSpan.FromMinutes(2), reason);
-                    return false;
-                }
-
-                return true;
-            }
-
-            // 验证一下 多次请求超包是否会被拉入黑名单
-            int badPacketCount = 0;
-            // 超包黑名单阈值
-            const int blacklistThreshold = 3;
-            try
-            {
-                while (!token.IsCancellationRequested)
-                {
-                    // 包头处理
-                    var lenBuf = new byte[4];
-                    var read = await ReadExactAsync(stream, lenBuf, 0, 4, token, _receiveTimeoutMs);
-                    if (read == 0) break;
-
-                    // 执行字节速率检查
-                    if (!CheckByteRateLimit(read, remote, out var rateLimitReason))
-                        break;
-
-                    var length = BitConverter.ToInt32(lenBuf, 0);
-                    // 长度校验：防止过大或非法负载
-                    if (length <= 0 || length > _maxMessageSize)
-                    {
-                        Log($"非法或过大消息长度: {length}，断开连接");
-                        badPacketCount++;
-                        if (badPacketCount >= blacklistThreshold)
-                        {
-                            AddToBlacklist(remote, TimeSpan.FromMinutes(5), "bad_packet_length");
-                        }
-
-                        break;
-                    }
-
-                    // 包体处理
-                    var buf = new byte[length];
-                    await ReadExactAsync(stream, buf, 0, length, token, _receiveTimeoutMs);
-
-                    // 再次执行字节速率检查（针对消息体）
-                    if (!CheckByteRateLimit(length, remote, out rateLimitReason))
-                        break;
-
-                    Envelope envelope;
-                    try
-                    {
-                        envelope = Envelope.Parser.ParseFrom(buf);
-                    }
-                    catch (InvalidProtocolBufferException ipbe)
-                    {
-                        Log($"协议解析异常(Envelope): {ipbe.Message}，断开");
-                        badPacketCount++;
-                        if (badPacketCount >= blacklistThreshold)
-                        {
-                            AddToBlacklist(remote, TimeSpan.FromMinutes(5), "protocol_parse_error");
-                        }
-
-                        break;
-                    }
-
-                    var incomingReqId = string.IsNullOrWhiteSpace(envelope.RequestId)
-                        ? Guid.NewGuid().ToString("N")
-                        : envelope.RequestId;
-                    var reqContext =
-                        new RequestServerContext(this, envelope.Token ?? string.Empty, remote, incomingReqId);
-
-                    // 执行消息频率检查
-                    if (!CheckMessageRateLimit(remote, out var msgRateLimitReason))
-                        break;
-
-                    // 优先强类型：按 Envelope.type 查找具体请求类型
-                    if (_typedHandlers.TryGetValue(envelope.Type, out var strong))
-                    {
-                        var result = await strong.Invoke(envelope.Payload, reqContext);
-                        if (result != null)
-                        {
-                            // 写回响应信封（类型与载荷）
-                            await WriteEnvelopeAsync(stream, result.Value.responseType, result.Value.payload,
-                                envelope.RequestId, result.Value.errorCode, result.Value.errorMessage, token,
-                                _receiveTimeoutMs);
-                        }
-                    }
-                    else
-                    {
-                        Log($"未知消息类型: {envelope.Type}");
-                        CoreTelemetry.RecordUnknown(ServerName, envelope.Type);
-                    }
-                }
-            }
-            catch (OperationCanceledException)
-            {
-                Log($"客户端请求被取消: {remote}");
-            }
-            catch (IOException ioex)
-            {
-                Log($"客户端网络IO异常: {remote} {ioex.Message}");
-            }
-            catch (SocketException sex)
-            {
-                Log($"客户端套接字异常: {remote} {sex.Message}");
-            }
-            catch (Exception ex)
-            {
-                Log($"客户端异常: {ex.Message}");
-            }
-
-            Log($"客户端断开: {remote}");
-            Interlocked.Decrement(ref _currentConnections);
-        }
-    }
-
-
-    /// <summary>
-    /// ECS 更新驱动循环：固定间隔调用世界更新。
-    /// </summary>
-    /// <param name="token">取消令牌。</param>
-    private async Task EcsUpdateLoop(CancellationToken token)
-    {
-        // 每秒驱动一次ECS系统更新
-        var interval = TimeSpan.FromSeconds(1);
-        while (!token.IsCancellationRequested)
-        {
-            try
-            {
-                var ecs = GetComponent<Ecs.EcsWorldComponent>();
-                if (ecs != null)
-                {
-                    await ecs.World.UpdateAsync(interval);
-                }
-            }
-            catch (Exception ex)
-            {
-                Log($"ECS 更新异常: {ex.Message}");
-            }
-
-            await Task.Delay(interval, token);
-        }
-    }
-
-
 
     /// <summary>
     /// 从网络流精确读取指定长度的字节；若对端关闭则返回已读取长度。
@@ -695,6 +449,11 @@ public abstract class BaseGameServer : IServerContext
             var stream = client.GetStream();
             try
             {
+                try { client.Client.SetSocketOption(SocketOptionLevel.Socket, SocketOptionName.KeepAlive, true); }
+                catch
+                {
+                    // 某些平台不支持或设置失败，忽略不影响功能
+                }
                 client.ReceiveTimeout = _idleTimeoutMs;
                 client.SendTimeout = _receiveTimeoutMs;
             }
@@ -744,9 +503,9 @@ public abstract class BaseGameServer : IServerContext
                 return sum;
             }
 
-            bool CheckByteRateLimit(int bytes, string remoteEndpoint, out string reason)
+            bool CheckByteRateLimit(int bytes, string remoteEndpoint)
             {
-                reason = "";
+                string reason;
                 var bps = AddBytesAndGetRate(bytes);
                 if (_ipMaxBytesPerSecond > 0)
                 {
@@ -772,9 +531,9 @@ public abstract class BaseGameServer : IServerContext
                 return true;
             }
 
-            bool CheckMessageRateLimit(string remoteEndpoint, out string reason)
+            bool CheckMessageRateLimit(string remoteEndpoint)
             {
-                reason = "";
+                string reason;
                 var mps = AddMessagesAndGetRate(1);
                 if (_ipMaxMessagesPerSecond > 0)
                 {
@@ -801,31 +560,36 @@ public abstract class BaseGameServer : IServerContext
             }
 
             var subject = new Subject<Envelope>();
-            var sub = subject.Subscribe(async envelope =>
+            var sub = subject.Subscribe(async void (envelope) =>
             {
-                var incomingReqId = string.IsNullOrWhiteSpace(envelope.RequestId)
-                    ? Guid.NewGuid().ToString("N")
-                    : envelope.RequestId;
-                var reqContext = new RequestServerContext(this, envelope.Token ?? string.Empty, remote, incomingReqId);
-                if (_typedHandlers.TryGetValue(envelope.Type, out var strong))
+                try
                 {
-                    var result = await strong.Invoke(envelope.Payload, reqContext);
-                    if (result != null)
+                    var incomingReqId = string.IsNullOrWhiteSpace(envelope.RequestId)
+                        ? Guid.NewGuid().ToString("N")
+                        : envelope.RequestId;
+                    var reqContext = new RequestServerContext(this, envelope.Token ?? string.Empty, remote, incomingReqId);
+                    if (_typedHandlers.TryGetValue(envelope.Type, out var strong))
                     {
-                        await WriteEnvelopeAsync(stream, result.Value.responseType, result.Value.payload,
-                            envelope.RequestId, result.Value.errorCode, result.Value.errorMessage, token,
-                            _receiveTimeoutMs);
+                        var result = await strong.Invoke(envelope.Payload, reqContext);
+                        if (result != null)
+                        {
+                            await WriteEnvelopeAsync(stream, result.Value.responseType, result.Value.payload,
+                                envelope.RequestId, result.Value.errorCode, result.Value.errorMessage, token,
+                                _receiveTimeoutMs);
+                        }
+                    }
+                    else
+                    {
+                        Log($"未知消息类型: {envelope.Type}");
+                        CoreTelemetry.RecordUnknown(ServerName, envelope.Type);
                     }
                 }
-                else
+                catch (Exception e)
                 {
-                    Log($"未知消息类型: {envelope.Type}");
-                    CoreTelemetry.RecordUnknown(ServerName, envelope.Type);
+                    Log(e.Message);
                 }
             });
 
-            int badPacketCount = 0;
-            const int blacklistThreshold = 3;
             try
             {
                 while (!token.IsCancellationRequested)
@@ -833,37 +597,27 @@ public abstract class BaseGameServer : IServerContext
                     var lenBuf = new byte[4];
                     var read = await ReadExactAsync(stream, lenBuf, 0, 4, token, _receiveTimeoutMs);
                     if (read == 0) break;
-                    if (!CheckByteRateLimit(read, remote, out var rateLimitReason)) break;
+                    if (!CheckByteRateLimit(read, remote)) break;
                     var length = BitConverter.ToInt32(lenBuf, 0);
                     if (length <= 0 || length > _maxMessageSize)
                     {
                         Log($"非法或过大消息长度: {length}，断开连接");
-                        badPacketCount++;
-                        if (badPacketCount >= blacklistThreshold)
-                        {
-                            AddToBlacklist(remote, TimeSpan.FromMinutes(5), "bad_packet_length");
-                        }
                         break;
                     }
                     var buf = new byte[length];
                     await ReadExactAsync(stream, buf, 0, length, token, _receiveTimeoutMs);
-                    if (!CheckByteRateLimit(length, remote, out rateLimitReason)) break;
+                    if (!CheckByteRateLimit(length, remote)) break;
                     Envelope envelope;
                     try
                     {
                         envelope = Envelope.Parser.ParseFrom(buf);
                     }
-                    catch (InvalidProtocolBufferException ipbe)
+                    catch (InvalidProtocolBufferException exception)
                     {
-                        Log($"协议解析异常(Envelope): {ipbe.Message}，断开");
-                        badPacketCount++;
-                        if (badPacketCount >= blacklistThreshold)
-                        {
-                            AddToBlacklist(remote, TimeSpan.FromMinutes(5), "protocol_parse_error");
-                        }
+                        Log($"协议解析异常(Envelope): {exception.Message}，断开");
                         break;
                     }
-                    if (!CheckMessageRateLimit(remote, out var msgRateLimitReason)) break;
+                    if (!CheckMessageRateLimit(remote)) break;
                     subject.OnNext(envelope);
                 }
             }
@@ -871,9 +625,9 @@ public abstract class BaseGameServer : IServerContext
             {
                 Log($"客户端请求被取消: {remote}");
             }
-            catch (IOException ioex)
+            catch (IOException ioException)
             {
-                Log($"客户端网络IO异常: {remote} {ioex.Message}");
+                Log($"客户端网络IO异常: {remote} {ioException.Message}");
             }
             catch (SocketException sex)
             {
@@ -884,8 +638,16 @@ public abstract class BaseGameServer : IServerContext
                 Log($"客户端异常: {ex.Message}");
             }
 
-            try { subject.OnCompleted(); } catch { }
-            try { sub.Dispose(); } catch { }
+            try { subject.OnCompleted(); }
+            catch
+            {
+                // 结束事件流时的异常可忽略
+            }
+            try { sub.Dispose(); }
+            catch
+            {
+                // 释放订阅时的异常可忽略
+            }
             Log($"客户端断开: {remote}");
             Interlocked.Decrement(ref _currentConnections);
         }
@@ -916,7 +678,7 @@ public abstract class BaseGameServer : IServerContext
     {
         private const int BucketCount = 10;
         private const int BucketMs = 100;
-        private int _currentBucketIndex = 0;
+        private int _currentBucketIndex;
         private long _bucketWindowStartTicks = Stopwatch.GetTimestamp();
         private readonly int[] _messageBuckets = new int[BucketCount];
         private readonly int[] _byteBuckets = new int[BucketCount];

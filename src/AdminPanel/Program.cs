@@ -4,6 +4,10 @@ using DotNetGameServer.AdminPanel; // 为访问 HealthStatus 和 ServerStatusRes
 using DotNetGameServer.AdminPanel.Data;
 using Microsoft.EntityFrameworkCore;
 
+const string HealthStatus = "Healthy";
+const string UnhealthyStatus = "Unhealthy";
+const string DegradedStatus = "Degraded";
+
 var builder = WebApplication.CreateBuilder(args);
 
 // 注册 IHttpClientFactory
@@ -30,125 +34,6 @@ app.UseStaticFiles();
 
 // 重定向根路径到监控页面
 app.MapGet("/", () => Results.Redirect("/monitoring/status.html"));
-
-
-
-// 定义要监控的服务器健康检查端点列表
-var serverHealthEndpoints = new Dictionary<string, string>
-{
-    { "Directory Server", "http://localhost:5101/health" },
-    { "Login Server", "http://localhost:5102/health" },
-    { "Resource Server", "http://localhost:5103/health" },
-    { "Battle Server", "http://localhost:5104/health" },
-    { "Logic Server", "http://localhost:5105/health" }
-};
-
-app.MapGet("/api/server-status", async (IHttpClientFactory httpClientFactory) =>
-{
-    var client = httpClientFactory.CreateClient();
-
-    var tasks = serverHealthEndpoints.Select(async endpoint =>
-    {
-        try
-        {
-            var response = await client.GetAsync(endpoint.Value);
-            var content = await response.Content.ReadAsStringAsync();
-            var serverReport = JsonDocument.Parse(content);
-
-            serverReport.RootElement.TryGetProperty("status", out var statusElement);
-            serverReport.RootElement.TryGetProperty("checks", out var checksElement);
-
-            return new ServerStatusResult
-            {
-                Name = endpoint.Key,
-                Status = statusElement.GetString() ?? HealthStatus.Unknown,
-                Checks = checksElement.Clone(), // Clone to avoid lifetime issues with JsonDocument
-            };
-        }
-        catch (Exception ex)
-        {
-            return new ServerStatusResult
-            {
-                Name = endpoint.Key,
-                Status = HealthStatus.Unhealthy,
-                Description = "无法连接到健康检查端点或处理时发生错误。",
-                Exception = ex.Message
-            };
-        }
-    });
-
-    var results = await Task.WhenAll(tasks);
-    var overallStatus = Array.Exists(results, r => r.Status != HealthStatus.Healthy) ? HealthStatus.Unhealthy : HealthStatus.Healthy;
-
-    var finalReport = new
-    {
-        status = overallStatus,
-        checks = results
-    };
-
-    return Results.Json(finalReport);
-});
-
-// Server-Sent Events (SSE) 实时推送服务器状态
-app.MapGet("/api/server-status/stream", async (IHttpClientFactory httpClientFactory, HttpContext context) =>
-{
-    context.Response.Headers.Append("Cache-Control", "no-cache");
-    context.Response.Headers.Append("Content-Type", "text/event-stream");
-
-    var client = httpClientFactory.CreateClient();
-    var cancellation = context.RequestAborted;
-
-    while (!cancellation.IsCancellationRequested)
-    {
-        var tasks = serverHealthEndpoints.Select(async endpoint =>
-        {
-            try
-            {
-                var response = await client.GetAsync(endpoint.Value, cancellation);
-                var content = await response.Content.ReadAsStringAsync(cancellation);
-                var serverReport = JsonDocument.Parse(content);
-
-                serverReport.RootElement.TryGetProperty("status", out var statusElement);
-                serverReport.RootElement.TryGetProperty("checks", out var checksElement);
-
-                return new ServerStatusResult
-                {
-                    Name = endpoint.Key,
-                Status = statusElement.GetString() ?? HealthStatus.Unknown,
-                    Checks = checksElement.Clone(),
-                };
-            }
-            catch (Exception ex)
-            {
-                return new ServerStatusResult
-                {
-                    Name = endpoint.Key,
-                    Status = HealthStatus.Unhealthy,
-                    Description = "无法连接到健康检查端点或处理时发生错误。",
-                    Exception = ex.Message
-                };
-            }
-        });
-
-        var results = await Task.WhenAll(tasks);
-        var overallStatus = Array.Exists(results, r => r.Status != HealthStatus.Healthy) ? HealthStatus.Unhealthy : HealthStatus.Healthy;
-        // 保持与 Minimal API 的命名策略一致（camelCase），避免 SSE 返回的 PascalCase 导致前端取不到字段（出现 undefined/未知）
-        var jsonOptions = new JsonSerializerOptions(JsonSerializerDefaults.Web);
-        var payload = JsonSerializer.Serialize(new { status = overallStatus, checks = results }, jsonOptions);
-
-        await context.Response.WriteAsync($"data: {payload}\n\n", cancellation);
-        await context.Response.Body.FlushAsync(cancellation);
-
-        try
-        {
-            await Task.Delay(TimeSpan.FromSeconds(2), cancellation); // 2秒推送一次
-        }
-        catch (TaskCanceledException)
-        {
-            break;
-        }
-    }
-});
 
 app.MapPost("/api/resource/upload", async (IFormFile file, AdminDbContext dbContext, ILogger<Program> logger) =>
 {
@@ -218,25 +103,202 @@ app.MapPost("/api/resource/upload", async (IFormFile file, AdminDbContext dbCont
 });
 
 
+// 服务器状态API端点 - 自动服务发现
+app.MapGet("/api/server-status", async (IHttpClientFactory httpClientFactory, ILogger<Program> logger) =>
+{
+    try
+    {
+        var httpClient = httpClientFactory.CreateClient();
+        var checks = new List<object>();
+        
+        // 定义服务配置（基于start_all_servers.bat的端口分配）
+        var services = new[]
+        {
+            new { name = "Directory Server", port = 5101, gamePort = 5500 },
+            new { name = "Login Server", port = 5102, gamePort = 5501 },
+            new { name = "Battle Server", port = 5103, gamePort = 5502 },
+            new { name = "Logic Server", port = 5104, gamePort = 5503 }
+        };
+        
+        // 检查每个服务的状态
+        foreach (var service in services)
+        {
+            try
+            {
+                // 尝试连接健康检查端口
+                var healthResponse = await httpClient.GetAsync($"http://localhost:{service.port}/health", 
+                    new CancellationTokenSource(TimeSpan.FromSeconds(2)).Token);
+                
+                if (healthResponse.IsSuccessStatusCode)
+                {
+                    var healthData = await healthResponse.Content.ReadFromJsonAsync<JsonElement>();
+                    checks.Add(new
+                    {
+                        name = service.name,
+                        status = HealthStatus,
+                        description = $"服务运行正常 (游戏端口: {service.gamePort})",
+                        exception = (string?)null,
+                        data = new { healthPort = service.port, gamePort = service.gamePort, healthData }
+                    });
+                }
+                else
+                {
+                    checks.Add(new
+                    {
+                        name = service.name,
+                        status = UnhealthyStatus,
+                        description = $"健康检查返回错误: {healthResponse.StatusCode}",
+                        exception = (string?)null,
+                        data = new { healthPort = service.port, gamePort = service.gamePort }
+                    });
+                }
+            }
+            catch (Exception ex)
+            {
+                // 服务未运行或连接失败
+                checks.Add(new
+                {
+                    name = service.name,
+                    status = "Unhealthy",
+                    description = "服务未运行或连接失败",
+                    exception = ex.Message,
+                    data = new { healthPort = service.port, gamePort = service.gamePort }
+                });
+            }
+        }
+        
+        // 添加Admin Panel自身状态
+        checks.Add(new
+        {
+            name = "Admin Panel",
+            status = HealthStatus,
+            description = "管理面板运行正常",
+            exception = (string?)null,
+            data = new { uptime = Environment.TickCount64 / 1000, version = "1.0.0" }
+        });
+        
+        var overallStatus = checks.Exists(c => c.GetType().GetProperty("status")?.GetValue(c)?.ToString() != HealthStatus) ? DegradedStatus : HealthStatus;
+        
+        var serverStatus = new
+        {
+            status = overallStatus,
+            checks = checks.ToArray()
+        };
+        
+        return Results.Ok(serverStatus);
+    }
+    catch (Exception ex)
+    {
+        logger.LogError(ex, "Error getting server status");
+        return Results.Problem("Error getting server status");
+    }
+});
+
+// SSE服务器状态流端点 - 自动服务发现
+app.MapGet("/api/server-status/stream", async (HttpContext context, ILogger<Program> logger) =>
+{
+    context.Response.Headers.Append("Content-Type", "text/event-stream");
+    context.Response.Headers.Append("Cache-Control", "no-cache");
+    context.Response.Headers.Append("Connection", "keep-alive");
+    
+    var httpClientFactory = context.RequestServices.GetRequiredService<IHttpClientFactory>();
+    var httpClient = httpClientFactory.CreateClient();
+    
+    // 定义服务配置
+    var services = new[]
+    {
+        new { name = "Directory Server", port = 5101, gamePort = 5500 },
+        new { name = "Login Server", port = 5102, gamePort = 5501 },
+        new { name = "Battle Server", port = 5103, gamePort = 5502 },
+        new { name = "Logic Server", port = 5104, gamePort = 5503 }
+    };
+    
+    try
+    {
+        while (!context.RequestAborted.IsCancellationRequested)
+        {
+            var checks = new List<object>();
+            
+            // 检查每个服务的状态
+            foreach (var service in services)
+            {
+                try
+                {
+                    var healthResponse = await httpClient.GetAsync($"http://localhost:{service.port}/health", 
+                        new CancellationTokenSource(TimeSpan.FromSeconds(2)).Token);
+                    
+                    if (healthResponse.IsSuccessStatusCode)
+                    {
+                        var healthData = await healthResponse.Content.ReadFromJsonAsync<JsonElement>();
+                        checks.Add(new
+                        {
+                            name = service.name,
+                            status = HealthStatus,
+                            description = $"服务运行正常 (游戏端口: {service.gamePort})",
+                            exception = (string?)null,
+                            data = new { healthPort = service.port, gamePort = service.gamePort, healthData }
+                        });
+                    }
+                    else
+                    {
+                        checks.Add(new
+                        {
+                            name = service.name,
+                            status = UnhealthyStatus,
+                            description = $"健康检查返回错误: {healthResponse.StatusCode}",
+                            exception = (string?)null,
+                            data = new { healthPort = service.port, gamePort = service.gamePort }
+                        });
+                    }
+                }
+                catch (Exception ex)
+                {
+                    checks.Add(new
+                    {
+                        name = service.name,
+                        status = UnhealthyStatus,
+                        description = "服务未运行或连接失败",
+                        exception = ex.Message,
+                        data = new { healthPort = service.port, gamePort = service.gamePort }
+                    });
+                }
+            }
+            
+            // 添加Admin Panel自身状态
+            checks.Add(new
+            {
+                name = "Admin Panel",
+                status = HealthStatus,
+                description = "管理面板运行正常",
+                exception = (string?)null,
+                data = new { uptime = Environment.TickCount64 / 1000, version = "1.0.0" }
+            });
+            
+            var overallStatus = checks.Exists(c => c.GetType().GetProperty("status")?.GetValue(c)?.ToString() != HealthStatus) ? DegradedStatus : HealthStatus;
+            
+            var serverStatus = new
+            {
+                status = overallStatus,
+                checks = checks.ToArray()
+            };
+            
+            var data = $"data: {System.Text.Json.JsonSerializer.Serialize(serverStatus)}\n\n";
+            await context.Response.WriteAsync(data);
+            await context.Response.Body.FlushAsync();
+            
+            // 每3秒发送一次更新
+            await Task.Delay(3000, context.RequestAborted);
+        }
+    }
+    catch (OperationCanceledException)
+    {
+        logger.LogInformation("SSE connection closed");
+    }
+    catch (Exception ex)
+    {
+        logger.LogError(ex, "SSE error");
+    }
+});
+
 app.Run();
 
-namespace DotNetGameServer.AdminPanel
-{
-    // 健康状态常量，避免魔法字符串（置于命名空间中以满足 S3903）
-    internal static class HealthStatus
-    {
-        public const string Healthy = "Healthy";
-        public const string Unhealthy = "Unhealthy";
-        public const string Unknown = "Unknown";
-    }
-
-    // 定义一个具体类型用于结果，避免类型推断问题
-    public class ServerStatusResult
-    {
-        public string Name { get; set; } = string.Empty;
-        public string? Status { get; init; }
-        public object? Checks { get; set; }
-        public string? Description { get; set; }
-        public string? Exception { get; set; }
-    }
-}

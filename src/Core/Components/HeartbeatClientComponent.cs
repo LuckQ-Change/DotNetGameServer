@@ -4,6 +4,7 @@ using Shared;
 using Core.Config;
 using DotNetGameServer;
 using System;
+using System.Threading;
 using R3;
 
 namespace Core.Components;
@@ -19,6 +20,11 @@ public class HeartbeatClientComponent : IServerComponent
     private readonly Func<string>? _statusProvider;
     private CancellationTokenSource? _cts;
     private IDisposable? _hbSubscription;
+    private TcpClient? _client;
+    private NetworkStream? _stream;
+    private readonly SemaphoreSlim _sendLock = new(1, 1);
+    private CancellationTokenSource? _connCts;
+    private Task? _recvTask;
 
     private readonly SimpleConfigLoader.HeartbeatSettings _settings;
     private readonly string _type;
@@ -104,6 +110,14 @@ public class HeartbeatClientComponent : IServerComponent
             // 释放订阅失败可忽略：不影响销毁流程
         }
         _hbSubscription = null;
+        try { _connCts?.Cancel(); } catch { }
+        try { _stream?.Dispose(); } catch { }
+        try { _client?.Dispose(); } catch { }
+        _recvTask = null;
+        _connCts = null;
+        _stream = null;
+        _client = null;
+        try { _sendLock.Dispose(); } catch { }
         _cts = null;
         return Task.CompletedTask;
     }
@@ -129,7 +143,16 @@ public class HeartbeatClientComponent : IServerComponent
             Capacity = _settings.Capacity,
             Status = _statusProvider?.Invoke() ?? "online"
         };
-        await SendHeartbeatAsync(_settings.DirectoryHost, _settings.DirectoryPort, req, token);
+        _log($"[心跳] tick: {req.Id} -> {_settings.DirectoryHost}:{_settings.DirectoryPort} players={req.PlayerCount} capacity={req.Capacity} status={req.Status}");
+        try
+        {
+            await SendHeartbeatAsync(_settings.DirectoryHost, _settings.DirectoryPort, req, token);
+            _log("[心跳] sent");
+        }
+        catch (Exception ex)
+        {
+            _log($"[心跳] send failed: {ex.Message}");
+        }
     }
 
     /// <summary>
@@ -137,33 +160,35 @@ public class HeartbeatClientComponent : IServerComponent
     /// </summary>
     private async Task SendHeartbeatAsync(string host, int port, HeartbeatRequest req, CancellationToken ct)
     {
-        using var client = new TcpClient();
-        await client.ConnectAsync(host, port, ct);
-        using var stream = client.GetStream();
-        var env = new Envelope { Type = "HeartbeatRequest", Payload = ByteString.CopyFrom(req.ToByteArray()) };
-        // 生成心跳签名令牌（绑定到 serverId）
+        await _sendLock.WaitAsync(ct);
         try
         {
-            var secret = _secret ?? "dev-secret"; // 若异常情况下为空，在开发模式仍允许默认值
-            env.Token = TokenSigner.ComposeHeartbeatToken(req.Id, secret);
+            await EnsureConnectedAsync(host, port, ct);
+            var env = new Envelope { Type = "HeartbeatRequest", Payload = ByteString.CopyFrom(req.ToByteArray()) };
+            try
+            {
+                var secret = _secret ?? "dev-secret";
+                env.Token = TokenSigner.ComposeHeartbeatToken(req.Id, secret);
+            }
+            catch (Exception)
+            {
+            }
+            var bytes = env.ToByteArray();
+            var len = BitConverter.GetBytes(bytes.Length);
+            var stream = _stream!;
+            await stream.WriteAsync(len.AsMemory(0, 4), ct);
+            await stream.WriteAsync(bytes.AsMemory(), ct);
+            await stream.FlushAsync(ct);
         }
-        catch (Exception)
+        catch
         {
-            // 心跳令牌生成失败时发送未签名心跳，目录服务可按未认证处理。
+            SafeCloseConnection();
+            throw;
         }
-        var bytes = env.ToByteArray();
-        var len = BitConverter.GetBytes(bytes.Length);
-        await stream.WriteAsync(len.AsMemory(0, 4), ct);
-        await stream.WriteAsync(bytes.AsMemory(), ct);
-        await stream.FlushAsync(ct);
-
-        // 读取响应（可选）
-        var lenBuf = new byte[4];
-        var read = await ReadExactAsync(stream, lenBuf, 0, 4, ct);
-        if (read == 0) return;
-        var respLen = BitConverter.ToInt32(lenBuf, 0);
-        var buf = new byte[respLen];
-        await ReadExactAsync(stream, buf, 0, respLen, ct);
+        finally
+        {
+            _sendLock.Release();
+        }
     }
 
     /// <summary>
@@ -199,4 +224,54 @@ public class HeartbeatClientComponent : IServerComponent
         return string.Equals(env, "Development", StringComparison.OrdinalIgnoreCase);
     }
 
+    private async Task EnsureConnectedAsync(string host, int port, CancellationToken ct)
+    {
+        if (_client != null && _client.Connected && _stream != null) return;
+        SafeCloseConnection();
+        var client = new TcpClient();
+        try { client.Client.SetSocketOption(SocketOptionLevel.Socket, SocketOptionName.KeepAlive, true); } catch { }
+        await client.ConnectAsync(host, port, ct);
+        _client = client;
+        _stream = client.GetStream();
+        _connCts = CancellationTokenSource.CreateLinkedTokenSource(_cts!.Token);
+        _recvTask = Task.Run(() => ReceiveLoopAsync(_connCts.Token));
+    }
+
+    private async Task ReceiveLoopAsync(CancellationToken token)
+    {
+        var stream = _stream;
+        if (stream == null) return;
+        try
+        {
+            var lenBuf = new byte[4];
+            while (!token.IsCancellationRequested)
+            {
+                var r = await ReadExactAsync(stream, lenBuf, 0, 4, token);
+                if (r < 4) break;
+                var respLen = BitConverter.ToInt32(lenBuf, 0);
+                if (respLen <= 0 || respLen > 8 * 1024 * 1024) break;
+                var buf = new byte[respLen];
+                var rr = await ReadExactAsync(stream, buf, 0, respLen, token);
+                if (rr < respLen) break;
+            }
+        }
+        catch
+        {
+        }
+        finally
+        {
+            SafeCloseConnection();
+        }
+    }
+
+    private void SafeCloseConnection()
+    {
+        try { _connCts?.Cancel(); } catch { }
+        try { _stream?.Dispose(); } catch { }
+        try { _client?.Dispose(); } catch { }
+        _recvTask = null;
+        _connCts = null;
+        _stream = null;
+        _client = null;
+    }
 }

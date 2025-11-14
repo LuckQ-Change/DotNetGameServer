@@ -27,7 +27,7 @@ public class ResourceGameServer(ILogger<ResourceGameServer> logger, IConfigurati
 
         AddComponent(new UrlSignerComponent());
         AddComponent(new HeartbeatClientComponent(
-            message => Log(message),
+            message => LogHeartbeat(message),
             type: "resource",
             portProvider: () => ListeningPort,
             playerCountProvider: () => 0,

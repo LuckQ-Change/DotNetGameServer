@@ -13,6 +13,8 @@ using OpenTelemetry.Resources;
 using OpenTelemetry.Metrics;
 using OpenTelemetry.Trace;
 using Core.Telemetry;
+using Core.Diagnostics;
+using System.Net;
 
 using ServerHost; // 访问命名空间中的类型（HostingUtilities、GameServerService）
 
@@ -127,6 +129,8 @@ if (metricsEnabled)
 }
 
 builder.Services.AddHostedService<GameServerService>();
+builder.Services.AddSingleton<CurrentServerAccessor>();
+builder.Services.AddHostedService<AdminConsoleHostedService>();
 builder.Services.AddHealthChecks()
     .AddCheck<ServerHealthCheck>("liveness", tags: new[] { "liveness" })
     .AddCheck<ReadinessHealthCheck>("readiness", tags: new[] { "readiness" });
@@ -141,6 +145,7 @@ var healthUrl = builder.Configuration[Shared.Constants.ConfigKeys.ServiceHealthC
                 ?? Environment.GetEnvironmentVariable(Shared.Constants.ConfigKeys.HealthCheckUrlEnv);
 
 var app = builder.Build();
+Core.Diagnostics.BasicCommands.RegisterAll();
 // Configure listening URL for the embedded HTTP server (health checks)
 if (!string.IsNullOrWhiteSpace(healthUrl))
 {
@@ -200,6 +205,42 @@ app.MapHealthChecks("/ready", new Microsoft.AspNetCore.Diagnostics.HealthChecks.
     }
 });
 
+app.MapPost("/admin/command", async (HttpContext context, IConfiguration cfg, IHostEnvironment env, CurrentServerAccessor accessor) =>
+{
+    var enabled = env.IsDevelopment() || string.Equals(cfg["ADMIN_HTTP_ENABLED"], "true", StringComparison.OrdinalIgnoreCase);
+    if (!enabled) return Results.NotFound();
+    if (!env.IsDevelopment())
+    {
+        var auth = context.Request.Headers["Authorization"].ToString();
+        if (string.IsNullOrWhiteSpace(auth) || !auth.StartsWith("Bearer ")) return Results.Unauthorized();
+        var token = auth.Substring("Bearer ".Length);
+        var expect = cfg["ADMIN_TOKEN"] ?? Environment.GetEnvironmentVariable("ADMIN_TOKEN");
+        if (string.IsNullOrWhiteSpace(expect) || !string.Equals(token, expect)) return Results.Unauthorized();
+        var ip = context.Connection.RemoteIpAddress;
+        if (ip != null && !IPAddress.IsLoopback(ip))
+        {
+            var allowed = (cfg["ADMIN_HTTP_ALLOWED_IPS"] ?? "127.0.0.1").Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+            var hit = allowed.Any(a => string.Equals(a, ip.ToString(), StringComparison.OrdinalIgnoreCase));
+            if (!hit) return Results.Unauthorized();
+        }
+    }
+    using var sr = new StreamReader(context.Request.Body);
+    var body = await sr.ReadToEndAsync();
+    string cmdText;
+    try
+    {
+        var doc = System.Text.Json.JsonDocument.Parse(body);
+        cmdText = doc.RootElement.TryGetProperty("cmd", out var c) ? c.GetString() ?? string.Empty : string.Empty;
+    }
+    catch
+    {
+        cmdText = body;
+    }
+    var ctx = new DefaultCommandContext(accessor.Server);
+    var res = await CommandRegistry.ExecuteTextAsync(cmdText, ctx);
+    return Results.Json(res);
+});
+
 await app.RunAsync();
 
 namespace ServerHost
@@ -232,16 +273,18 @@ namespace ServerHost
         private readonly IConfiguration _configuration;
         private readonly IServiceProvider _serviceProvider;
         private readonly IHostEnvironment _hostEnvironment;
+        private readonly CurrentServerAccessor _accessor;
         private BaseGameServer? _server;
         private IServiceScope? _loginScope;
 
         public GameServerService(ILogger<GameServerService> logger, IConfiguration configuration,
-            IServiceProvider serviceProvider, IHostEnvironment hostEnvironment)
+            IServiceProvider serviceProvider, IHostEnvironment hostEnvironment, CurrentServerAccessor accessor)
         {
             _logger = logger;
             _configuration = configuration;
             _serviceProvider = serviceProvider;
             _hostEnvironment = hostEnvironment;
+            _accessor = accessor;
         }
 
         public async Task StartAsync(CancellationToken cancellationToken)
@@ -276,9 +319,9 @@ namespace ServerHost
             };
 
             await _server.StartAsync(port);
+            _accessor.Set(_server);
             _logger.LogInformation("服务启动成功: {server} 正在监听 {port}, 环境={env}", _server.ServerName, port,
                 _hostEnvironment.EnvironmentName);
-            Console.WriteLine($"服务启动成功: {_server.ServerName} 正在监听 {port}, 环境={_hostEnvironment.EnvironmentName}");
             try { Console.Title = $"{_server.ServerName} : {port}"; }
             catch
             {
@@ -292,6 +335,7 @@ namespace ServerHost
             {
                 await _server.StopAsync();
             }
+            try { _accessor.Set(null); } catch { }
             try { _loginScope?.Dispose(); } catch { }
             _loginScope = null;
         }

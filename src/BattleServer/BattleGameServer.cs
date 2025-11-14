@@ -18,7 +18,7 @@ public class BattleGameServer(ILogger<BattleGameServer> logger) : BaseGameServer
         _ = ecs.World.RegisterSystemAsync(new Ecs.BattleGcSystem(TimeSpan.FromMinutes(30)));
 
         AddComponent(new HeartbeatClientComponent(
-            message => Log(message),
+            message => LogHeartbeat(message),
             type: "battle",
             portProvider: () => ListeningPort,
             playerCountProvider: () => 0, // Replace with actual player count

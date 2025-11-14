@@ -21,19 +21,29 @@ public static class LogCenter
     /// Development 默认 Information，Production 默认 Warning
     /// </summary>
     public static LogLevel MinimumLevel { get; private set; } = ResolveDefaultLevel();
+    public static bool GlobalEnabled { get; private set; } = false;
+    private static readonly System.Collections.Concurrent.ConcurrentDictionary<string, bool> _categoryEnabled = new(StringComparer.OrdinalIgnoreCase);
 
     /// <summary>
     /// 设置最小日志级别
     /// </summary>
-    public static void SetMinimumLevel(LogLevel level)
-    {
-        MinimumLevel = level;
-    }
+    public static void SetMinimumLevel(LogLevel level) { MinimumLevel = level; }
+    public static void SetGlobalEnabled(bool enabled) { GlobalEnabled = enabled; }
+    public static void EnableCategory(string category) { _categoryEnabled[category] = true; }
+    public static void DisableCategory(string category) { _categoryEnabled[category] = false; }
+    public static bool IsCategoryEnabled(string category) => _categoryEnabled.TryGetValue(category, out var en) && en;
 
     /// <summary>
     /// 判断是否应输出该级别日志
     /// </summary>
-    public static bool ShouldLog(LogLevel level) => level >= MinimumLevel;
+    public static bool ShouldLog(LogLevel level) => ShouldLog(level, null);
+    public static bool ShouldLog(LogLevel level, string? category)
+    {
+        var catEnabled = category != null && IsCategoryEnabled(category);
+        if (catEnabled) return true;
+        if (!GlobalEnabled) return false;
+        return level >= MinimumLevel;
+    }
 
     /// <summary>
     /// 推送一条日志事件到订阅流
@@ -55,15 +65,11 @@ public static class LogCenter
             if (!string.IsNullOrWhiteSpace(envLevel) && Enum.TryParse<LogLevel>(envLevel, true, out var parsed))
                 return parsed;
 
-            var env = Environment.GetEnvironmentVariable("DOTNET_ENVIRONMENT")
-                      ?? Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT")
-                      ?? string.Empty;
-            if (string.Equals(env, "Production", StringComparison.OrdinalIgnoreCase)) return LogLevel.Warning;
-            return LogLevel.Information;
+            return LogLevel.None;
         }
         catch
         {
-            return LogLevel.Information;
+            return LogLevel.None;
         }
     }
 }

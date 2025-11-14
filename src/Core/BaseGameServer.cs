@@ -295,17 +295,7 @@ public abstract class BaseGameServer : IServerContext
     /// <param name="message">日志消息。</param>
     public void Log(string message)
     {
-        if (LogCenter.ShouldLog(LogLevel.Information))
-        {
-            _logger.LogInformation("[{Server}] {Message}", ServerName, message);
-            LogCenter.Publish(new LogEvent
-            {
-                Level = LogLevel.Information,
-                Category = ServerName,
-                Message = message,
-                Server = ServerName
-            });
-        }
+        LogWithCategory(message, ServerName, LogLevel.Information);
     }
 
     /// <summary>
@@ -315,13 +305,23 @@ public abstract class BaseGameServer : IServerContext
     /// <param name="level">日志级别。</param>
     public void Log(string message, LogLevel level)
     {
-        if (LogCenter.ShouldLog(level))
+        LogWithCategory(message, ServerName, level);
+    }
+
+    public void LogHeartbeat(string message)
+    {
+        LogWithCategory(message, "Heartbeat", LogLevel.Information);
+    }
+
+    public void LogWithCategory(string message, string category, LogLevel level)
+    {
+        if (LogCenter.ShouldLog(level, category))
         {
             _logger.Log(level, "[{Server}] {Message}", ServerName, message);
             LogCenter.Publish(new LogEvent
             {
                 Level = level,
-                Category = ServerName,
+                Category = category,
                 Message = message,
                 Server = ServerName
             });
@@ -669,6 +669,53 @@ public abstract class BaseGameServer : IServerContext
     {
         _blacklist[remote] = DateTime.UtcNow.Add(duration);
         Log($"加入黑名单: {remote} 原因={reason} 时长={duration}");
+    }
+
+    public IReadOnlyDictionary<string, DateTime> ListBlacklist()
+    {
+        return new Dictionary<string, DateTime>(_blacklist);
+    }
+
+    public void BlacklistAdd(string remote, TimeSpan duration, string reason)
+    {
+        AddToBlacklist(remote, duration, reason);
+    }
+
+    public bool BlacklistRemove(string remote)
+    {
+        return _blacklist.TryRemove(remote, out _);
+    }
+
+    public string[] ListHandlerNames()
+    {
+        return _typedHandlers.Keys.ToArray();
+    }
+
+    public object GetLimitsSnapshot()
+    {
+        return new
+        {
+            MaxMessageSizeBytes = _maxMessageSize,
+            MaxConcurrentConnections = _maxConcurrentConnections,
+            ReceiveTimeoutMs = _receiveTimeoutMs,
+            AcceptBackoffMs = _acceptBackoffMs,
+            MaxBytesPerSecond = _maxBytesPerSecond,
+            MaxMessagesPerSecond = _maxMessagesPerSecond,
+            IdleTimeoutMs = _idleTimeoutMs,
+            IpMaxBytesPerSecond = _ipMaxBytesPerSecond,
+            IpMaxMessagesPerSecond = _ipMaxMessagesPerSecond
+        };
+    }
+
+    public object GetRuntimeSnapshot()
+    {
+        return new
+        {
+            ServerName,
+            ListeningPort,
+            CurrentConnections = Volatile.Read(ref _currentConnections),
+            BlacklistCount = _blacklist.Count
+        };
     }
 
     /// <summary>

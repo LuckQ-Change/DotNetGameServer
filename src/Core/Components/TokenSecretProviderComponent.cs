@@ -30,10 +30,7 @@ public class TokenSecretProviderComponent(string? baseDir = null) : ITokenSecret
         {
             if (IsDevelopment())
             {
-                _secret = "dev-secret";
-                // 仅开发环境允许使用默认密钥。
-                Console.WriteLine("[TokenSecretProvider] 使用开发默认密钥 'dev-secret'。请在生产环境配置 directory.tokenSecret 或环境变量。");
-            }
+                _secret = "dev-secret";    }
             else
             {
                 throw new InvalidOperationException("Token secret 未配置。请通过环境变量或 config.json(directory.tokenSecret) 配置密钥。");

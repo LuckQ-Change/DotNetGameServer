@@ -16,7 +16,7 @@ public class LoginGameServer(ILogger<LoginGameServer> logger, IUserAuthComponent
         Log($"Using '{userAuthComponent.GetType().Name}' for user authentication.");
 
         AddComponent(new HeartbeatClientComponent(
-            message => Log(message),
+            message => LogHeartbeat(message),
             type: "login",
             portProvider: () => ListeningPort,
             playerCountProvider: () => 0,

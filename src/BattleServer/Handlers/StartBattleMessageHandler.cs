@@ -8,7 +8,7 @@ namespace BattleServer.Handlers;
 /// <summary>
 /// 开始战斗消息处理器
 /// </summary>
-public class StartBattleMessageHandler : IStrongMessageHandler<StartBattleRequest, StartBattleResponse>
+public class StartBattleMessageHandler : IMessageHandler<StartBattleRequest, StartBattleResponse>
 {
     public Task<StartBattleResponse?> HandleAsync(StartBattleRequest request, IServerContext context)
     {

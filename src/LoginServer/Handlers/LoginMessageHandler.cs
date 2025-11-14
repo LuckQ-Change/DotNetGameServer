@@ -8,7 +8,7 @@ using Shared;
 
 namespace LoginServer.Handlers;
 
-public class LoginMessageHandler(IUserAuthComponent authComponent) : IStrongMessageHandler<LoginRequest, LoginResponse>
+public class LoginMessageHandler(IUserAuthComponent authComponent) : IMessageHandler<LoginRequest, LoginResponse>
 {
     public async Task<LoginResponse?> HandleAsync(LoginRequest request, IServerContext context)
     {

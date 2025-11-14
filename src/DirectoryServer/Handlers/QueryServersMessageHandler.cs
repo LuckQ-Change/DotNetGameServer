@@ -4,7 +4,7 @@ using DirectoryServer.Components;
 
 namespace DirectoryServer.Handlers;
 
-public class QueryServersMessageHandler : IStrongMessageHandler<QueryServersRequest, QueryServersResponse>
+public class QueryServersMessageHandler : IMessageHandler<QueryServersRequest, QueryServersResponse>
 {
     private static readonly TimeSpan _throttleWindow = TimeSpan.FromSeconds(5);
     private static readonly int _throttleMaxRequests = 10; // 每窗口最多请求数
@@ -39,6 +39,7 @@ public class QueryServersMessageHandler : IStrongMessageHandler<QueryServersRequ
         }
 
         var all = reg.ListServers();
+        all = all.Where(s => string.Equals(s.Type, "logic", StringComparison.OrdinalIgnoreCase));
 
         // 区域过滤
         if (!string.IsNullOrWhiteSpace(request.Region))

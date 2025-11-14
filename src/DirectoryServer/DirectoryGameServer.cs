@@ -148,10 +148,10 @@ public class DirectoryGameServer : BaseGameServer
 
     private void RegisterMessageHandlers()
     {
-        RegisterStrongMessageHandler(new Handlers.QueryServersMessageHandler());
-        RegisterStrongMessageHandler(new Handlers.QueryServerStatusMessageHandler());
-        RegisterStrongMessageHandler(new Handlers.SwitchServerMessageHandler());
-        RegisterStrongMessageHandler(new Handlers.VerifySwitchTokenMessageHandler());
-        RegisterStrongMessageHandler(new Handlers.HeartbeatMessageHandler());
+        RegisterMessageHandler(new Handlers.QueryServersMessageHandler());
+        RegisterMessageHandler(new Handlers.QueryServerStatusMessageHandler());
+        RegisterMessageHandler(new Handlers.SwitchServerMessageHandler());
+        RegisterMessageHandler(new Handlers.VerifySwitchTokenMessageHandler());
+        RegisterMessageHandler(new Handlers.HeartbeatMessageHandler());
     }
 }

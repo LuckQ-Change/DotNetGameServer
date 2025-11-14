@@ -10,7 +10,7 @@ public class LoginGameServer(ILogger<LoginGameServer> logger, IUserAuthComponent
 {
     public override async Task StartAsync(int port)
     {
-        RegisterStrongMessageHandler(new LoginMessageHandler(userAuthComponent));
+        RegisterMessageHandler(new LoginMessageHandler(userAuthComponent));
 
         AddComponent(userAuthComponent);
         Log($"Using '{userAuthComponent.GetType().Name}' for user authentication.");

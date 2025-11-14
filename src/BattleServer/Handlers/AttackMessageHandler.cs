@@ -8,7 +8,7 @@ namespace BattleServer;
 /// <summary>
 /// 攻击消息处理器
 /// </summary>
-public class AttackMessageHandler : IStrongMessageHandler<AttackRequest, AttackResponse>
+public class AttackMessageHandler : IMessageHandler<AttackRequest, AttackResponse>
 {
     public Task<AttackResponse?> HandleAsync(AttackRequest request, IServerContext context)
     {

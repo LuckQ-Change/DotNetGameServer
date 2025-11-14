@@ -10,7 +10,7 @@ namespace Core;
 /// <summary>
 /// 强类型消息处理器接口：以具体的请求/响应类型进行处理
 /// </summary>
-public interface IStrongMessageHandler<TReq, TResp>
+public interface IMessageHandler<TReq, TResp>
     where TReq : class, IMessage<TReq>, new()
     where TResp : class, IMessage<TResp>, new()
 {
@@ -26,7 +26,7 @@ public interface IStrongMessageHandler<TReq, TResp>
 /// <summary>
 /// 内部：统一的强类型处理器调用封装
 /// </summary>
-internal interface IStrongHandlerInvoker
+internal interface IHandlerInvoker
 {
     /// <summary>
     /// 使用 ByteString 载荷调用处理器，返回响应类型名与响应字节；无响应则为 null
@@ -34,7 +34,7 @@ internal interface IStrongHandlerInvoker
     public Task<(string responseType, byte[] payload, int errorCode, string errorMessage)?> Invoke(ByteString payload, IServerContext context);
 }
 
-internal sealed class StrongHandlerInvoker<TReq, TResp> : IStrongHandlerInvoker
+internal sealed class HandlerInvoker<TReq, TResp> : IHandlerInvoker
     where TReq : class, IMessage<TReq>, new()
     where TResp : class, IMessage<TResp>, new()
 {
@@ -53,7 +53,7 @@ internal sealed class StrongHandlerInvoker<TReq, TResp> : IStrongHandlerInvoker
     private const string StatusNoResponse = "no_response";
     private const string StatusFail = "fail";
 
-    private readonly IStrongMessageHandler<TReq, TResp> _handler;
+    private readonly IMessageHandler<TReq, TResp> _handler;
     // 缓存静态元数据，减少重复实例化与反射
     private static readonly MessageParser<TReq> _reqParser = (MessageParser<TReq>)new TReq().Descriptor.Parser;
     private static readonly string _reqTypeName = new TReq().Descriptor.Name;
@@ -72,7 +72,7 @@ internal sealed class StrongHandlerInvoker<TReq, TResp> : IStrongHandlerInvoker
     /// 构造统一的强类型处理器调用器。
     /// </summary>
     /// <param name="handler">强类型消息处理器实例。</param>
-    public StrongHandlerInvoker(IStrongMessageHandler<TReq, TResp> handler)
+    public HandlerInvoker(IMessageHandler<TReq, TResp> handler)
     {
         _handler = handler;
     }

@@ -35,7 +35,7 @@ public abstract class BaseGameServer : IServerContext
     private readonly ILogger _logger; // 日志
 
     // 连接数指标通过 Meter 注册，无需持有字段引用。
-    private readonly ConcurrentDictionary<string, IStrongHandlerInvoker> _typedHandlers = new();
+    private readonly ConcurrentDictionary<string, IHandlerInvoker> _typedHandlers = new();
 
     private readonly ConcurrentDictionary<Type, IServerComponent> _components = new();
 
@@ -146,11 +146,11 @@ public abstract class BaseGameServer : IServerContext
     /// <typeparam name="TReq">请求消息类型。</typeparam>
     /// <typeparam name="TResp">响应消息类型。</typeparam>
     /// <param name="handler">强类型消息处理器。</param>
-    protected void RegisterStrongMessageHandler<TReq, TResp>(IStrongMessageHandler<TReq, TResp> handler)
+    protected void RegisterMessageHandler<TReq, TResp>(IMessageHandler<TReq, TResp> handler)
         where TReq : class, IMessage<TReq>, new()
         where TResp : class, IMessage<TResp>, new()
     {
-        var invoker = new StrongHandlerInvoker<TReq, TResp>(handler);
+        var invoker = new HandlerInvoker<TReq, TResp>(handler);
         // 同时注册短名与全名，兼容现有 Envelope.type 用法
         var reqName = new TReq().Descriptor.Name;
         var reqFullName = new TReq().Descriptor.FullName;
@@ -767,44 +767,6 @@ public abstract class BaseGameServer : IServerContext
             for (var i = 0; i < BucketCount; i++) sum += _messageBuckets[i];
             return sum;
         }
-    }
-}
-
-/// <summary>
-/// 程序集内密封类，用于封装请求上下文信息
-/// </summary>
-internal class RequestServerContext : IServerContext
-{
-    private readonly BaseGameServer _server;
-    private readonly string _token;
-    private AuthInfo? _auth;
-    private readonly string _requestId;
-
-    public RequestServerContext(BaseGameServer server, string? token, string remote, string requestId)
-    {
-        _server = server;
-        _token = token ?? string.Empty;
-        RemoteAddress = remote;
-        _requestId = string.IsNullOrWhiteSpace(requestId) ? Guid.NewGuid().ToString("N") : requestId;
-    }
-
-    public string ServerName => _server.ServerName;
-    public string AccessToken => _token;
-    public string RemoteAddress { get; }
-    public string RequestId => _requestId;
-    public AuthInfo? Auth => _auth;
-
-    public void Log(string message) => _server.Log(message);
-
-    public void Log(string message, LogLevel level) => _server.Log(message, level);
-    public T? GetComponent<T>() where T : class, IServerComponent => _server.GetComponent<T>();
-
-    /// <summary>
-    /// 内部：设置鉴权后的身份信息。
-    /// </summary>
-    internal void SetAuth(AuthInfo info)
-    {
-        _auth = info;
     }
 }
     

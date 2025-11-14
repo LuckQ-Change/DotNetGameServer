@@ -7,7 +7,7 @@ using Core.Config;
 
 namespace DirectoryServer.Handlers;
 
-public class HeartbeatMessageHandler : IStrongMessageHandler<HeartbeatRequest, HeartbeatResponse>
+public class HeartbeatMessageHandler : IMessageHandler<HeartbeatRequest, HeartbeatResponse>
 {
     public Task<HeartbeatResponse?> HandleAsync(HeartbeatRequest req, IServerContext context)
     {

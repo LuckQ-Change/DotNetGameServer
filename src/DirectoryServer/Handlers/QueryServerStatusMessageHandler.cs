@@ -5,7 +5,7 @@ using DirectoryServer.Components;
 
 namespace DirectoryServer.Handlers;
 
-public class QueryServerStatusMessageHandler : IStrongMessageHandler<QueryServerStatusRequest, QueryServerStatusResponse>
+public class QueryServerStatusMessageHandler : IMessageHandler<QueryServerStatusRequest, QueryServerStatusResponse>
 {
     public Task<QueryServerStatusResponse?> HandleAsync(QueryServerStatusRequest req, IServerContext context)
     {

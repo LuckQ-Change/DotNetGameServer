@@ -5,7 +5,7 @@ using DirectoryServer.Components;
 
 namespace DirectoryServer.Handlers;
 
-public class SwitchServerMessageHandler : IStrongMessageHandler<SwitchServerRequest, SwitchServerResponse>
+public class SwitchServerMessageHandler : IMessageHandler<SwitchServerRequest, SwitchServerResponse>
 {
     public Task<SwitchServerResponse?> HandleAsync(SwitchServerRequest req, IServerContext context)
     {
@@ -35,6 +35,14 @@ public class SwitchServerMessageHandler : IStrongMessageHandler<SwitchServerRequ
                 metrics?.RecordSwitch(false);
                 resp.Success = false;
                 resp.Message = "目标服务器不在线";
+                return Task.FromResult<SwitchServerResponse?>(resp);
+            }
+
+            if (!string.Equals(s.Type, "logic", StringComparison.OrdinalIgnoreCase))
+            {
+                metrics?.RecordSwitch(false);
+                resp.Success = false;
+                resp.Message = "目标服务器类型不允许";
                 return Task.FromResult<SwitchServerResponse?>(resp);
             }
 

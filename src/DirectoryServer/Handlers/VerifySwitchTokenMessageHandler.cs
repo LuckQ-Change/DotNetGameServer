@@ -4,7 +4,7 @@ using DirectoryServer.Components;
 
 namespace DirectoryServer.Handlers;
 
-public class VerifySwitchTokenMessageHandler : IStrongMessageHandler<VerifySwitchTokenRequest, VerifySwitchTokenResponse>
+public class VerifySwitchTokenMessageHandler : IMessageHandler<VerifySwitchTokenRequest, VerifySwitchTokenResponse>
 {
     public Task<VerifySwitchTokenResponse?> HandleAsync(VerifySwitchTokenRequest req, IServerContext context)
     {

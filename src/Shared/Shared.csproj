@@ -24,8 +24,6 @@
     <Protobuf Include="Protos/envelope.proto" GrpcServices="None" />
     <Protobuf Include="Protos/auth.proto" GrpcServices="None" />
     <Protobuf Include="Protos/battle.proto" GrpcServices="None" />
-    <Protobuf Include="Protos/resource.proto" GrpcServices="None" />
-    <Protobuf Include="Protos/signin.proto" GrpcServices="None" />
     <Protobuf Include="Protos/directory.proto" GrpcServices="None" />
   </ItemGroup>
 

@@ -3,17 +3,6 @@
 
 namespace DotNetGameServer
 {
-    // 逻辑服：查询签到状态
-    public sealed partial class QuerySignInStatusRequest : Shared.IUserIdentifiedRequest
-    {
-        public string? GetUserIdOrNull() => string.IsNullOrWhiteSpace(UserId) ? null : UserId;
-    }
-
-    // 逻辑服：领取签到奖励
-    public sealed partial class ClaimSignInRewardRequest : Shared.IUserIdentifiedRequest
-    {
-        public string? GetUserIdOrNull() => string.IsNullOrWhiteSpace(UserId) ? null : UserId;
-    }
 
     // 战斗服：开始战斗
     public sealed partial class StartBattleRequest : Shared.IUserIdentifiedRequest

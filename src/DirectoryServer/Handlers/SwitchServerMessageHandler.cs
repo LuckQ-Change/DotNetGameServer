@@ -5,21 +5,21 @@ using DirectoryServer.Components;
 
 namespace DirectoryServer.Handlers;
 
-public class SwitchServerMessageHandler : IMessageHandler<SwitchServerRequest, SwitchServerResponse>
+public class SwitchServerMessageHandler : IMessageHandler<c2s_switch_server, s2c_switch_server>
 {
-    public Task<SwitchServerResponse?> HandleAsync(SwitchServerRequest req, IServerContext context)
+    public Task<s2c_switch_server?> HandleAsync(c2s_switch_server req, IServerContext context)
     {
-        var metrics = context.GetComponent<DirectoryServer.Components.DirectoryMetricsComponent>();
+        var metrics = context.GetComponent<DirectoryMetricsComponent>();
         try
         {
             var reg = context.GetComponent<IServerRegistryComponent>();
-            var resp = new SwitchServerResponse();
+            var resp = new s2c_switch_server();
             if (reg == null)
             {
                 metrics?.RecordSwitch(false);
                 resp.Success = false;
                 resp.Message = "目录组件不可用";
-                return Task.FromResult<SwitchServerResponse?>(resp);
+                return Task.FromResult<s2c_switch_server?>(resp);
             }
 
             var s = reg.GetServer(req.ServerId);
@@ -28,14 +28,14 @@ public class SwitchServerMessageHandler : IMessageHandler<SwitchServerRequest, S
                 metrics?.RecordSwitch(false);
                 resp.Success = false;
                 resp.Message = "目标服务器不存在";
-                return Task.FromResult<SwitchServerResponse?>(resp);
+                return Task.FromResult<s2c_switch_server?>(resp);
             }
             if (!string.Equals(s.Status, "online", StringComparison.OrdinalIgnoreCase))
             {
                 metrics?.RecordSwitch(false);
                 resp.Success = false;
                 resp.Message = "目标服务器不在线";
-                return Task.FromResult<SwitchServerResponse?>(resp);
+                return Task.FromResult<s2c_switch_server?>(resp);
             }
 
             if (!string.Equals(s.Type, "logic", StringComparison.OrdinalIgnoreCase))
@@ -43,7 +43,7 @@ public class SwitchServerMessageHandler : IMessageHandler<SwitchServerRequest, S
                 metrics?.RecordSwitch(false);
                 resp.Success = false;
                 resp.Message = "目标服务器类型不允许";
-                return Task.FromResult<SwitchServerResponse?>(resp);
+                return Task.FromResult<s2c_switch_server?>(resp);
             }
 
             var token = reg.IssueSwitchToken(req.UserId, s, TimeSpan.FromMinutes(5));
@@ -66,14 +66,14 @@ public class SwitchServerMessageHandler : IMessageHandler<SwitchServerRequest, S
             metrics?.RecordSwitch(true);
             context.Log($"[目录] 下发切服令牌 user={req.UserId}, server={s.Id}, ttl=5m, signed=1");
 
-            return Task.FromResult<SwitchServerResponse?>(resp);
+            return Task.FromResult<s2c_switch_server?>(resp);
         }
         catch (Exception ex)
         {
             metrics?.RecordSwitchError();
             context.Log($"[目录] 切服处理异常: {ex.Message}");
-            var resp = new SwitchServerResponse { Success = false, Message = "内部错误" };
-            return Task.FromResult<SwitchServerResponse?>(resp);
+            var resp = new s2c_switch_server { Success = false, Message = "内部错误" };
+            return Task.FromResult<s2c_switch_server?>(resp);
         }
     }
 

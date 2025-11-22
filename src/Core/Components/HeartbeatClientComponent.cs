@@ -3,8 +3,6 @@ using Google.Protobuf;
 using Shared;
 using Core.Config;
 using DotNetGameServer;
-using System;
-using System.Threading;
 using R3;
 
 namespace Core.Components;
@@ -24,7 +22,7 @@ public class HeartbeatClientComponent : IServerComponent
     private NetworkStream? _stream;
     private readonly SemaphoreSlim _sendLock = new(1, 1);
     private CancellationTokenSource? _connCts;
-    private Task? _recvTask;
+    public Task? RecvTask { get; private set; }
 
     private readonly SimpleConfigLoader.HeartbeatSettings _settings;
     private readonly string _type;
@@ -46,15 +44,17 @@ public class HeartbeatClientComponent : IServerComponent
     /// <param name="playerCountProvider">玩家数量提供器，可选。</param>
     /// <param name="statusProvider">状态提供器，可选。</param>
     /// <param name="baseDir">配置基准目录。</param>
-    public HeartbeatClientComponent(Action<string> log, string type, Func<int?> portProvider, Func<int>? playerCountProvider = null, Func<string>? statusProvider = null, string? baseDir = null)
+    public HeartbeatClientComponent(Action<string> log, string type, Func<int?> portProvider,
+        Func<int>? playerCountProvider = null, Func<string>? statusProvider = null, string? baseDir = null)
     {
         _log = log;
         _type = type;
         _portProvider = portProvider;
         _playerCountProvider = playerCountProvider;
         _statusProvider = statusProvider;
-        _settings = SimpleConfigLoader.LoadHeartbeatSettings(baseDir) ?? new Config.SimpleConfigLoader.HeartbeatSettings();
-        _idPrefix = type; 
+        _settings = SimpleConfigLoader.LoadHeartbeatSettings(baseDir) ??
+                    new Config.SimpleConfigLoader.HeartbeatSettings();
+        _idPrefix = type;
     }
 
     /// <summary>
@@ -80,6 +80,7 @@ public class HeartbeatClientComponent : IServerComponent
         {
             _secret = sec;
         }
+
         var interval = TimeSpan.FromSeconds(Math.Max(1, _settings.IntervalSeconds));
         _hbSubscription = Observable.Interval(interval)
             .Subscribe(_ =>
@@ -95,7 +96,10 @@ public class HeartbeatClientComponent : IServerComponent
     /// </summary>
     public Task DestroyAsync()
     {
-        try { _cts?.Cancel(); }
+        try
+        {
+            _cts?.Cancel();
+        }
         catch (OperationCanceledException)
         {
             // 循环已取消
@@ -104,20 +108,57 @@ public class HeartbeatClientComponent : IServerComponent
         {
             // 非关键异常，忽略以完成销毁流程。
         }
-        try { _hbSubscription?.Dispose(); }
+
+        try
+        {
+            _hbSubscription?.Dispose();
+        }
         catch
         {
             // 释放订阅失败可忽略：不影响销毁流程
         }
+
         _hbSubscription = null;
-        try { _connCts?.Cancel(); } catch { }
-        try { _stream?.Dispose(); } catch { }
-        try { _client?.Dispose(); } catch { }
-        _recvTask = null;
+        try
+        {
+            _connCts?.Cancel();
+        }
+        catch
+        {
+            /*忽略*/
+        }
+
+        try
+        {
+            _stream?.Dispose();
+        }
+        catch
+        {
+            /*忽略*/
+        }
+
+        try
+        {
+            _client?.Dispose();
+        }
+        catch
+        {
+            /*忽略*/
+        }
+
+        RecvTask = null;
         _connCts = null;
         _stream = null;
         _client = null;
-        try { _sendLock.Dispose(); } catch { }
+        try
+        {
+            _sendLock.Dispose();
+        }
+        catch
+        {
+            /*忽略*/
+        }
+
         _cts = null;
         return Task.CompletedTask;
     }
@@ -132,7 +173,7 @@ public class HeartbeatClientComponent : IServerComponent
         }
 
         _lastResolvedPort = port;
-        var req = new HeartbeatRequest
+        var req = new c2s_heartbeat
         {
             Id = _idPrefix + ":" + port,
             Type = _type,
@@ -143,7 +184,8 @@ public class HeartbeatClientComponent : IServerComponent
             Capacity = _settings.Capacity,
             Status = _statusProvider?.Invoke() ?? "online"
         };
-        _log($"[心跳] tick: {req.Id} -> {_settings.DirectoryHost}:{_settings.DirectoryPort} players={req.PlayerCount} capacity={req.Capacity} status={req.Status}");
+        _log(
+            $"[心跳] tick: {req.Id} -> {_settings.DirectoryHost}:{_settings.DirectoryPort} players={req.PlayerCount} capacity={req.Capacity} status={req.Status}");
         try
         {
             await SendHeartbeatAsync(_settings.DirectoryHost, _settings.DirectoryPort, req, token);
@@ -158,13 +200,13 @@ public class HeartbeatClientComponent : IServerComponent
     /// <summary>
     /// 通过 TCP 发送心跳信封到目录服务器。
     /// </summary>
-    private async Task SendHeartbeatAsync(string host, int port, HeartbeatRequest req, CancellationToken ct)
+    private async Task SendHeartbeatAsync(string host, int port, c2s_heartbeat req, CancellationToken ct)
     {
         await _sendLock.WaitAsync(ct);
         try
         {
             await EnsureConnectedAsync(host, port, ct);
-            var env = new Envelope { Type = "HeartbeatRequest", Payload = ByteString.CopyFrom(req.ToByteArray()) };
+            var env = new envelope { Type = "HeartbeatRequest", Payload = ByteString.CopyFrom(req.ToByteArray()) };
             try
             {
                 var secret = _secret ?? "dev-secret";
@@ -172,7 +214,9 @@ public class HeartbeatClientComponent : IServerComponent
             }
             catch (Exception)
             {
+                //忽略
             }
+
             var bytes = env.ToByteArray();
             var len = BitConverter.GetBytes(bytes.Length);
             var stream = _stream!;
@@ -194,7 +238,8 @@ public class HeartbeatClientComponent : IServerComponent
     /// <summary>
     /// 从网络流精确读取指定字节数；对端关闭则返回已读取长度。
     /// </summary>
-    private static async Task<int> ReadExactAsync(NetworkStream stream, byte[] buffer, int offset, int count, CancellationToken token)
+    private static async Task<int> ReadExactAsync(NetworkStream stream, byte[] buffer, int offset, int count,
+        CancellationToken token)
     {
         var total = 0;
         while (total < count)
@@ -203,6 +248,7 @@ public class HeartbeatClientComponent : IServerComponent
             if (n == 0) return total;
             total += n;
         }
+
         return total;
     }
 
@@ -229,12 +275,20 @@ public class HeartbeatClientComponent : IServerComponent
         if (_client != null && _client.Connected && _stream != null) return;
         SafeCloseConnection();
         var client = new TcpClient();
-        try { client.Client.SetSocketOption(SocketOptionLevel.Socket, SocketOptionName.KeepAlive, true); } catch { }
+        try
+        {
+            client.Client.SetSocketOption(SocketOptionLevel.Socket, SocketOptionName.KeepAlive, true);
+        }
+        catch
+        {
+            /*忽略*/
+        }
+
         await client.ConnectAsync(host, port, ct);
         _client = client;
         _stream = client.GetStream();
         _connCts = CancellationTokenSource.CreateLinkedTokenSource(_cts!.Token);
-        _recvTask = Task.Run(() => ReceiveLoopAsync(_connCts.Token));
+        RecvTask = Task.Run(() => ReceiveLoopAsync(_connCts.Token));
     }
 
     private async Task ReceiveLoopAsync(CancellationToken token)
@@ -257,6 +311,7 @@ public class HeartbeatClientComponent : IServerComponent
         }
         catch
         {
+            /*忽略*/
         }
         finally
         {
@@ -266,10 +321,34 @@ public class HeartbeatClientComponent : IServerComponent
 
     private void SafeCloseConnection()
     {
-        try { _connCts?.Cancel(); } catch { }
-        try { _stream?.Dispose(); } catch { }
-        try { _client?.Dispose(); } catch { }
-        _recvTask = null;
+        try
+        {
+            _connCts?.Cancel();
+        }
+        catch
+        {
+            /*忽略*/
+        }
+
+        try
+        {
+            _stream?.Dispose();
+        }
+        catch
+        {
+            /*忽略*/
+        }
+
+        try
+        {
+            _client?.Dispose();
+        }
+        catch
+        {
+            /*忽略*/
+        }
+
+        RecvTask = null;
         _connCts = null;
         _stream = null;
         _client = null;

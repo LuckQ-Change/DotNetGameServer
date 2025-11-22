@@ -4,13 +4,13 @@ using DirectoryServer.Components;
 
 namespace DirectoryServer.Handlers;
 
-public class QueryServersMessageHandler : IMessageHandler<QueryServersRequest, QueryServersResponse>
+public class QueryServersMessageHandler : IMessageHandler<c2s_query_servers, s2c_query_servers>
 {
     private static readonly TimeSpan _throttleWindow = TimeSpan.FromSeconds(5);
     private static readonly int _throttleMaxRequests = 10; // 每窗口最多请求数
     private static readonly System.Collections.Concurrent.ConcurrentDictionary<string, (DateTime windowStartUtc, int count)> _throttle = new();
 
-    public Task<QueryServersResponse?> HandleAsync(QueryServersRequest request, IServerContext context)
+    public Task<s2c_query_servers?> HandleAsync(c2s_query_servers request, IServerContext context)
     {
         // 按IP限流（轻量本地实现）
         var ip = context.RemoteAddress ?? "unknown";
@@ -25,8 +25,8 @@ public class QueryServersMessageHandler : IMessageHandler<QueryServersRequest, Q
             if (entry.count + 1 > _throttleMaxRequests)
             {
                 // 超限：返回空列表，避免打爆目录
-                var limitedResp = new QueryServersResponse();
-                return Task.FromResult<QueryServersResponse?>(limitedResp);
+                var limitedResp = new s2c_query_servers();
+                return Task.FromResult<s2c_query_servers?>(limitedResp);
             }
             _throttle[ip] = (entry.windowStartUtc, entry.count + 1);
         }
@@ -34,8 +34,8 @@ public class QueryServersMessageHandler : IMessageHandler<QueryServersRequest, Q
         var reg = context.GetComponent<IServerRegistryComponent>();
         if (reg == null)
         {
-            var respFail = new QueryServersResponse();
-            return Task.FromResult<QueryServersResponse?>(respFail);
+            var respFail = new s2c_query_servers();
+            return Task.FromResult<s2c_query_servers?>(respFail);
         }
 
         var all = reg.ListServers();
@@ -97,10 +97,10 @@ public class QueryServersMessageHandler : IMessageHandler<QueryServersRequest, Q
             ordered = ordered.Take(request.Limit);
         }
 
-        var resp = new QueryServersResponse();
+        var resp = new s2c_query_servers();
         foreach (var s in ordered)
         {
-            resp.Servers.Add(new ServerInfo
+            resp.Servers.Add(new server_info
             {
                 Id = s.Id,
                 Type = s.Type,
@@ -114,6 +114,6 @@ public class QueryServersMessageHandler : IMessageHandler<QueryServersRequest, Q
                 AvgRttMs = s.AvgRttMs
             });
         }
-        return Task.FromResult<QueryServersResponse?>(resp);
+        return Task.FromResult<s2c_query_servers?>(resp);
     }
 }

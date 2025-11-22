@@ -36,6 +36,7 @@ public static class SimpleConfigLoader
             }
 
             var appDefault = Path.Combine(dir, "appsettings.json");
+            if (!string.IsNullOrWhiteSpace(appDefault))
             {
                 var sec = TryReadDirectoryTokenSecretFromJson(appDefault);
                 if (!string.IsNullOrWhiteSpace(sec)) return sec;

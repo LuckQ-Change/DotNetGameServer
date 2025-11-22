@@ -196,7 +196,7 @@ internal sealed class HandlerInvoker<TReq, TResp> : IHandlerInvoker
     private static string? TryExtractUserId(TReq req)
     {
         // 优先使用标准接口，避免反射依赖
-        if (req is Shared.IUserIdentifiedRequest iid)
+        if (req is IUserIdentifiedRequest iid)
         {
             try { return iid.GetUserIdOrNull(); }
             catch (Exception)

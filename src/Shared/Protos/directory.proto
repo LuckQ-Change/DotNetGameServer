@@ -2,7 +2,7 @@ syntax = "proto3";
 package DotNetGameServer;
 
 // 服务器基础信息
-message ServerInfo {
+message server_info {
   string id = 1;
   string type = 2;    // Login/Battle/Resource/Directory 等
   string region = 3;  // 区域/分区，例如: CN-1
@@ -17,7 +17,7 @@ message ServerInfo {
 }
 
 // 查询服务器列表（支持智能策略）
-message QueryServersRequest {
+message c2s_query_servers {
   // 选择策略："load"（按负载从低到高）、"latency"（按心跳新鲜度模拟延迟，从低到高）
   string strategy = 1;
   // 区域过滤（可选）：仅返回指定区域的服务器
@@ -29,25 +29,25 @@ message QueryServersRequest {
     bytes ext_payload = 100;
   }
 }
-message QueryServersResponse {
-  repeated ServerInfo servers = 1;
+message s2c_query_servers {
+  repeated server_info servers = 1;
 }
 
 // 查询单服状态
-message QueryServerStatusRequest {
+message c2s_query_server_status {
   string serverId = 1;
 }
-message QueryServerStatusResponse {
+message s2c_query_server_status {
   bool found = 1;
-  ServerInfo info = 2;
+  server_info info = 2;
 }
 
 // 切换服务器（返回临时令牌）
-message SwitchServerRequest {
+message c2s_switch_server {
   string serverId = 1;
   string userId = 2;
 }
-message SwitchServerResponse {
+message s2c_switch_server {
   bool success = 1;
   string message = 2;
   string host = 3;
@@ -57,20 +57,21 @@ message SwitchServerResponse {
 }
 
 // 切服令牌验证（服务端二次校验，可选）
-message VerifySwitchTokenRequest {
+message c2s_verify_switch_token {
   string userId = 1;    // 令牌绑定的用户
   string serverId = 2;  // 目标服务器ID
   string token = 3;     // 客户端携带的已签名令牌
   bool consume = 4;     // 是否在验证通过后消费（防重放）
 }
-message VerifySwitchTokenResponse {
+
+message s2c_verify_switch_token {
   bool valid = 1;
   string message = 2;
   int64 expireAt = 3;   // 若有效，返回过期时间（unix ms）
 }
 
 // 业务服心跳上报
-message HeartbeatRequest {
+message c2s_heartbeat {
   string id = 1;
   string type = 2;
   string region = 3;
@@ -82,6 +83,6 @@ message HeartbeatRequest {
   // 可选：业务服上报平均延迟（如自测目录往返），未上报则目录按心跳新鲜度估算
   int32 avgRttMs = 9;
 }
-message HeartbeatResponse {
+message s2c_heartbeat {
   bool accepted = 1;
 }

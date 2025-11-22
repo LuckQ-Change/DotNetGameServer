@@ -2,12 +2,12 @@ syntax = "proto3";
 package DotNetGameServer;
 
 // 登录认证相关
-message LoginRequest {
+message c2s_login {
   string username = 1;
   string password = 2;
 }
 
-message LoginResponse {
+message s2c_login {
   bool success = 1;
   string message = 2;
   // 登录令牌（用于后续请求携带到 Envelope.token）

@@ -1,4 +1,3 @@
-using BattleServer.Handlers;
 using Core;
 using Core.Components;
 using Core.Ecs;
@@ -10,8 +9,6 @@ public class BattleGameServer(ILogger<BattleGameServer> logger) : BaseGameServer
 {
     public override async Task StartAsync(int port)
     {
-        RegisterMessageHandler(new StartBattleMessageHandler());
-        RegisterMessageHandler(new AttackMessageHandler());
 
         var ecs = new EcsWorldComponent();
         AddComponent(ecs);

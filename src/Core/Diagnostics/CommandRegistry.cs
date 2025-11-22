@@ -2,20 +2,20 @@ using System.Collections.Concurrent;
 
 namespace Core.Diagnostics;
 
-public sealed class CommandRegistry
+public static class CommandRegistry
 {
-    private static readonly ConcurrentDictionary<string, ICommand> _commands = new(StringComparer.OrdinalIgnoreCase);
-    private static readonly SemaphoreSlim _sema = new(1, 1);
+    private static readonly ConcurrentDictionary<string, ICommand> Commands = new(StringComparer.OrdinalIgnoreCase);
+    private static readonly SemaphoreSlim Sema = new(1, 1);
 
     public static void Register(ICommand cmd, params string[] aliases)
     {
-        _commands[cmd.Name] = cmd;
-        foreach (var a in aliases) _commands[a] = cmd;
+        Commands[cmd.Name] = cmd;
+        foreach (var a in aliases) Commands[a] = cmd;
     }
 
     public static IReadOnlyCollection<string> List()
     {
-        return _commands.Keys.ToArray();
+        return Commands.Keys.ToArray();
     }
 
     public static async Task<object?> ExecuteTextAsync(string text, ICommandContext context)
@@ -23,8 +23,8 @@ public sealed class CommandRegistry
         var tokens = Tokenize(text);
         if (tokens.Length == 0) return new { ok = false, error = "empty" };
         var name = tokens[0];
-        if (!_commands.TryGetValue(name, out var cmd)) return new { ok = false, error = "not_found", name };
-        await _sema.WaitAsync();
+        if (!Commands.TryGetValue(name, out var cmd)) return new { ok = false, error = "not_found", name };
+        await Sema.WaitAsync();
         try
         {
             var args = tokens.Skip(1).ToArray();
@@ -33,7 +33,7 @@ public sealed class CommandRegistry
         }
         finally
         {
-            _sema.Release();
+            Sema.Release();
         }
     }
 

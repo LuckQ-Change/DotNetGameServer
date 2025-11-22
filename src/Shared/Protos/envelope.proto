@@ -2,7 +2,7 @@ syntax = "proto3";
 package DotNetGameServer;
 
 // 通用消息封装
-message Envelope {
+message envelope {
   string type = 1;
   bytes payload = 2;
   // 统一鉴权令牌（可选）：客户端->服务端随消息携带

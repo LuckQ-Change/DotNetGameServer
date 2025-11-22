@@ -141,7 +141,7 @@ public abstract class BaseGameServer : IServerContext
 
     /// <summary>
     /// 注册强类型消息处理器，采用具体的请求/响应类型进行分发。
-    /// 同时注册短名与全名以兼容不同的 <c>Envelope.type</c> 表示。
+    /// 同时注册短名与全名以兼容不同的 <c>envelope.type</c> 表示。
     /// </summary>
     /// <typeparam name="TReq">请求消息类型。</typeparam>
     /// <typeparam name="TResp">响应消息类型。</typeparam>
@@ -151,7 +151,7 @@ public abstract class BaseGameServer : IServerContext
         where TResp : class, IMessage<TResp>, new()
     {
         var invoker = new HandlerInvoker<TReq, TResp>(handler);
-        // 同时注册短名与全名，兼容现有 Envelope.type 用法
+        // 同时注册短名与全名，兼容现有 envelope.type 用法
         var reqName = new TReq().Descriptor.Name;
         var reqFullName = new TReq().Descriptor.FullName;
         _typedHandlers[reqName] = invoker;
@@ -422,10 +422,10 @@ public abstract class BaseGameServer : IServerContext
     /// <summary>
     /// 将响应类型与载荷封装为信封并写入网络流。
     /// </summary>
-    private static async Task WriteEnvelopeAsync(Stream stream, string type, byte[] payload, string? requestId,
+    private static async Task WriteenvelopeAsync(Stream stream, string type, byte[] payload, string? requestId,
         int errorCode, string? errorMessage, CancellationToken token, int timeoutMs)
     {
-        var env = new Envelope { Type = type, Payload = ByteString.CopyFrom(payload) };
+        var env = new envelope { Type = type, Payload = ByteString.CopyFrom(payload) };
         if (!string.IsNullOrWhiteSpace(requestId)) env.RequestId = requestId;
         // 服务器不再回写协议版本字段，简化并避免客户端版本依赖
         env.ErrorCode = errorCode;
@@ -559,7 +559,7 @@ public abstract class BaseGameServer : IServerContext
                 return true;
             }
 
-            var subject = new Subject<Envelope>();
+            var subject = new Subject<envelope>();
             var sub = subject.Subscribe(async void (envelope) =>
             {
                 try
@@ -573,7 +573,7 @@ public abstract class BaseGameServer : IServerContext
                         var result = await strong.Invoke(envelope.Payload, reqContext);
                         if (result != null)
                         {
-                            await WriteEnvelopeAsync(stream, result.Value.responseType, result.Value.payload,
+                            await WriteenvelopeAsync(stream, result.Value.responseType, result.Value.payload,
                                 envelope.RequestId, result.Value.errorCode, result.Value.errorMessage, token,
                                 _receiveTimeoutMs);
                         }
@@ -607,14 +607,14 @@ public abstract class BaseGameServer : IServerContext
                     var buf = new byte[length];
                     await ReadExactAsync(stream, buf, 0, length, token, _receiveTimeoutMs);
                     if (!CheckByteRateLimit(length, remote)) break;
-                    Envelope envelope;
+                    envelope envelope;
                     try
                     {
-                        envelope = Envelope.Parser.ParseFrom(buf);
+                        envelope = envelope.Parser.ParseFrom(buf);
                     }
                     catch (InvalidProtocolBufferException exception)
                     {
-                        Log($"协议解析异常(Envelope): {exception.Message}，断开");
+                        Log($"协议解析异常(envelope): {exception.Message}，断开");
                         break;
                     }
                     if (!CheckMessageRateLimit(remote)) break;

@@ -8,9 +8,9 @@ using Shared;
 
 namespace LoginServer.Handlers;
 
-public class LoginMessageHandler(IUserAuthComponent authComponent) : IMessageHandler<LoginRequest, LoginResponse>
+public class LoginMessageHandler(IUserAuthComponent authComponent) : IMessageHandler<c2s_login, s2c_login>
 {
-    public async Task<LoginResponse?> HandleAsync(LoginRequest request, IServerContext context)
+    public async Task<s2c_login?> HandleAsync(c2s_login request, IServerContext context)
     {
         var authResult = await authComponent.AuthenticateAsync(request.Username, request.Password);
 
@@ -47,7 +47,7 @@ public class LoginMessageHandler(IUserAuthComponent authComponent) : IMessageHan
             }
         } 
 
-        return new LoginResponse
+        return new s2c_login
         {
             Success = authResult.Success,
             Message = authResult.Message,

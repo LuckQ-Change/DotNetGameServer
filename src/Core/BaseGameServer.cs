@@ -442,6 +442,7 @@ public abstract class BaseGameServer : IServerContext
     private async Task HandleClientR3(TcpClient client, CancellationToken token)
     {
         var remote = client.Client.RemoteEndPoint?.ToString() ?? "未知";
+        var remoteIp = (client.Client.RemoteEndPoint as IPEndPoint)?.Address?.ToString() ?? remote;
         Log($"客户端连接: {remote}");
         using (client)
         {
@@ -503,20 +504,20 @@ public abstract class BaseGameServer : IServerContext
                 return sum;
             }
 
-            bool CheckByteRateLimit(int bytes, string remoteEndpoint)
+            bool CheckByteRateLimit(int bytes, string remoteEndpoint, string remoteIpOnly)
             {
                 string reason;
                 var bps = AddBytesAndGetRate(bytes);
                 if (_ipMaxBytesPerSecond > 0)
                 {
-                    var ipRate = _ipRates.GetOrAdd(remoteEndpoint, _ => new IpSlidingRate());
+                    var ipRate = _ipRates.GetOrAdd(remoteIpOnly, _ => new IpSlidingRate());
                     var ipBpsNow = ipRate.AddBytesAndGetRate(bytes);
                     if (ipBpsNow > _ipMaxBytesPerSecond)
                     {
                         reason = "ip_bytes_rate_limit_exceeded";
                         Log($"[IP限速-字节] {remoteEndpoint} {ipBpsNow}B/s > {_ipMaxBytesPerSecond}B/s，断开");
                         Interlocked.Increment(ref _rateEventCount);
-                        AddToBlacklist(remoteEndpoint, TimeSpan.FromMinutes(2), reason);
+                        AddToBlacklist(remoteIpOnly, TimeSpan.FromMinutes(2), reason);
                         return false;
                     }
                 }
@@ -531,20 +532,20 @@ public abstract class BaseGameServer : IServerContext
                 return true;
             }
 
-            bool CheckMessageRateLimit(string remoteEndpoint)
+            bool CheckMessageRateLimit(string remoteEndpoint, string remoteIpOnly)
             {
                 string reason;
                 var mps = AddMessagesAndGetRate(1);
                 if (_ipMaxMessagesPerSecond > 0)
                 {
-                    var ipRate = _ipRates.GetOrAdd(remoteEndpoint, _ => new IpSlidingRate());
+                    var ipRate = _ipRates.GetOrAdd(remoteIpOnly, _ => new IpSlidingRate());
                     var ipMpsNow = ipRate.AddMessagesAndGetRate(1);
                     if (ipMpsNow > _ipMaxMessagesPerSecond)
                     {
                         reason = "ip_message_rate_limit_exceeded";
                         Log($"[IP限速-频率] {remoteEndpoint} {ipMpsNow}/s > {_ipMaxMessagesPerSecond}/s，断开");
                         Interlocked.Increment(ref _rateEventCount);
-                        AddToBlacklist(remoteEndpoint, TimeSpan.FromMinutes(2), reason);
+                        AddToBlacklist(remoteIpOnly, TimeSpan.FromMinutes(2), reason);
                         return false;
                     }
                 }
@@ -567,6 +568,7 @@ public abstract class BaseGameServer : IServerContext
                     var incomingReqId = string.IsNullOrWhiteSpace(envelope.RequestId)
                         ? Guid.NewGuid().ToString("N")
                         : envelope.RequestId;
+                    Log($"recv route={envelope.Type} req_id={incomingReqId} ip={remote}");
                     var reqContext = new RequestServerContext(this, envelope.Token ?? string.Empty, remote, incomingReqId);
                     if (_typedHandlers.TryGetValue(envelope.Type, out var strong))
                     {
@@ -576,6 +578,7 @@ public abstract class BaseGameServer : IServerContext
                             await WriteenvelopeAsync(stream, result.Value.responseType, result.Value.payload,
                                 envelope.RequestId, result.Value.errorCode, result.Value.errorMessage, token,
                                 _receiveTimeoutMs);
+                            Log($"send route={result.Value.responseType} req_id={envelope.RequestId} ip={remote} error_code={result.Value.errorCode}");
                         }
                     }
                     else
@@ -597,7 +600,7 @@ public abstract class BaseGameServer : IServerContext
                     var lenBuf = new byte[4];
                     var read = await ReadExactAsync(stream, lenBuf, 0, 4, token, _receiveTimeoutMs);
                     if (read == 0) break;
-                    if (!CheckByteRateLimit(read, remote)) break;
+                    if (!CheckByteRateLimit(read, remote, remoteIp)) break;
                     var length = BitConverter.ToInt32(lenBuf, 0);
                     if (length <= 0 || length > _maxMessageSize)
                     {
@@ -606,7 +609,7 @@ public abstract class BaseGameServer : IServerContext
                     }
                     var buf = new byte[length];
                     await ReadExactAsync(stream, buf, 0, length, token, _receiveTimeoutMs);
-                    if (!CheckByteRateLimit(length, remote)) break;
+                    if (!CheckByteRateLimit(length, remote, remoteIp)) break;
                     envelope envelope;
                     try
                     {
@@ -617,7 +620,7 @@ public abstract class BaseGameServer : IServerContext
                         Log($"协议解析异常(envelope): {exception.Message}，断开");
                         break;
                     }
-                    if (!CheckMessageRateLimit(remote)) break;
+                    if (!CheckMessageRateLimit(remote, remoteIp)) break;
                     subject.OnNext(envelope);
                 }
             }

@@ -179,7 +179,7 @@ internal sealed class HandlerInvoker<TReq, TResp> : IHandlerInvoker
             activity?.AddTag(TagStatus, status);
             if (!string.IsNullOrWhiteSpace(errorCode)) activity?.AddTag(TagErrorCode, errorCode);
             activity?.AddTag(TagLatencyMs, (int)sw.Elapsed.TotalMilliseconds);
-            context.Log($"req_id={context.RequestId} ip={context.RemoteAddress} type={_reqTypeName} status={status} code={errorCode ?? ""} latency_ms={(int)sw.Elapsed.TotalMilliseconds}");
+            context.Log($"req_id={context.RequestId} ip={context.RemoteAddress} route={_reqTypeName} status={status} code={errorCode ?? ""} latency_ms={(int)sw.Elapsed.TotalMilliseconds}");
             activity?.Stop();
         }
 

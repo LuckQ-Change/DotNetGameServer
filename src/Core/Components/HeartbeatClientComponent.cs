@@ -206,7 +206,7 @@ public class HeartbeatClientComponent : IServerComponent
         try
         {
             await EnsureConnectedAsync(host, port, ct);
-            var env = new envelope { Type = "HeartbeatRequest", Payload = ByteString.CopyFrom(req.ToByteArray()) };
+            var env = new envelope { Type = c2s_heartbeat.Descriptor.Name, Payload = ByteString.CopyFrom(req.ToByteArray()) };
             try
             {
                 var secret = _secret ?? "dev-secret";

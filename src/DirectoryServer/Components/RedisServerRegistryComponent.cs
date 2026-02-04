@@ -28,6 +28,8 @@ public class RedisServerRegistryComponent : IServerRegistryComponent
     private readonly Policy _redisPolicy;
     private readonly bool _useMessagePack;
     private readonly RedisSecurityOptions? _securityOptions;
+    // 内存降级缓存：当 Redis 不可用时，返回最后一次成功的服务器列表
+    private List<ServerRecord> _fallbackCache = new();
     private static readonly string CheckTokenScriptText = "local v = redis.call('GET', KEYS[1]) \nif not v then return 0 end \nif v == ARGV[1] then \n  if ARGV[2] == '1' then redis.call('DEL', KEYS[1]) end \n  return 1 \nelse \n  return 0 \nend";
     private readonly LuaScript _checkTokenScript = LuaScript.Prepare(CheckTokenScriptText);
     private LoadedLuaScript? _checkTokenLoadedScript;
@@ -157,23 +159,45 @@ public class RedisServerRegistryComponent : IServerRegistryComponent
 
     public IEnumerable<ServerRecord> ListServers()
     {
-        if (_db == null) yield break;
-        PurgeExpired();
-        var now = TimeManager.UnixSeconds;
-        var entries = RedisExec("zrange_active", () => _db.SortedSetRangeByScoreWithScores(ServersZSetKey(), now - (long)_removeTtl.TotalSeconds, double.PositiveInfinity));
-        if (entries == null || entries.Length == 0) yield break;
-        // 批量读取记录值
-        var keys = entries.Select(e => (RedisKey)ServerKey(e.Element!)).ToArray();
-        var values = RedisExec("mget_servers", () => _db.StringGet(keys));
-        for (int i = 0; i < entries.Length; i++)
+        if (_db == null)
         {
-            var scoreSec = entries[i].Score;
-            var val = values[i];
-            if (val.IsNullOrEmpty) continue;
-            var rec = DeserializeRecord(val);
-            if (rec == null) continue;
-            var isOnline = (DateTimeOffset.UtcNow.ToUnixTimeSeconds() - (long)scoreSec) <= (long)_offlineTtl.TotalSeconds;
-            yield return isOnline ? rec : rec with { Status = "offline" };
+            // 如果从未连接成功，返回空或降级数据
+            return _fallbackCache;
+        }
+
+        try
+        {
+            PurgeExpired();
+            var now = TimeManager.UnixSeconds;
+            // 尝试从 Redis 读取
+            var entries = RedisExec("zrange_active", () => _db.SortedSetRangeByScoreWithScores(ServersZSetKey(), now - (long)_removeTtl.TotalSeconds, double.PositiveInfinity));
+            if (entries == null || entries.Length == 0) return Enumerable.Empty<ServerRecord>();
+
+            // 批量读取记录值
+            var keys = entries.Select(e => (RedisKey)ServerKey(e.Element!)).ToArray();
+            var values = RedisExec("mget_servers", () => _db.StringGet(keys));
+            
+            var list = new List<ServerRecord>();
+            for (int i = 0; i < entries.Length; i++)
+            {
+                var scoreSec = entries[i].Score;
+                var val = values[i];
+                if (val.IsNullOrEmpty) continue;
+                var rec = DeserializeRecord(val);
+                if (rec == null) continue;
+                var isOnline = (DateTimeOffset.UtcNow.ToUnixTimeSeconds() - (long)scoreSec) <= (long)_offlineTtl.TotalSeconds;
+                list.Add(isOnline ? rec : rec with { Status = "offline" });
+            }
+
+            // 更新降级缓存
+            _fallbackCache = list;
+            return list;
+        }
+        catch (Exception ex)
+        {
+            // Redis 故障时，触发降级逻辑
+            Console.WriteLine($"[{DateTime.UtcNow:HH:mm:ss} ERR] [RedisServerRegistry] ListServers failed, using fallback cache. Error: {ex.Message}");
+            return _fallbackCache;
         }
     }
 

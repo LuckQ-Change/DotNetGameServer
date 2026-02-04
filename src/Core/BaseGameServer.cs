@@ -108,7 +108,6 @@ public abstract class BaseGameServer : IServerContext
         try
         {
             AddComponent<ITokenSecretProvider>(new TokenSecretProviderComponent(AppContext.BaseDirectory));
-            // 令牌撤销列表（内存实现）。如需分布式，可在具体服务中替换为 Redis 实现。
             AddComponent<ITokenRevocationStore>(new InMemoryTokenRevocationStore());
         }
         catch (Exception ex)
@@ -151,7 +150,6 @@ public abstract class BaseGameServer : IServerContext
         where TResp : class, IMessage<TResp>, new()
     {
         var invoker = new HandlerInvoker<TReq, TResp>(handler);
-        // 同时注册短名与全名，兼容现有 envelope.type 用法
         var reqName = new TReq().Descriptor.Name;
         var reqFullName = new TReq().Descriptor.FullName;
         _typedHandlers[reqName] = invoker;
@@ -374,7 +372,7 @@ public abstract class BaseGameServer : IServerContext
                     continue;
                 }
 
-                _ = Task.Run(() => HandleClientR3(client, token), token);
+                _ = Task.Run(() => HandleClient(client, token), token);
                 // 成功接受连接后重置退避
                 currentBackoffMs = _acceptBackoffMs;
             }
@@ -422,7 +420,7 @@ public abstract class BaseGameServer : IServerContext
     /// <summary>
     /// 将响应类型与载荷封装为信封并写入网络流。
     /// </summary>
-    private static async Task WriteenvelopeAsync(Stream stream, string type, byte[] payload, string? requestId,
+    private static async Task WriteEnvelopeAsync(Stream stream, string type, byte[] payload, string? requestId,
         int errorCode, string? errorMessage, CancellationToken token, int timeoutMs)
     {
         var env = new envelope { Type = type, Payload = ByteString.CopyFrom(payload) };
@@ -439,7 +437,7 @@ public abstract class BaseGameServer : IServerContext
         await stream.FlushAsync(cts.Token);
     }
 
-    private async Task HandleClientR3(TcpClient client, CancellationToken token)
+    private async Task HandleClient(TcpClient client, CancellationToken token)
     {
         var remote = client.Client.RemoteEndPoint?.ToString() ?? "未知";
         var remoteIp = (client.Client.RemoteEndPoint as IPEndPoint)?.Address?.ToString() ?? remote;
@@ -575,7 +573,7 @@ public abstract class BaseGameServer : IServerContext
                         var result = await strong.Invoke(envelope.Payload, reqContext);
                         if (result != null)
                         {
-                            await WriteenvelopeAsync(stream, result.Value.responseType, result.Value.payload,
+                            await WriteEnvelopeAsync(stream, result.Value.responseType, result.Value.payload,
                                 envelope.RequestId, result.Value.errorCode, result.Value.errorMessage, token,
                                 _receiveTimeoutMs);
                             Log($"send route={result.Value.responseType} req_id={envelope.RequestId} ip={remote} error_code={result.Value.errorCode}");

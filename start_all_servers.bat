@@ -7,7 +7,24 @@ if "%PROJECT_PATH:~-1%"=="\" set "PROJECT_PATH=%PROJECT_PATH:~0,-1%"
 
 rem Build configuration (optional first argument), default to Debug
 set "CONFIG=Debug"
-if not "%~1"=="" set "CONFIG=%~1"
+set "SINGLE_WINDOW=0"
+
+rem Ensure Development environment and provide a non-default DIRECTORY_TOKEN_SECRET to satisfy production guard if misconfigured
+set DOTNET_ENVIRONMENT=Development
+set ASPNETCORE_ENVIRONMENT=Development
+rem Align all services with appsettings.json: directory.tokenSecret = "changeme-dev"
+set DIRECTORY_TOKEN_SECRET=changeme-dev
+
+:parse_args
+if "%~1"=="" goto :args_done
+if /i "%~1"=="single" set "SINGLE_WINDOW=1" & shift & goto :parse_args
+if /i "%~1"=="--single" set "SINGLE_WINDOW=1" & shift & goto :parse_args
+if /i "%~1"=="debug" set "CONFIG=Debug" & shift & goto :parse_args
+if /i "%~1"=="release" set "CONFIG=Release" & shift & goto :parse_args
+rem Fallback for unknown arg acting as config (legacy behavior)
+if not "%~1"=="" set "CONFIG=%~1" & shift & goto :parse_args
+goto :parse_args
+:args_done
 
 echo Building ServerHost project (%CONFIG%)...
 dotnet build "%PROJECT_PATH%\src\ServerHost\ServerHost.csproj" -c %CONFIG%
@@ -18,13 +35,10 @@ set "TFM=net9.0"
 if exist "%PROJECT_PATH%\src\ServerHost\bin\%CONFIG%\net8.0\ServerHost.dll" set "TFM=net8.0"
 
 set "DLL_PATH=%PROJECT_PATH%\src\ServerHost\bin\%CONFIG%\%TFM%\ServerHost.dll"
-echo Launching server instances from %DLL_PATH% ...
 
-rem Ensure Development environment and provide a non-default DIRECTORY_TOKEN_SECRET to satisfy production guard if misconfigured
-set DOTNET_ENVIRONMENT=Development
-set ASPNETCORE_ENVIRONMENT=Development
-rem Align all services with appsettings.json: directory.tokenSecret = "changeme-dev"
-set DIRECTORY_TOKEN_SECRET=changeme-dev
+if "%SINGLE_WINDOW%"=="1" goto :launch_single
+
+echo Launching server instances from %DLL_PATH% ...
 
 rem Auto-detect present servers by project file and start with incremental ports
 set BASE_PORT=5500
@@ -45,6 +59,11 @@ set /a HEALTH_BASE+=1
 call :try_start "LogicGameServer" logic %BASE_PORT% %HEALTH_BASE%
 
 echo Auto-detected servers have been launched in new windows.
+goto :eof
+
+:launch_single
+echo Launching ALL servers in ONE window (Development Mode)...
+dotnet exec "%DLL_PATH%" -- --service=all
 goto :eof
 
 :try_start

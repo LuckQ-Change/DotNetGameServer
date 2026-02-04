@@ -34,10 +34,6 @@ public static class ConfigKeys
     public const string DirectoryRegistryCleanupIntervalSecondsEnv = "DIRECTORY_REGISTRY_CLEANUP_INTERVAL_SECONDS";
     public const string RedisConnectionEnv = "REDIS_CONNECTION";
 
-    // ResourceServer - 资源根路径
-    public const string ResourceRootConfigKey = "resource:root";
-    public const string ResourceRootEnv = "RESOURCE_ROOT";
-
     // Core/Base/Server 通用运行参数（环境变量名）
     public const string ServerMaxMessageSizeEnv = "SERVER_MAX_MESSAGE_SIZE";
     public const string ServerMaxConnectionsEnv = "SERVER_MAX_CONNECTIONS";

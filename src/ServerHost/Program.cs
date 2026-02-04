@@ -274,7 +274,7 @@ namespace ServerHost
         private readonly IServiceProvider _serviceProvider;
         private readonly IHostEnvironment _hostEnvironment;
         private readonly CurrentServerAccessor _accessor;
-        private BaseGameServer? _server;
+        private readonly List<BaseGameServer> _servers = new();
         private IServiceScope? _loginScope;
 
         public GameServerService(ILogger<GameServerService> logger, IConfiguration configuration,
@@ -291,7 +291,7 @@ namespace ServerHost
         {
             var service = _configuration[Shared.Constants.ConfigKeys.ServiceConfigKey] ??
                           Environment.GetEnvironmentVariable(Shared.Constants.ConfigKeys.ServiceEnv) ?? "directory";
-            var port = _configuration.GetValue<int?>("port") ??
+            var portConfig = _configuration.GetValue<int?>("port") ??
                        (int.TryParse(Environment.GetEnvironmentVariable(Shared.Constants.ConfigKeys.PortEnv), out var p)
                            ? p
                            : 5500);
@@ -305,7 +305,35 @@ namespace ServerHost
                 ValidateProductionConfiguration();
             }
 
-            _server = service.ToLowerInvariant() switch
+            if (string.Equals(service, "all", StringComparison.OrdinalIgnoreCase))
+            {
+                // 单进程启动所有服务模式（开发环境专用）
+                await StartServerInstanceAsync("directory", 5500);
+                await StartServerInstanceAsync("login", 5501);
+                await StartServerInstanceAsync("battle", 5502);
+                await StartServerInstanceAsync("logic", 5503);
+
+                // 将目录服务器设为控制台上下文默认目标
+                var dir = _servers.FirstOrDefault(s => s is DirectoryServer.DirectoryGameServer);
+                if (dir != null) _accessor.Set(dir);
+                
+                try { Console.Title = "All Servers (5500-5503)"; } catch { }
+            }
+            else
+            {
+                await StartServerInstanceAsync(service, portConfig);
+                if (_servers.Count > 0)
+                {
+                    var s = _servers[0];
+                    _accessor.Set(s);
+                    try { Console.Title = $"{s.ServerName} : {portConfig}"; } catch { }
+                }
+            }
+        }
+
+        private async Task StartServerInstanceAsync(string serviceType, int port)
+        {
+            BaseGameServer server = serviceType.ToLowerInvariant() switch
             {
                 "directory" => new DirectoryServer.DirectoryGameServer(
                     _serviceProvider.GetRequiredService<ILogger<DirectoryServer.DirectoryGameServer>>(),
@@ -315,26 +343,21 @@ namespace ServerHost
                     .GetRequiredService<ILogger<BattleServer.BattleGameServer>>()),
                 "logic" => new LogicServer.LogicGameServer(_serviceProvider
                     .GetRequiredService<ILogger<LogicServer.LogicGameServer>>()),
-                _ => throw new ArgumentException($"未知服务类型: {service}")
+                _ => throw new ArgumentException($"未知服务类型: {serviceType}")
             };
 
-            await _server.StartAsync(port);
-            _accessor.Set(_server);
-            _logger.LogInformation("服务启动成功: {server} 正在监听 {port}, 环境={env}", _server.ServerName, port,
-                _hostEnvironment.EnvironmentName);
-            try { Console.Title = $"{_server.ServerName} : {port}"; }
-            catch
-            {
-                // 某些宿主环境不支持设置控制台标题，忽略即可
-            }
+            await server.StartAsync(port);
+            _servers.Add(server);
+            _logger.LogInformation("服务启动成功: {server} 正在监听 {port}, 环境={env}", server.ServerName, port, _hostEnvironment.EnvironmentName);
         }
 
         public async Task StopAsync(CancellationToken cancellationToken)
         {
-            if (_server != null)
+            foreach (var server in _servers)
             {
-                await _server.StopAsync();
+                await server.StopAsync();
             }
+            _servers.Clear();
             try { _accessor.Set(null); } catch { }
             try { _loginScope?.Dispose(); } catch { }
             _loginScope = null;

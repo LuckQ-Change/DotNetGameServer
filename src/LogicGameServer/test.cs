@@ -18,7 +18,11 @@ public class TestReview(ILogger<LogicGameServer> logger) : BaseGameServer(nameof
             statusProvider: () => "online",
             baseDir: AppContext.BaseDirectory
         ));
-
+SetWUJiaQing();
         await base.StartAsync(port);
+    }
+    private void SetWUJiaQing(){
+        var w=new object();
+        w.name="wau";
     }
 }

@@ -7,15 +7,8 @@ namespace LoginServer.Components;
 /// 基于 Entity Framework Core 的用户认证组件。
 /// 注意：演示使用明文密码比对，生产环境请使用安全的密码哈希（如 bcrypt/scrypt/argon2）。
 /// </summary>
-public class DbUserAuthComponent : IUserAuthComponent
+public class DbUserAuthComponent(GameDbContext dbContext) : IUserAuthComponent
 {
-    private readonly GameDbContext _db;
-
-    public DbUserAuthComponent(GameDbContext dbContext)
-    {
-        _db = dbContext;
-    }
-
     public string Name => "DbUserAuth";
 
     public Task InitializeAsync()
@@ -31,15 +24,13 @@ public class DbUserAuthComponent : IUserAuthComponent
 
     public async Task<AuthResult> AuthenticateAsync(string username, string password)
     {
-        var user = await _db.Users.FirstOrDefaultAsync(u => u.Username == username);
+        var user = await dbContext.Users.FirstOrDefaultAsync(u => u.Username == username);
 
         if (user == null)
         {
             return new AuthResult(false, "用户不存在");
         }
 
-        // In a real application, you should use a secure password hashing library like BCrypt.Net
-        // For demonstration, we are doing a plain text comparison.
         var passwordMatches = user.Password == password;
 
         return passwordMatches

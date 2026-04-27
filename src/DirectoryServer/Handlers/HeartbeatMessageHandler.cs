@@ -1,10 +1,7 @@
 using Core;
 using DotNetGameServer;
-using Google.Protobuf;
 using DirectoryServer.Components;
 using Shared;
-using Core.Config;
-
 namespace DirectoryServer.Handlers;
 
 public class HeartbeatMessageHandler : IMessageHandler<c2s_heartbeat, s2c_heartbeat>

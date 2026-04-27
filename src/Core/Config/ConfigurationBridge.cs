@@ -31,7 +31,7 @@ public static class ConfigurationBridge
     /// </summary>
     public static void ValidateAndLog(IConfiguration config, ILogger? logger)
     {
-        var secretFromCfg = config[Shared.Constants.ConfigKeys.DirectoryTokenSecretKeyLower];
+        var secretFromCfg = config[ConfigKeys.DirectoryTokenSecretKeyLower];
         var secretFromEnv = Environment.GetEnvironmentVariable(ConfigKeys.DirectoryTokenSecretEnv);
         var secretFromFile = SimpleConfigLoader.LoadDirectoryTokenSecret(AppContext.BaseDirectory);
 

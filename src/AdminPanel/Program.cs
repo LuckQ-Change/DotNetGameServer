@@ -1,6 +1,5 @@
 using System.Text.Json;
 using System.Security.Cryptography;
-using DotNetGameServer.AdminPanel; // 为访问 HealthStatus 和 ServerStatusResult 所在命名空间
 using DotNetGameServer.AdminPanel.Data;
 using Microsoft.EntityFrameworkCore;
 
@@ -37,7 +36,7 @@ app.MapGet("/", () => Results.Redirect("/monitoring/status.html"));
 
 app.MapPost("/api/resource/upload", async (IFormFile file, AdminDbContext dbContext, ILogger<Program> logger) =>
 {
-    if (file == null || file.Length == 0)
+    if (file.Length == 0)
     {
         return Results.BadRequest("No file uploaded.");
     }
@@ -45,7 +44,7 @@ app.MapPost("/api/resource/upload", async (IFormFile file, AdminDbContext dbCont
     var tempDir = Path.Combine(Path.GetTempPath(), "adminpanel_uploads");
     Directory.CreateDirectory(tempDir);
     var tempPath = Path.Combine(tempDir, Path.GetRandomFileName());
-    string hashString = string.Empty;
+    string hashString;
 
     try
     {
@@ -72,7 +71,7 @@ app.MapPost("/api/resource/upload", async (IFormFile file, AdminDbContext dbCont
         Directory.CreateDirectory(Path.GetDirectoryName(permanentStoragePath)!);
         File.Move(tempPath, permanentStoragePath);
 
-        var resource = new DotNetGameServer.AdminPanel.Data.Resource
+        var resource = new Resource
         {
             FileName = file.FileName,
             Hash = hashString,

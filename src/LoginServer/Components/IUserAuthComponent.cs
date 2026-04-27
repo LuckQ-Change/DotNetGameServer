@@ -7,7 +7,7 @@ namespace LoginServer.Components;
 /// </summary>
 public interface IUserAuthComponent : IServerComponent
 {
-    Task<AuthResult> AuthenticateAsync(string username, string password);
+    public Task<AuthResult> AuthenticateAsync(string username, string password);
 }
 
 /// <summary>

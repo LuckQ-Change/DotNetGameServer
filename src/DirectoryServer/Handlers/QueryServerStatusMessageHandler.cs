@@ -1,6 +1,5 @@
 using Core;
 using DotNetGameServer;
-using Google.Protobuf;
 using DirectoryServer.Components;
 
 namespace DirectoryServer.Handlers;

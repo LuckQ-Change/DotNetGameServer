@@ -1,13 +1,11 @@
-using System.Threading;
 using System.Diagnostics.Metrics;
 using Core;
 
 namespace DirectoryServer.Components;
 
-public class DirectoryMetricsComponent : IServerComponent
+public class DirectoryMetricsComponent(Action<string> log, Func<int>? activeServersProvider = null)
+    : IServerComponent
 {
-    private readonly Action<string> _log;
-    private readonly Func<int>? _activeServersProvider;
     private CancellationTokenSource? _cts;
 
     private long _hbAccepted;
@@ -19,12 +17,6 @@ public class DirectoryMetricsComponent : IServerComponent
     private DateTime _periodStartUtc = DateTime.UtcNow;
 
     public string Name => "Metrics";
-
-    public DirectoryMetricsComponent(Action<string> log, Func<int>? activeServersProvider = null)
-    {
-        _log = log;
-        _activeServersProvider = activeServersProvider;
-    }
 
     // OTEL/Prometheus 指标（通过 System.Diagnostics.Metrics 暴露）
     private Meter? _meter;
@@ -127,9 +119,9 @@ public class DirectoryMetricsComponent : IServerComponent
                 var swOk = Interlocked.Read(ref _swAccepted);
                 var swReject = Interlocked.Read(ref _swRejected);
                 var swErr = Interlocked.Read(ref _swError);
-                var active = _activeServersProvider?.Invoke();
+                var active = activeServersProvider?.Invoke();
 
-                _log($"[目录] 指标汇总 [{start:HH:mm:ss} - {end:HH:mm:ss}]: HB ok={hbOk} reject={hbReject} err={hbErr}; SW ok={swOk} reject={swReject} err={swErr}; active={(active?.ToString() ?? "-")} ");
+                log($"[目录] 指标汇总 [{start:HH:mm:ss} - {end:HH:mm:ss}]: HB ok={hbOk} reject={hbReject} err={hbErr}; SW ok={swOk} reject={swReject} err={swErr}; active={(active?.ToString() ?? "-")} ");
                 Reset();
             }
             catch (Exception)

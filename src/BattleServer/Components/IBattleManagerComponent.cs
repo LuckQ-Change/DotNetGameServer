@@ -7,8 +7,8 @@ namespace BattleServer;
 /// </summary>
 public interface IBattleManagerComponent : IServerComponent
 {
-    Task<BattleInfo?> StartBattleAsync(string playerId, string battleType);
-    Task<AttackResult?> ProcessAttackAsync(string battleId, string playerId, int damage);
-    Task<BattleInfo?> GetBattleAsync(string battleId);
-    Task EndBattleAsync(string battleId);
+    public Task<BattleInfo?> StartBattleAsync(string playerId, string battleType);
+    public Task<AttackResult?> ProcessAttackAsync(string battleId, string playerId, int damage);
+    public Task<BattleInfo?> GetBattleAsync(string battleId);
+    public Task EndBattleAsync(string battleId);
 }

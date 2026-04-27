@@ -14,7 +14,8 @@ public class VerifySwitchTokenMessageHandler : IMessageHandler<c2s_verify_switch
             var reg = context.GetComponent<IServerRegistryComponent>();
             if (reg == null)
             {
-                return Task.FromResult<s2c_verify_switch_token?>(new s2c_verify_switch_token { Valid = false, Message = "目录组件不可用" });
+                return Task.FromResult<s2c_verify_switch_token?>(new s2c_verify_switch_token
+                    { Valid = false, Message = "目录组件不可用" });
             }
 
             // 校验签名与过期
@@ -22,14 +23,17 @@ public class VerifySwitchTokenMessageHandler : IMessageHandler<c2s_verify_switch
             var primary = secretProvider?.GetSecret();
             if (string.IsNullOrWhiteSpace(primary))
             {
-                return Task.FromResult<s2c_verify_switch_token?>(new s2c_verify_switch_token { Valid = false, Message = "目录令牌密钥不可用" });
+                return Task.FromResult<s2c_verify_switch_token?>(new s2c_verify_switch_token
+                    { Valid = false, Message = "目录令牌密钥不可用" });
             }
+
             string? tokenId = null;
             long expSec = 0;
             bool verified = false;
             foreach (var s in secretProvider!.GetVerifySecrets())
             {
-                if (!string.IsNullOrWhiteSpace(s) && Shared.TokenSigner.TryVerify(req.Token, req.UserId, req.ServerId, s, out var tid, out var e))
+                if (!string.IsNullOrWhiteSpace(s) &&
+                    Shared.TokenSigner.TryVerify(req.Token, req.UserId, req.ServerId, s, out var tid, out var e))
                 {
                     verified = true;
                     tokenId = tid;
@@ -37,11 +41,13 @@ public class VerifySwitchTokenMessageHandler : IMessageHandler<c2s_verify_switch
                     break;
                 }
             }
+
             if (!verified || tokenId == null)
             {
                 metrics?.RecordSwitch(false);
                 context.Log($"[目录] 令牌签名或过期校验失败 user={req.UserId}, server={req.ServerId}");
-                return Task.FromResult<s2c_verify_switch_token?>(new s2c_verify_switch_token { Valid = false, Message = "令牌签名或过期无效" });
+                return Task.FromResult<s2c_verify_switch_token?>(new s2c_verify_switch_token
+                    { Valid = false, Message = "令牌签名或过期无效" });
             }
 
             // 检查注册表中令牌是否存在/匹配，并可选地消费
@@ -49,7 +55,8 @@ public class VerifySwitchTokenMessageHandler : IMessageHandler<c2s_verify_switch
             if (!ok)
             {
                 metrics?.RecordSwitch(false);
-                return Task.FromResult<s2c_verify_switch_token?>(new s2c_verify_switch_token { Valid = false, Message = "令牌不存在或不匹配" });
+                return Task.FromResult<s2c_verify_switch_token?>(new s2c_verify_switch_token
+                    { Valid = false, Message = "令牌不存在或不匹配" });
             }
 
             metrics?.RecordSwitch(true);
@@ -66,8 +73,8 @@ public class VerifySwitchTokenMessageHandler : IMessageHandler<c2s_verify_switch
         {
             metrics?.RecordSwitchError();
             context.Log($"[目录] 令牌验证异常: {ex.Message}");
-            return Task.FromResult<s2c_verify_switch_token?>(new s2c_verify_switch_token { Valid = false, Message = "内部错误" });
+            return Task.FromResult<s2c_verify_switch_token?>(new s2c_verify_switch_token
+                { Valid = false, Message = "内部错误" });
         }
     }
-
 }

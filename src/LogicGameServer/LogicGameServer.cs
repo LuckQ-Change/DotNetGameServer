@@ -1,6 +1,7 @@
 using Core;
 using Core.Components;
 using Core.Ecs;
+
 using Microsoft.Extensions.Logging;
 
 namespace LogicServer;
@@ -11,11 +12,9 @@ public class LogicGameServer(ILogger<LogicGameServer> logger) : BaseGameServer(n
     {
         AddComponent(new EcsWorldComponent());
         AddComponent(new HeartbeatClientComponent(
-            message => LogHeartbeat(message),
-            type: "logic",
+            LogHeartbeat,
+            type: nameof(LogicGameServer),
             portProvider: () => ListeningPort,
-            playerCountProvider: () => 0,
-            statusProvider: () => "online",
             baseDir: AppContext.BaseDirectory
         ));
 

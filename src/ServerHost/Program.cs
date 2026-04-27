@@ -45,6 +45,7 @@ static IDictionary<string, string> PreParseArgs(string[] argv)
                 val = argv[++i];
             }
         }
+
         if (string.IsNullOrWhiteSpace(key) || val is null) continue;
         if (string.Equals(key, "service", StringComparison.OrdinalIgnoreCase))
             dict[Shared.Constants.ConfigKeys.ServiceConfigKey] = val;
@@ -53,11 +54,12 @@ static IDictionary<string, string> PreParseArgs(string[] argv)
         else if (string.Equals(key, "healthCheckUrl", StringComparison.OrdinalIgnoreCase))
             dict[Shared.Constants.ConfigKeys.ServiceHealthCheckUrlKeyLower] = val;
     }
+
     return dict;
 }
-builder.Configuration.AddInMemoryCollection(PreParseArgs(args));
 
-// Configuration
+builder.Configuration.AddInMemoryCollection(PreParseArgs(args)!);
+
 builder.Configuration
     .SetBasePath(AppContext.BaseDirectory)
     .AddJsonFile("appsettings.json", optional: true, reloadOnChange: true)
@@ -70,7 +72,6 @@ builder.Configuration
         ["--healthCheckUrl"] = Shared.Constants.ConfigKeys.ServiceHealthCheckUrlKeyLower
     });
 
-// Services
 builder.Services.AddDbContext<GameDbContext>(options =>
 {
     if (builder.Environment.IsDevelopment())
@@ -85,7 +86,6 @@ builder.Services.AddDbContext<GameDbContext>(options =>
 
 builder.Services.AddScoped<IUserAuthComponent, DbUserAuthComponent>();
 
-// Telemetry: Metrics
 var metricsEnabled = builder.Configuration.GetValue<bool?>(Shared.Constants.ConfigKeys.TelemetryMetricsEnabledKeyLower)
                      ?? (bool.TryParse(
                          Environment.GetEnvironmentVariable(Shared.Constants.ConfigKeys.TelemetryMetricsEnabledEnv),
@@ -135,18 +135,16 @@ builder.Services.AddHealthChecks()
     .AddCheck<ServerHealthCheck>("liveness", tags: new[] { "liveness" })
     .AddCheck<ReadinessHealthCheck>("readiness", tags: new[] { "readiness" });
 
-// Logging
 builder.Logging.ClearProviders();
 builder.Logging.AddConsole();
 
-// Health check HTTP URL
 var healthUrl = builder.Configuration[Shared.Constants.ConfigKeys.ServiceHealthCheckUrlKeyLower]
                 ?? Environment.GetEnvironmentVariable(Shared.Constants.ConfigKeys.ServiceHealthCheckUrlEnv)
                 ?? Environment.GetEnvironmentVariable(Shared.Constants.ConfigKeys.HealthCheckUrlEnv);
 
 var app = builder.Build();
-Core.Diagnostics.BasicCommands.RegisterAll();
-// Configure listening URL for the embedded HTTP server (health checks)
+BasicCommands.RegisterAll();
+
 if (!string.IsNullOrWhiteSpace(healthUrl))
 {
     try
@@ -155,14 +153,12 @@ if (!string.IsNullOrWhiteSpace(healthUrl))
     }
     catch
     {
-        /* ignore malformed url */
+        /* ignore*/
     }
 }
 
-// Seed the database in development environment
 HostingUtilities.SeedDevelopmentDatabase(app.Services);
 
-// Map health checks endpoint（liveness）
 app.MapHealthChecks("/health", new Microsoft.AspNetCore.Diagnostics.HealthChecks.HealthCheckOptions
 {
     ResponseWriter = async (context, report) =>
@@ -183,7 +179,6 @@ app.MapHealthChecks("/health", new Microsoft.AspNetCore.Diagnostics.HealthChecks
     }
 });
 
-// Map readiness endpoint（只包含 readiness 标签的检查）
 app.MapHealthChecks("/ready", new Microsoft.AspNetCore.Diagnostics.HealthChecks.HealthCheckOptions
 {
     Predicate = r => r.Tags.Contains("readiness"),
@@ -205,41 +200,46 @@ app.MapHealthChecks("/ready", new Microsoft.AspNetCore.Diagnostics.HealthChecks.
     }
 });
 
-app.MapPost("/admin/command", async (HttpContext context, IConfiguration cfg, IHostEnvironment env, CurrentServerAccessor accessor) =>
-{
-    var enabled = env.IsDevelopment() || string.Equals(cfg["ADMIN_HTTP_ENABLED"], "true", StringComparison.OrdinalIgnoreCase);
-    if (!enabled) return Results.NotFound();
-    if (!env.IsDevelopment())
+app.MapPost("/admin/command",
+    async (HttpContext context, IConfiguration cfg, IHostEnvironment env, CurrentServerAccessor accessor) =>
     {
-        var auth = context.Request.Headers["Authorization"].ToString();
-        if (string.IsNullOrWhiteSpace(auth) || !auth.StartsWith("Bearer ")) return Results.Unauthorized();
-        var token = auth.Substring("Bearer ".Length);
-        var expect = cfg["ADMIN_TOKEN"] ?? Environment.GetEnvironmentVariable("ADMIN_TOKEN");
-        if (string.IsNullOrWhiteSpace(expect) || !string.Equals(token, expect)) return Results.Unauthorized();
-        var ip = context.Connection.RemoteIpAddress;
-        if (ip != null && !IPAddress.IsLoopback(ip))
+        var enabled = env.IsDevelopment() ||
+                      string.Equals(cfg["ADMIN_HTTP_ENABLED"], "true", StringComparison.OrdinalIgnoreCase);
+        if (!enabled) return Results.NotFound();
+        if (!env.IsDevelopment())
         {
-            var allowed = (cfg["ADMIN_HTTP_ALLOWED_IPS"] ?? "127.0.0.1").Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
-            var hit = allowed.Any(a => string.Equals(a, ip.ToString(), StringComparison.OrdinalIgnoreCase));
-            if (!hit) return Results.Unauthorized();
+            var auth = context.Request.Headers["Authorization"].ToString();
+            if (string.IsNullOrWhiteSpace(auth) || !auth.StartsWith("Bearer ")) return Results.Unauthorized();
+            var token = auth.Substring("Bearer ".Length);
+            var expect = cfg["ADMIN_TOKEN"] ?? Environment.GetEnvironmentVariable("ADMIN_TOKEN");
+            if (string.IsNullOrWhiteSpace(expect) || !string.Equals(token, expect)) return Results.Unauthorized();
+            var ip = context.Connection.RemoteIpAddress;
+            if (ip != null && !IPAddress.IsLoopback(ip))
+            {
+                var allowed = (cfg["ADMIN_HTTP_ALLOWED_IPS"] ?? "127.0.0.1").Split(',',
+                    StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+                var hit = allowed.Any(a => string.Equals(a, ip.ToString(), StringComparison.OrdinalIgnoreCase));
+                if (!hit) return Results.Unauthorized();
+            }
         }
-    }
-    using var sr = new StreamReader(context.Request.Body);
-    var body = await sr.ReadToEndAsync();
-    string cmdText;
-    try
-    {
-        var doc = System.Text.Json.JsonDocument.Parse(body);
-        cmdText = doc.RootElement.TryGetProperty("cmd", out var c) ? c.GetString() ?? string.Empty : string.Empty;
-    }
-    catch
-    {
-        cmdText = body;
-    }
-    var ctx = new DefaultCommandContext(accessor.Server);
-    var res = await CommandRegistry.ExecuteTextAsync(cmdText, ctx);
-    return Results.Json(res);
-});
+
+        using var sr = new StreamReader(context.Request.Body);
+        var body = await sr.ReadToEndAsync();
+        string cmdText;
+        try
+        {
+            var doc = System.Text.Json.JsonDocument.Parse(body);
+            cmdText = doc.RootElement.TryGetProperty("cmd", out var c) ? c.GetString() ?? string.Empty : string.Empty;
+        }
+        catch
+        {
+            cmdText = body;
+        }
+
+        var ctx = new DefaultCommandContext(accessor.Server);
+        var res = await CommandRegistry.ExecuteTextAsync(cmdText, ctx);
+        return Results.Json(res);
+    });
 
 await app.RunAsync();
 
@@ -257,7 +257,7 @@ namespace ServerHost
                 var dbContext = serviceProvider.GetRequiredService<GameDbContext>();
                 if (!dbContext.Users.Any())
                 {
-                    dbContext.Users.Add(new Core.Db.User { Username = "test", Password = "password" });
+                    dbContext.Users.Add(new User { Username = "test", Password = "password" });
                     dbContext.SaveChanges();
                 }
             }
@@ -292,9 +292,10 @@ namespace ServerHost
             var service = _configuration[Shared.Constants.ConfigKeys.ServiceConfigKey] ??
                           Environment.GetEnvironmentVariable(Shared.Constants.ConfigKeys.ServiceEnv) ?? "directory";
             var portConfig = _configuration.GetValue<int?>("port") ??
-                       (int.TryParse(Environment.GetEnvironmentVariable(Shared.Constants.ConfigKeys.PortEnv), out var p)
-                           ? p
-                           : 5500);
+                             (int.TryParse(Environment.GetEnvironmentVariable(Shared.Constants.ConfigKeys.PortEnv),
+                                 out var p)
+                                 ? p
+                                 : 5500);
 
             // 配置链路校验与提示：记录 DirectoryTokenSecret 来源
             Core.Config.ConfigurationBridge.ValidateAndLog(_configuration, _logger);
@@ -316,8 +317,15 @@ namespace ServerHost
                 // 将目录服务器设为控制台上下文默认目标
                 var dir = _servers.FirstOrDefault(s => s is DirectoryServer.DirectoryGameServer);
                 if (dir != null) _accessor.Set(dir);
-                
-                try { Console.Title = "All Servers (5500-5503)"; } catch { }
+
+                try
+                {
+                    Console.Title = "All Servers (5500-5503)";
+                }
+                catch
+                {
+                    // ignore
+                }
             }
             else
             {
@@ -326,7 +334,14 @@ namespace ServerHost
                 {
                     var s = _servers[0];
                     _accessor.Set(s);
-                    try { Console.Title = $"{s.ServerName} : {portConfig}"; } catch { }
+                    try
+                    {
+                        Console.Title = $"{s.ServerName} : {portConfig}";
+                    }
+                    catch
+                    {
+                        // ignore
+                    }
                 }
             }
         }
@@ -348,7 +363,8 @@ namespace ServerHost
 
             await server.StartAsync(port);
             _servers.Add(server);
-            _logger.LogInformation("服务启动成功: {server} 正在监听 {port}, 环境={env}", server.ServerName, port, _hostEnvironment.EnvironmentName);
+            _logger.LogInformation("服务启动成功: {server} 正在监听 {port}, 环境={env}", server.ServerName, port,
+                _hostEnvironment.EnvironmentName);
         }
 
         public async Task StopAsync(CancellationToken cancellationToken)
@@ -357,9 +373,26 @@ namespace ServerHost
             {
                 await server.StopAsync();
             }
+
             _servers.Clear();
-            try { _accessor.Set(null); } catch { }
-            try { _loginScope?.Dispose(); } catch { }
+            try
+            {
+                _accessor.Set(null);
+            }
+            catch
+            {
+                // ignore
+            }
+
+            try
+            {
+                _loginScope?.Dispose();
+            }
+            catch
+            {
+                // ignore
+            }
+
             _loginScope = null;
         }
 

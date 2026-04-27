@@ -5,10 +5,10 @@ namespace Core.Components;
 public interface ITokenRevocationStore : IServerComponent
 {
     /// <summary>将 tokenId 标记为撤销，直到过期时间。</summary>
-    void Revoke(string tokenId, DateTimeOffset expireAt);
+    public void Revoke(string tokenId, DateTimeOffset expireAt);
 
     /// <summary>检查 tokenId 是否已被撤销（自动清理过期条目）。</summary>
-    bool IsRevoked(string tokenId);
+    public bool IsRevoked(string tokenId);
 }
 
 /// <summary>

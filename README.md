@@ -1,6 +1,6 @@
 ## DotNetGameServer 运行与配置指南（关键安全项）
 
-本项目由多种服务组成（Directory/Login/Logic/Battle/Resource），使用统一的 TCP + Protobuf Envelope 协议与 Unity 客户端通信。生产环境下，必须正确设置鉴权密钥与注册表等关键参数。
+本项目由多种服务组成（Directory/Login/Logic/Battle），使用统一的 TCP + Protobuf Envelope 协议与 Unity 客户端通信。生产环境下，必须正确设置鉴权密钥与注册表等关键参数。
 
 ### 1. 关键环境变量
 - DIRECTORY_TOKEN_SECRET：用于签发/校验令牌与心跳签名的 HMAC 密钥（必须是强随机字符串，生产必填且不可为默认值）
@@ -24,7 +24,7 @@ dotnet exec .\src\ServerHost\bin\Debug\net8.0\ServerHost.dll -- --service=direct
 ```
 
 ### 3. Docker 运行
-`docker-compose.yml` 已提供示例服务（directory/login/logic/battle/resource/redis/postgres）。请在部署前通过环境变量或 `.env` 配置强密钥与连接串：
+`docker-compose.yml` 已提供示例服务（directory/login/logic/battle/redis/postgres）。请在部署前通过环境变量或 `.env` 配置强密钥与连接串：
 ```
 DIRECTORY_TOKEN_SECRET=please-change-to-strong-secret
 REDIS_PASSWORD=please-change

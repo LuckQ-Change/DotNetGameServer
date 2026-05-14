@@ -37,7 +37,8 @@ public class SwitchServerMessageHandler : IMessageHandler<c2s_switch_server, s2c
                 return Task.FromResult<s2c_switch_server?>(resp);
             }
 
-            if (!string.Equals(s.Type, "logic", StringComparison.OrdinalIgnoreCase))
+            if (!string.Equals(s.Type, "logic", StringComparison.OrdinalIgnoreCase) &&
+                !string.Equals(s.Type, "battle", StringComparison.OrdinalIgnoreCase))
             {
                 metrics?.RecordSwitch(false);
                 resp.Success = false;

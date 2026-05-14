@@ -18,6 +18,27 @@ public static class CommandRegistry
         return Commands.Keys.ToArray();
     }
 
+    public static IReadOnlyList<CommandDescriptor> Describe()
+    {
+        var groups = Commands
+            .GroupBy(kv => kv.Value)
+            .Select(g =>
+            {
+                var cmd = g.Key;
+                var aliasSet = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+                foreach (var k in g.Select(x => x.Key))
+                {
+                    if (string.Equals(k, cmd.Name, StringComparison.OrdinalIgnoreCase)) continue;
+                    aliasSet.Add(k);
+                }
+                return new CommandDescriptor(cmd.Name, aliasSet.OrderBy(x => x, StringComparer.OrdinalIgnoreCase).ToArray());
+            })
+            .OrderBy(x => x.Name, StringComparer.OrdinalIgnoreCase)
+            .ToArray();
+
+        return groups;
+    }
+
     public static async Task<object?> ExecuteTextAsync(string text, ICommandContext context)
     {
         var tokens = Tokenize(text);
@@ -55,3 +76,5 @@ public static class CommandRegistry
         return list.ToArray();
     }
 }
+
+public sealed record CommandDescriptor(string Name, string[] Aliases);

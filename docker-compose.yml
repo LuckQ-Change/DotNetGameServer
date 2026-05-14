@@ -39,9 +39,6 @@ services:
       - postgres_data:/var/lib/postgresql/data
     restart: unless-stopped
 
-volumes:
-  postgres_data:
-
   login:
     build: .
     environment:
@@ -110,27 +107,6 @@ volumes:
         max-file: "3"
     restart: unless-stopped
 
-  resource:
-    build: .
-    environment:
-      ASPNETCORE_ENVIRONMENT: "Development"
-      SERVICE: "resource"
-      PORT: 5504
-    ports:
-      - "5504:5504"
-    healthcheck:
-      test: ["CMD-SHELL", "bash -c 'echo > /dev/tcp/127.0.0.1/$PORT' || exit 1"]
-      interval: 20s
-      timeout: 3s
-      retries: 3
-      start_period: 10s
-    logging:
-      driver: "json-file"
-      options:
-        max-size: "10m"
-        max-file: "3"
-    restart: unless-stopped
-
   redis:
     image: redis:7
     environment:
@@ -147,3 +123,6 @@ volumes:
       retries: 5
       start_period: 10s
     restart: unless-stopped
+
+volumes:
+  postgres_data:

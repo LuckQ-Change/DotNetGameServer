@@ -13,7 +13,7 @@ public class LogicGameServer(ILogger<LogicGameServer> logger) : BaseGameServer(n
         AddComponent(new EcsWorldComponent());
         AddComponent(new HeartbeatClientComponent(
             LogHeartbeat,
-            type: nameof(LogicGameServer),
+            type: "logic",
             portProvider: () => ListeningPort,
             baseDir: AppContext.BaseDirectory
         ));

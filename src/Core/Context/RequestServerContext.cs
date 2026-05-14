@@ -26,9 +26,11 @@ internal class RequestServerContext : IServerContext
     public string RequestId => _requestId;
     public AuthInfo? Auth => _auth;
 
-    public void Log(string message) => _server.Log(message);
+    public void Log(string message) =>
+        _server.LogWithContext(message, ServerName, LogLevel.Information, RemoteAddress, RequestId, _auth?.UserId);
 
-    public void Log(string message, LogLevel level) => _server.Log(message, level);
+    public void Log(string message, LogLevel level) =>
+        _server.LogWithContext(message, ServerName, level, RemoteAddress, RequestId, _auth?.UserId);
     public T? GetComponent<T>() where T : class, IServerComponent => _server.GetComponent<T>();
 
     /// <summary>

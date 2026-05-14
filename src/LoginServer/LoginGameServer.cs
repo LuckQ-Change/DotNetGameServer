@@ -20,7 +20,7 @@ public class LoginGameServer(ILogger<LoginGameServer> logger, IUserAuthComponent
 
         AddComponent(new HeartbeatClientComponent(
             LogHeartbeat,
-            type: nameof(LoginGameServer),
+            type: "login",
             portProvider: () => ListeningPort,
             baseDir: AppContext.BaseDirectory
         ));

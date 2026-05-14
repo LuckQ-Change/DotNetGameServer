@@ -65,8 +65,9 @@ internal sealed class HandlerInvoker<TReq, TResp> : IHandlerInvoker
     private static readonly PropertyInfo? _respSuccessProp = typeof(TResp).GetProperty("Success");
     private static readonly PropertyInfo? _respCodeProp = typeof(TResp).GetProperty("Code")
         ?? typeof(TResp).GetProperty("ErrorCode")
-        ?? typeof(TResp).GetProperty("StatusCode")
-        ?? typeof(TResp).GetProperty("Message");
+        ?? typeof(TResp).GetProperty("StatusCode");
+    private static readonly PropertyInfo? _respMessageProp = typeof(TResp).GetProperty("Message")
+        ?? typeof(TResp).GetProperty("ErrorMessage");
 
     /// <summary>
     /// 构造统一的强类型处理器调用器。
@@ -152,6 +153,7 @@ internal sealed class HandlerInvoker<TReq, TResp> : IHandlerInvoker
         string? errorCode = null;
         int errorCodeInt = 0;
         string errorMessage = string.Empty;
+        string? respMessage = null;
         TResp? respObj = null;
         try
         {
@@ -162,13 +164,12 @@ internal sealed class HandlerInvoker<TReq, TResp> : IHandlerInvoker
             }
             else
             {
-                (status, errorCode) = DetermineStatusAndCode(respObj);
+                (status, errorCode, respMessage) = DetermineStatusAndCode(respObj);
             }
         }
         catch (Exception ex)
         {
             status = StatusError;
-            errorCode = ex.GetType().Name;
             activity?.AddTag(TagException, ex.Message);
             errorMessage = ex.Message;
         }
@@ -188,8 +189,21 @@ internal sealed class HandlerInvoker<TReq, TResp> : IHandlerInvoker
         // 使用响应类型的消息名作为 Envelope.type
         var respType = _respTypeName;
         // 统一错误码规范化
-        errorCodeInt = ErrorCodeMapper.Map(errorCode ?? status);
-        if (string.IsNullOrWhiteSpace(errorMessage)) errorMessage = errorCode ?? status;
+        if (string.Equals(status, StatusOk, StringComparison.OrdinalIgnoreCase))
+        {
+            errorCodeInt = 0;
+            errorMessage = string.Empty;
+        }
+        else if (string.Equals(status, StatusError, StringComparison.OrdinalIgnoreCase))
+        {
+            errorCodeInt = 500;
+            if (string.IsNullOrWhiteSpace(errorMessage)) errorMessage = "internal_error";
+        }
+        else
+        {
+            errorCodeInt = ErrorCodeMapper.Map(errorCode ?? status);
+            if (string.IsNullOrWhiteSpace(errorMessage)) errorMessage = respMessage ?? errorCode ?? status;
+        }
         return (respType, respObj.ToByteArray(), errorCodeInt, errorMessage);
     }
 
@@ -222,10 +236,11 @@ internal sealed class HandlerInvoker<TReq, TResp> : IHandlerInvoker
         return null;
     }
 
-    private static (string status, string? code) DetermineStatusAndCode(TResp resp)
+    private static (string status, string? code, string? message) DetermineStatusAndCode(TResp resp)
     {
         string status = StatusOk;
         string? code = null;
+        string? message = null;
         try
         {
             var successProp = _respSuccessProp;
@@ -240,11 +255,17 @@ internal sealed class HandlerInvoker<TReq, TResp> : IHandlerInvoker
                 var v = p.GetValue(resp);
                 if (v != null) code = Convert.ToString(v);
             }
+            var msg = _respMessageProp;
+            if (msg != null)
+            {
+                var v = msg.GetValue(resp);
+                if (v != null) message = Convert.ToString(v);
+            }
         }
         catch (Exception)
         {
             // 兼容响应对象不含约定字段的情况，保持默认 status/code。
         }
-        return (status, code);
+        return (status, code, message);
     }
 }

@@ -39,7 +39,7 @@ public class HeartbeatClientComponent : IServerComponent
     /// 构造心跳客户端组件。
     /// </summary>
     /// <param name="log">日志回调。</param>
-    /// <param name="type">服务类型标识（如 battle/resource/logic）。</param>
+    /// <param name="type">服务类型标识（如 battle/login/logic）。</param>
     /// <param name="portProvider">当前监听端口提供器。</param>
     /// <param name="playerCountProvider">玩家数量提供器，可选。</param>
     /// <param name="statusProvider">状态提供器，可选。</param>

@@ -24,13 +24,13 @@ public class TokenSecretProviderComponent(string? baseDir = null) : ITokenSecret
         // 启动时读取并缓存密钥；环境变量优先，其次配置文件。
         var dir = baseDir ?? AppContext.BaseDirectory;
         var sec = SimpleConfigLoader.LoadDirectoryTokenSecret(dir);
-        // 允许通过环境变量提供备用密钥以支持轮换（不写入配置文件）
         var secondaryEnv = Environment.GetEnvironmentVariable("DIRECTORY_TOKEN_SECRET_SECONDARY");
         if (string.IsNullOrWhiteSpace(sec))
         {
             if (IsDevelopment())
             {
-                _secret = "dev-secret";    }
+                _secret = "dev-secret";
+            }
             else
             {
                 throw new InvalidOperationException("Token secret 未配置。请通过环境变量或 config.json(directory.tokenSecret) 配置密钥。");

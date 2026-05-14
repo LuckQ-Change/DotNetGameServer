@@ -1,73 +1,85 @@
 @echo off
-setlocal
+setlocal EnableExtensions
 
-rem Resolve project root to this script's directory
 set "PROJECT_PATH=%~dp0"
 if "%PROJECT_PATH:~-1%"=="\" set "PROJECT_PATH=%PROJECT_PATH:~0,-1%"
 
-rem Build configuration (optional first argument), default to Debug
 set "CONFIG=Debug"
 set "SINGLE_WINDOW=0"
 
-rem Ensure Development environment and provide a non-default DIRECTORY_TOKEN_SECRET to satisfy production guard if misconfigured
-set DOTNET_ENVIRONMENT=Development
-set ASPNETCORE_ENVIRONMENT=Development
-rem Align all services with appsettings.json: directory.tokenSecret = "changeme-dev"
-set DIRECTORY_TOKEN_SECRET=changeme-dev
+set "DOTNET_ENVIRONMENT=Development"
+set "ASPNETCORE_ENVIRONMENT=Development"
+set "DIRECTORY_TOKEN_SECRET=dev-secret"
 
 :parse_args
 if "%~1"=="" goto :args_done
-if /i "%~1"=="single" set "SINGLE_WINDOW=1" & shift & goto :parse_args
-if /i "%~1"=="--single" set "SINGLE_WINDOW=1" & shift & goto :parse_args
-if /i "%~1"=="debug" set "CONFIG=Debug" & shift & goto :parse_args
-if /i "%~1"=="release" set "CONFIG=Release" & shift & goto :parse_args
-rem Fallback for unknown arg acting as config (legacy behavior)
-if not "%~1"=="" set "CONFIG=%~1" & shift & goto :parse_args
+if /I "%~1"=="single" (
+  set "SINGLE_WINDOW=1"
+  shift
+  goto :parse_args
+)
+if /I "%~1"=="--single" (
+  set "SINGLE_WINDOW=1"
+  shift
+  goto :parse_args
+)
+if /I "%~1"=="debug" (
+  set "CONFIG=Debug"
+  shift
+  goto :parse_args
+)
+if /I "%~1"=="release" (
+  set "CONFIG=Release"
+  shift
+  goto :parse_args
+)
+set "CONFIG=%~1"
+shift
 goto :parse_args
-:args_done
 
+:args_done
 echo Building ServerHost project (%CONFIG%)...
-dotnet build "%PROJECT_PATH%\src\ServerHost\ServerHost.csproj" -c %CONFIG%
+dotnet build "%PROJECT_PATH%\src\ServerHost\ServerHost.csproj" -c "%CONFIG%"
 if errorlevel 1 goto :fail
 
-rem Target framework detection (prefer net9.0, fallback to net8.0)
-set "TFM=net9.0"
-if exist "%PROJECT_PATH%\src\ServerHost\bin\%CONFIG%\net8.0\ServerHost.dll" set "TFM=net8.0"
-
+set "TFM=net8.0"
+if exist "%PROJECT_PATH%\src\ServerHost\bin\%CONFIG%\net9.0\ServerHost.dll" set "TFM=net9.0"
 set "DLL_PATH=%PROJECT_PATH%\src\ServerHost\bin\%CONFIG%\%TFM%\ServerHost.dll"
+
+if not exist "%DLL_PATH%" (
+  echo ServerHost output not found: %DLL_PATH%
+  goto :fail
+)
 
 if "%SINGLE_WINDOW%"=="1" goto :launch_single
 
 echo Launching server instances from %DLL_PATH% ...
-
-rem Auto-detect present servers by project file and start with incremental ports
 set BASE_PORT=5500
 set HEALTH_BASE=5101
 
-call :try_start "DirectoryServer" directory %BASE_PORT% %HEALTH_BASE%
+call :try_start "DirectoryServer" "directory" %BASE_PORT% %HEALTH_BASE%
 set /a BASE_PORT+=1
 set /a HEALTH_BASE+=1
 
-call :try_start "LoginServer" login %BASE_PORT% %HEALTH_BASE%
+call :try_start "LoginServer" "login" %BASE_PORT% %HEALTH_BASE%
 set /a BASE_PORT+=1
 set /a HEALTH_BASE+=1
 
-call :try_start "BattleServer" battle %BASE_PORT% %HEALTH_BASE%
+call :try_start "BattleServer" "battle" %BASE_PORT% %HEALTH_BASE%
 set /a BASE_PORT+=1
 set /a HEALTH_BASE+=1
 
-call :try_start "LogicGameServer" logic %BASE_PORT% %HEALTH_BASE%
+call :try_start "LogicGameServer" "logic" %BASE_PORT% %HEALTH_BASE%
 
-echo Auto-detected servers have been launched in new windows.
+echo All server windows have been launched.
 goto :eof
 
 :launch_single
-echo Launching ALL servers in ONE window (Development Mode)...
-dotnet exec "%DLL_PATH%" -- --service=all
+echo Launching all services in one window...
+dotnet exec "%DLL_PATH%" -- --service all
 goto :eof
 
 :try_start
-rem %1=ProjectDirName %2=service %3=port %4=healthPort
 setlocal
 set "_PROJ=%~1"
 set "_SERVICE=%~2"
@@ -81,11 +93,12 @@ if /I "%_PROJ%"=="LoginServer" set "_CSPROJ=%PROJECT_PATH%\src\LoginServer\Login
 if /I "%_PROJ%"=="DirectoryServer" set "_CSPROJ=%PROJECT_PATH%\src\DirectoryServer\DirectoryServer.csproj"
 
 if exist "%_CSPROJ%" (
-  echo Starting %_SERVICE% on port %_PORT% (health http://localhost:%_HEALTH%)
-  start "%_SERVICE%" cmd /k dotnet exec "%DLL_PATH%" -- --service=%_SERVICE% --port=%_PORT% --healthCheckUrl=http://localhost:%_HEALTH%
+  echo Starting %_SERVICE% on port %_PORT% with health http://localhost:%_HEALTH%
+  start "%_SERVICE%" cmd /k dotnet exec "%DLL_PATH%" -- --service %_SERVICE% --port %_PORT% --healthCheckUrl http://localhost:%_HEALTH%
 ) else (
-  echo Skipped %_SERVICE% (project not found: %_CSPROJ%)
+  echo Skipped %_SERVICE% because project was not found: %_CSPROJ%
 )
+
 endlocal & exit /b 0
 
 :fail

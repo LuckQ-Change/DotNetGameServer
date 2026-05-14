@@ -185,7 +185,7 @@ public class RedisServerRegistryComponent : IServerRegistryComponent
                 if (val.IsNullOrEmpty) continue;
                 var rec = DeserializeRecord(val);
                 if (rec == null) continue;
-                var isOnline = (DateTimeOffset.UtcNow.ToUnixTimeSeconds() - (long)scoreSec) <= (long)_offlineTtl.TotalSeconds;
+                var isOnline = (TimeManager.UnixSeconds - (long)scoreSec) <= (long)_offlineTtl.TotalSeconds;
                 list.Add(isOnline ? rec : rec with { Status = "offline" });
             }
 
@@ -196,7 +196,7 @@ public class RedisServerRegistryComponent : IServerRegistryComponent
         catch (Exception ex)
         {
             // Redis 故障时，触发降级逻辑
-            Console.WriteLine($"[{DateTime.UtcNow:HH:mm:ss} ERR] [RedisServerRegistry] ListServers failed, using fallback cache. Error: {ex.Message}");
+            Console.WriteLine($"[{TimeManager.UtcNow:HH:mm:ss} ERR] [RedisServerRegistry] ListServers failed, using fallback cache. Error: {ex.Message}");
             return _fallbackCache;
         }
     }

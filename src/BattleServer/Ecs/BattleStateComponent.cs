@@ -1,5 +1,5 @@
 using Core.Ecs;
-using System;
+using Shared.Time;
 
 namespace BattleServer.Ecs;
 
@@ -17,6 +17,7 @@ public class BattleStateComponent : IEntityComponent
     private readonly Random _random = new();
 
     public Task InitializeAsync() => Task.CompletedTask;
+
     public Task DestroyAsync() => Task.CompletedTask;
 
     public void Start(string battleId, string playerId, string battleType)
@@ -39,7 +40,7 @@ public class BattleStateComponent : IEntityComponent
             _ => 50
         };
         IsActive = true;
-        CreatedAtUtc = DateTime.UtcNow;
+        CreatedAtUtc = TimeManager.UtcNow;
         LastActiveUtc = CreatedAtUtc;
     }
 
@@ -49,6 +50,7 @@ public class BattleStateComponent : IEntityComponent
         {
             return (PlayerHp, EnemyHp, true, false, "战斗不存在或已结束");
         }
+
         if (PlayerId != playerId)
         {
             return (PlayerHp, EnemyHp, false, false, "玩家不匹配");
@@ -64,12 +66,12 @@ public class BattleStateComponent : IEntityComponent
         PlayerHp = newPlayerHp;
         EnemyHp = newEnemyHp;
         IsActive = !ended;
-        LastActiveUtc = DateTime.UtcNow;
+        LastActiveUtc = TimeManager.UtcNow;
 
         string msg;
         if (ended)
         {
-            msg = playerWon ? "战斗胜利！" : "战斗失败！";
+            msg = playerWon ? "战斗胜利" : "战斗失败";
         }
         else
         {

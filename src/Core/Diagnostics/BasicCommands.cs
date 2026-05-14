@@ -10,7 +10,10 @@ public static class BasicCommands
         CommandRegistry.Register(new LimitsCommand());
         CommandRegistry.Register(new HandlersCommand(), "handlers list");
         CommandRegistry.Register(new BlacklistCommand());
+        CommandRegistry.Register(new CommandsCommand());
+        CommandRegistry.Register(new SimPlayersCommand());
         LoggingCommands.RegisterAll();
+        TimeCommands.RegisterAll();
     }
 }
 

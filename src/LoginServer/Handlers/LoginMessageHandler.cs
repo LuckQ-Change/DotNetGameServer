@@ -5,6 +5,7 @@ using DotNetGameServer;
 using LoginServer.Components;
 using Microsoft.Extensions.Logging;
 using Shared;
+using Shared.Time;
 
 namespace LoginServer.Handlers;
 
@@ -26,7 +27,8 @@ public class LoginMessageHandler(IUserAuthComponent authComponent) : IMessageHan
                 var hb = context.GetComponent<HeartbeatClientComponent>();
                 var serverId = hb?.TryGetCurrentServerId();
                 var secretProvider = context.GetComponent<ITokenSecretProvider>();
-                var secret = secretProvider?.GetSecret() ?? SimpleConfigLoader.LoadDirectoryTokenSecret(AppContext.BaseDirectory);
+                var secret = secretProvider?.GetSecret() ??
+                             SimpleConfigLoader.LoadDirectoryTokenSecret(AppContext.BaseDirectory);
                 if (string.IsNullOrWhiteSpace(secret))
                 {
                     if (!IsDevelopment()) throw new InvalidOperationException("目录令牌密钥未配置，无法签发登录令牌。");
@@ -35,7 +37,7 @@ public class LoginMessageHandler(IUserAuthComponent authComponent) : IMessageHan
 
                 if (!string.IsNullOrWhiteSpace(serverId))
                 {
-                    expire = DateTimeOffset.UtcNow.ToUnixTimeSeconds() + 3600;
+                    expire = TimeManager.UnixSeconds + 3600;
                     var tokenId = Guid.NewGuid().ToString("N");
                     var sig = TokenSigner.ComputeSignature(tokenId, expire, request.Username, serverId, secret);
                     token = TokenSigner.ComposeSigned(tokenId, expire, sig);
@@ -45,7 +47,7 @@ public class LoginMessageHandler(IUserAuthComponent authComponent) : IMessageHan
             {
                 context.Log($"Error during token generation: {ex.Message}", LogLevel.Error);
             }
-        } 
+        }
 
         return new s2c_login
         {
@@ -55,6 +57,7 @@ public class LoginMessageHandler(IUserAuthComponent authComponent) : IMessageHan
             ExpireAt = expire
         };
     }
+
     private static bool IsDevelopment()
     {
         var env = Environment.GetEnvironmentVariable("DOTNET_ENVIRONMENT")

@@ -1,59 +1,176 @@
-using System;
+using System.Collections.Concurrent;
+using System.Text.Json;
+
 using Microsoft.Extensions.Logging;
+
 using R3;
+
+using Shared.Time;
 
 namespace Core.Logging;
 
 /// <summary>
-/// 日志中心：集中式最小级别控制与事件流分发
+/// 日志中心。
+/// 负责日志级别控制、分类开关、内存缓存以及导出。
 /// </summary>
 public static class LogCenter
 {
-    private static readonly Subject<LogEvent> _subject = new();
+    private static readonly Subject<LogEvent> Subject = new();
+    private static ConcurrentQueue<LogEvent> Cache = new();
+    private static readonly object CacheTrimLock = new();
+    private static readonly JsonSerializerOptions ExportJsonOptions = new(JsonSerializerDefaults.Web)
+    {
+        WriteIndented = false
+    };
 
-    /// <summary>
-    /// 日志事件流（R3），后台可通过 SSE 订阅
-    /// </summary>
-    public static Subject<LogEvent> Stream => _subject;
+    public static Subject<LogEvent> Stream => Subject;
 
-    /// <summary>
-    /// 最小日志级别（可由环境变量 LOG_LEVEL 覆盖）
-    /// Development 默认 Information，Production 默认 Warning
-    /// </summary>
     public static LogLevel MinimumLevel { get; private set; } = ResolveDefaultLevel();
-    public static bool GlobalEnabled { get; private set; } = false;
-    private static readonly System.Collections.Concurrent.ConcurrentDictionary<string, bool> _categoryEnabled = new(StringComparer.OrdinalIgnoreCase);
 
-    /// <summary>
-    /// 设置最小日志级别
-    /// </summary>
-    public static void SetMinimumLevel(LogLevel level) { MinimumLevel = level; }
-    public static void SetGlobalEnabled(bool enabled) { GlobalEnabled = enabled; }
-    public static void EnableCategory(string category) { _categoryEnabled[category] = true; }
-    public static void DisableCategory(string category) { _categoryEnabled[category] = false; }
-    public static bool IsCategoryEnabled(string category) => _categoryEnabled.TryGetValue(category, out var en) && en;
+    public static bool GlobalEnabled { get; private set; } = ResolveDefaultGlobalEnabled();
 
-    /// <summary>
-    /// 判断是否应输出该级别日志
-    /// </summary>
+    public static bool CacheEnabled { get; private set; } = true;
+
+    public static int CacheCapacity { get; private set; } = ResolveDefaultCacheCapacity();
+
+    private static readonly ConcurrentDictionary<string, bool> CategoryEnabled = new(StringComparer.OrdinalIgnoreCase);
+
+    static LogCenter()
+    {
+        var hb = Environment.GetEnvironmentVariable("LOG_HEARTBEAT_ENABLED");
+        if (!string.IsNullOrWhiteSpace(hb) && bool.TryParse(hb, out var enabled))
+            CategoryEnabled["Heartbeat"] = enabled;
+        else
+            CategoryEnabled["Heartbeat"] = false;
+    }
+
+    public static void SetMinimumLevel(LogLevel level) => MinimumLevel = level;
+
+    public static void SetGlobalEnabled(bool enabled) => GlobalEnabled = enabled;
+
+    public static void SetCacheEnabled(bool enabled) => CacheEnabled = enabled;
+
+    public static void SetCacheCapacity(int capacity)
+    {
+        CacheCapacity = Math.Max(1, capacity);
+        TrimCache();
+    }
+
+    public static void EnableCategory(string category) => CategoryEnabled[category] = true;
+
+    public static void DisableCategory(string category) => CategoryEnabled[category] = false;
+
+    public static bool IsCategoryEnabled(string category) =>
+        CategoryEnabled.TryGetValue(category, out var enabled) && enabled;
+
     public static bool ShouldLog(LogLevel level) => ShouldLog(level, null);
+
     public static bool ShouldLog(LogLevel level, string? category)
     {
-        var catEnabled = category != null && IsCategoryEnabled(category);
-        if (catEnabled) return true;
+        if (category != null && CategoryEnabled.TryGetValue(category, out var enabled))
+            return enabled;
         if (!GlobalEnabled) return false;
         return level >= MinimumLevel;
     }
 
-    /// <summary>
-    /// 推送一条日志事件到订阅流
-    /// </summary>
-    public static void Publish(LogEvent e)
+    public static void Publish(LogEvent logEvent)
     {
-        try { _subject.OnNext(e); }
+        if (CacheEnabled)
+        {
+            var cache = Cache;
+            cache.Enqueue(logEvent);
+            TrimCache(cache);
+        }
+
+        try
+        {
+            Subject.OnNext(logEvent);
+        }
         catch
         {
-            // 忽略订阅回调异常，确保日志主流程不中断
+            // 忽略订阅回调异常，确保日志主流程不中断。
+        }
+    }
+
+    public static IReadOnlyList<LogEvent> GetRecent(int count = 200)
+    {
+        var safeCount = Math.Max(1, count);
+        var snapshot = Cache.ToArray();
+        return snapshot.Length <= safeCount
+            ? snapshot
+            : snapshot.Skip(snapshot.Length - safeCount).ToArray();
+    }
+
+    public static void ClearCache()
+    {
+        Interlocked.Exchange(ref Cache, new ConcurrentQueue<LogEvent>());
+    }
+
+    public static async Task<LogExportResult> ExportAsync(string? path = null, int count = 0, CancellationToken cancellationToken = default)
+    {
+        var snapshot = Cache.ToArray();
+        if (count > 0 && snapshot.Length > count)
+        {
+            snapshot = snapshot.Skip(snapshot.Length - count).ToArray();
+        }
+
+        var resolvedPath = ResolveExportPath(path);
+        var directory = Path.GetDirectoryName(resolvedPath);
+        if (!string.IsNullOrWhiteSpace(directory))
+        {
+            Directory.CreateDirectory(directory);
+        }
+
+        await using var stream = new FileStream(
+            resolvedPath,
+            FileMode.Create,
+            FileAccess.Write,
+            FileShare.Read,
+            bufferSize: 8192,
+            useAsync: true);
+        await using var writer = new StreamWriter(stream);
+
+        foreach (var item in snapshot)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            var line = JsonSerializer.Serialize(item, ExportJsonOptions);
+            await writer.WriteLineAsync(line);
+        }
+
+        await writer.FlushAsync();
+        return new LogExportResult(resolvedPath, snapshot.Length);
+    }
+
+    private static string ResolveExportPath(string? path)
+    {
+        if (!string.IsNullOrWhiteSpace(path))
+        {
+            return Path.IsPathRooted(path)
+                ? path
+                : Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, path));
+        }
+
+        var fileName = $"logs-{TimeManager.UtcNow:yyyyMMdd-HHmmss}.jsonl";
+        return Path.Combine(AppContext.BaseDirectory, "exports", fileName);
+    }
+
+    private static void TrimCache()
+    {
+        TrimCache(Cache);
+    }
+
+    private static void TrimCache(ConcurrentQueue<LogEvent> cache)
+    {
+        if (CacheCapacity <= 0) return;
+
+        lock (CacheTrimLock)
+        {
+            var overflow = cache.Count - CacheCapacity;
+            if (overflow <= 0) return;
+            for (var i = 0; i < overflow; i++)
+            {
+                if (!cache.TryDequeue(out _)) break;
+            }
         }
     }
 
@@ -62,14 +179,45 @@ public static class LogCenter
         try
         {
             var envLevel = Environment.GetEnvironmentVariable("LOG_LEVEL");
-            if (!string.IsNullOrWhiteSpace(envLevel) && Enum.TryParse<LogLevel>(envLevel, true, out var parsed))
+            if (!string.IsNullOrWhiteSpace(envLevel) &&
+                Enum.TryParse<LogLevel>(envLevel, true, out var parsed))
+            {
                 return parsed;
+            }
 
-            return LogLevel.None;
+            var env = Environment.GetEnvironmentVariable("DOTNET_ENVIRONMENT")
+                      ?? Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT");
+            return string.Equals(env, "Development", StringComparison.OrdinalIgnoreCase)
+                ? LogLevel.Information
+                : LogLevel.Warning;
         }
         catch
         {
-            return LogLevel.None;
+            return LogLevel.Information;
         }
     }
+
+    private static bool ResolveDefaultGlobalEnabled()
+    {
+        var env = Environment.GetEnvironmentVariable("LOG_ENABLED");
+        if (!string.IsNullOrWhiteSpace(env) && bool.TryParse(env, out var enabled))
+        {
+            return enabled;
+        }
+
+        var runtimeEnv = Environment.GetEnvironmentVariable("DOTNET_ENVIRONMENT")
+                         ?? Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT");
+        return string.Equals(runtimeEnv, "Development", StringComparison.OrdinalIgnoreCase);
+    }
+
+    private static int ResolveDefaultCacheCapacity()
+    {
+        var env = Environment.GetEnvironmentVariable("LOG_CACHE_CAPACITY");
+        return int.TryParse(env, out var capacity) && capacity > 0 ? capacity : 2000;
+    }
 }
+
+/// <summary>
+/// 日志导出结果。
+/// </summary>
+public sealed record LogExportResult(string Path, int Count);

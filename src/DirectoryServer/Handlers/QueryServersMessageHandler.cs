@@ -1,119 +1,116 @@
 using Core;
-using DotNetGameServer;
 using DirectoryServer.Components;
+using DotNetGameServer;
+using Shared.Time;
 
 namespace DirectoryServer.Handlers;
 
 public class QueryServersMessageHandler : IMessageHandler<c2s_query_servers, s2c_query_servers>
 {
-    private static readonly TimeSpan _throttleWindow = TimeSpan.FromSeconds(5);
-    private static readonly int _throttleMaxRequests = 10; // 每窗口最多请求数
-    private static readonly System.Collections.Concurrent.ConcurrentDictionary<string, (DateTime windowStartUtc, int count)> _throttle = new();
+    private static readonly TimeSpan ThrottleWindow = TimeSpan.FromSeconds(5);
+    private static readonly int ThrottleMaxRequests = 10;
+    private static readonly System.Collections.Concurrent.ConcurrentDictionary<string, (DateTime windowStartUtc, int count)> Throttle = new();
 
     public Task<s2c_query_servers?> HandleAsync(c2s_query_servers request, IServerContext context)
     {
-        // 按IP限流（轻量本地实现）
         var ip = context.RemoteAddress ?? "unknown";
-        var nowUtc = DateTime.UtcNow;
-        var entry = _throttle.GetOrAdd(ip, _ => (nowUtc, 0));
-        if (nowUtc - entry.windowStartUtc > _throttleWindow)
+        var nowUtc = TimeManager.UtcNow;
+        var entry = Throttle.GetOrAdd(ip, _ => (nowUtc, 0));
+        if (nowUtc - entry.windowStartUtc > ThrottleWindow)
         {
-            _throttle[ip] = (nowUtc, 1);
+            Throttle[ip] = (nowUtc, 1);
         }
         else
         {
-            if (entry.count + 1 > _throttleMaxRequests)
+            if (entry.count + 1 > ThrottleMaxRequests)
             {
-                // 超限：返回空列表，避免打爆目录
-                var limitedResp = new s2c_query_servers();
-                return Task.FromResult<s2c_query_servers?>(limitedResp);
+                return Task.FromResult<s2c_query_servers?>(new s2c_query_servers());
             }
-            _throttle[ip] = (entry.windowStartUtc, entry.count + 1);
+
+            Throttle[ip] = (entry.windowStartUtc, entry.count + 1);
         }
 
-        var reg = context.GetComponent<IServerRegistryComponent>();
-        if (reg == null)
+        var registry = context.GetComponent<IServerRegistryComponent>();
+        if (registry == null)
         {
-            var respFail = new s2c_query_servers();
-            return Task.FromResult<s2c_query_servers?>(respFail);
+            return Task.FromResult<s2c_query_servers?>(new s2c_query_servers());
         }
 
-        var all = reg.ListServers();
-        all = all.Where(s => string.Equals(s.Type, "logic", StringComparison.OrdinalIgnoreCase));
+        var all = registry.ListServers();
+        all = all.Where(server => string.Equals(server.Type, "logic", StringComparison.OrdinalIgnoreCase));
 
-        // 区域过滤
         if (!string.IsNullOrWhiteSpace(request.Region))
         {
-            all = all.Where(s => string.Equals(s.Region, request.Region, StringComparison.OrdinalIgnoreCase));
+            all = all.Where(server => string.Equals(server.Region, request.Region, StringComparison.OrdinalIgnoreCase));
         }
 
-        // 智能策略排序
-        IEnumerable<ServerRecord> ordered;
-        var now = DateTime.UtcNow;
+        var now = TimeManager.UtcNow;
         var strategy = (request.Strategy ?? string.Empty).ToLowerInvariant();
-        if (strategy == "load")
+        IEnumerable<ServerRecord> ordered = strategy switch
         {
-            ordered = all
-                .OrderBy(s => s.PlayerCount * 1.0 / Math.Max(1, s.Capacity))
-                .ThenByDescending(s => s.LastHeartbeatUtc); // 心跳越新越前
-        }
-        else if (strategy == "latency")
-        {
-            // 兼容：优先使用 AvgRttMs，否则以心跳新鲜度估算
-            ordered = all
-                .OrderBy(s => s.AvgRttMs > 0 ? s.AvgRttMs : (int)(now - s.LastHeartbeatUtc).TotalMilliseconds)
-                .ThenBy(s => s.PlayerCount * 1.0 / Math.Max(1, s.Capacity));
-        }
-        else if (strategy == "weighted" || strategy == "load_latency")
-        {
-            // 组合权重：load 与 latency 按 0.6/0.4 计算综合分，候选按分值升序
-            var list = all.ToList();
-            double minRtt = list.Where(s => s.AvgRttMs > 0).Select(s => (double)s.AvgRttMs).DefaultIfEmpty(0).Min();
-            double maxRtt = list.Where(s => s.AvgRttMs > 0).Select(s => (double)s.AvgRttMs).DefaultIfEmpty(0).Max();
-            if (maxRtt <= minRtt) { maxRtt = minRtt + 1; }
+            "load" => all
+                .OrderBy(server => server.PlayerCount * 1.0 / Math.Max(1, server.Capacity))
+                .ThenByDescending(server => server.LastHeartbeatUtc),
+            "latency" => all
+                .OrderBy(server => server.AvgRttMs > 0
+                    ? server.AvgRttMs
+                    : (int)(now - server.LastHeartbeatUtc).TotalMilliseconds)
+                .ThenBy(server => server.PlayerCount * 1.0 / Math.Max(1, server.Capacity)),
+            "weighted" or "load_latency" => BuildWeightedOrder(all, now),
+            _ => all.OrderByDescending(server => server.LastHeartbeatUtc)
+        };
 
-            double wLoad = 0.6, wLatency = 0.4;
-            ordered = list
-                .Select(s =>
-                {
-                    var load = s.PlayerCount * 1.0 / Math.Max(1, s.Capacity);
-                    var rtt = s.AvgRttMs > 0 ? s.AvgRttMs : (int)(now - s.LastHeartbeatUtc).TotalMilliseconds;
-                    var rttNorm = (rtt - minRtt) / (maxRtt - minRtt);
-                    var score = wLoad * load + wLatency * rttNorm;
-                    return (s, score);
-                })
-                .OrderBy(t => t.score)
-                .ThenByDescending(t => t.s.LastHeartbeatUtc)
-                .Select(t => t.s);
-        }
-        else
-        {
-            ordered = all.OrderByDescending(s => s.LastHeartbeatUtc); // 默认：最新心跳靠前
-        }
-
-        // 限制数量
         if (request.Limit > 0)
         {
             ordered = ordered.Take(request.Limit);
         }
 
-        var resp = new s2c_query_servers();
-        foreach (var s in ordered)
+        var response = new s2c_query_servers();
+        foreach (var server in ordered)
         {
-            resp.Servers.Add(new server_info
+            response.Servers.Add(new server_info
             {
-                Id = s.Id,
-                Type = s.Type,
-                Region = s.Region,
-                Host = s.Host,
-                Port = s.Port,
-                PlayerCount = s.PlayerCount,
-                Capacity = s.Capacity,
-                Status = s.Status,
-                LastHeartbeat = new DateTimeOffset(s.LastHeartbeatUtc).ToUnixTimeMilliseconds(),
-                AvgRttMs = s.AvgRttMs
+                Id = server.Id,
+                Type = server.Type,
+                Region = server.Region,
+                Host = server.Host,
+                Port = server.Port,
+                PlayerCount = server.PlayerCount,
+                Capacity = server.Capacity,
+                Status = server.Status,
+                LastHeartbeat = new DateTimeOffset(server.LastHeartbeatUtc).ToUnixTimeMilliseconds(),
+                AvgRttMs = server.AvgRttMs
             });
         }
-        return Task.FromResult<s2c_query_servers?>(resp);
+
+        return Task.FromResult<s2c_query_servers?>(response);
+    }
+
+    private static IEnumerable<ServerRecord> BuildWeightedOrder(IEnumerable<ServerRecord> all, DateTime now)
+    {
+        var list = all.ToList();
+        var minRtt = list.Where(server => server.AvgRttMs > 0).Select(server => (double)server.AvgRttMs).DefaultIfEmpty(0).Min();
+        var maxRtt = list.Where(server => server.AvgRttMs > 0).Select(server => (double)server.AvgRttMs).DefaultIfEmpty(0).Max();
+        if (maxRtt <= minRtt)
+        {
+            maxRtt = minRtt + 1;
+        }
+
+        const double loadWeight = 0.6;
+        const double latencyWeight = 0.4;
+        return list
+            .Select(server =>
+            {
+                var load = server.PlayerCount * 1.0 / Math.Max(1, server.Capacity);
+                var rtt = server.AvgRttMs > 0
+                    ? server.AvgRttMs
+                    : (int)(now - server.LastHeartbeatUtc).TotalMilliseconds;
+                var rttNorm = (rtt - minRtt) / (maxRtt - minRtt);
+                var score = loadWeight * load + latencyWeight * rttNorm;
+                return (server, score);
+            })
+            .OrderBy(item => item.score)
+            .ThenByDescending(item => item.server.LastHeartbeatUtc)
+            .Select(item => item.server);
     }
 }

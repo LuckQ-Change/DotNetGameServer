@@ -61,7 +61,7 @@
   - 全局日志默认关闭（`global=false`，`level=None`）
   - 分类开启优先：即使全局关闭，只要某分类开启，就会输出该分类日志
   - 心跳日志分类名为 `Heartbeat`
-  - 一般服务器日志的分类名为服务器名，例如 `DirectoryGameServer`、`LoginGameServer`、`BattleGameServer`、`LogicGameServer`、`ResourceGameServer`
+  - 一般服务器日志的分类名为服务器名，例如 `DirectoryGameServer`、`LoginGameServer`、`BattleGameServer`、`LogicGameServer`
 - 输出：
   - `status`：`{ global, level }`
   - `on|off`：`{ ok, global }`

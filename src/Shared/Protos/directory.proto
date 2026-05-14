@@ -4,7 +4,7 @@ package DotNetGameServer;
 // 服务器基础信息
 message server_info {
   string id = 1;
-  string type = 2;    // Login/Battle/Resource/Directory 等
+  string type = 2;    // Login/Battle/Logic/Directory 等
   string region = 3;  // 区域/分区，例如: CN-1
   string host = 4;
   int32 port = 5;

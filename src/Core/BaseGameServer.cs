@@ -1,6 +1,7 @@
 using System.Collections.Concurrent;
 using System.Net;
 using System.Net.Sockets;
+using System.Threading.Channels;
 using DotNetGameServer;
 using Google.Protobuf;
 using System.Diagnostics;
@@ -12,6 +13,7 @@ using R3;
 using Core.Telemetry;
 using Core.Logging;
 using Core.Components;
+using Shared.Time;
 
 namespace Core;
 
@@ -33,6 +35,7 @@ public abstract class BaseGameServer : IServerContext
     private IWebHost? _webHost; // 用于后台监控
 
     private readonly ILogger _logger; // 日志
+    private readonly bool _forwardToILogger;
 
     // 连接数指标通过 Meter 注册，无需持有字段引用。
     private readonly ConcurrentDictionary<string, IHandlerInvoker> _typedHandlers = new();
@@ -74,6 +77,7 @@ public abstract class BaseGameServer : IServerContext
     {
         ServerName = serverName;
         _logger = logger ?? new DelegateLogger(Console.WriteLine, serverName);
+        _forwardToILogger = ResolveForwardToILogger();
         var settings = Config.SimpleConfigLoader.LoadServerSettings(AppContext.BaseDirectory);
         _maxMessageSize = Math.Max(1024, settings.MaxMessageSizeBytes);
         _maxConcurrentConnections = Math.Max(1, settings.MaxConcurrentConnections);
@@ -313,17 +317,38 @@ public abstract class BaseGameServer : IServerContext
 
     public void LogWithCategory(string message, string category, LogLevel level)
     {
+        LogWithContext(message, category, level);
+    }
+
+    internal void LogWithContext(
+        string message,
+        string category,
+        LogLevel level,
+        string? remote = null,
+        string? requestId = null,
+        string? userId = null)
+    {
         if (LogCenter.ShouldLog(level, category))
         {
-            _logger.Log(level, "[{Server}] {Message}", ServerName, message);
+            if (_forwardToILogger)
+                _logger.Log(level, "[{Server}] {Message}", ServerName, message);
             LogCenter.Publish(new LogEvent
             {
                 Level = level,
                 Category = category,
                 Message = message,
-                Server = ServerName
+                Server = ServerName,
+                Remote = string.IsNullOrWhiteSpace(remote) ? null : remote,
+                RequestId = string.IsNullOrWhiteSpace(requestId) ? null : requestId,
+                UserId = string.IsNullOrWhiteSpace(userId) ? null : userId
             });
         }
+    }
+
+    private static bool ResolveForwardToILogger()
+    {
+        var v = Environment.GetEnvironmentVariable("LOG_FORWARD_TO_ILOGGER");
+        return !string.IsNullOrWhiteSpace(v) && bool.TryParse(v, out var enabled) && enabled;
     }
 
     private async Task AcceptLoop(CancellationToken token)
@@ -558,38 +583,51 @@ public abstract class BaseGameServer : IServerContext
                 return true;
             }
 
-            var subject = new Subject<envelope>();
-            var sub = subject.Subscribe(async void (envelope) =>
+            var requestChannel = Channel.CreateUnbounded<envelope>(new UnboundedChannelOptions
             {
-                try
+                AllowSynchronousContinuations = false,
+                SingleReader = true,
+                SingleWriter = true
+            });
+
+            var requestProcessor = Task.Run(async () =>
+            {
+                await foreach (var env in requestChannel.Reader.ReadAllAsync(token))
                 {
-                    var incomingReqId = string.IsNullOrWhiteSpace(envelope.RequestId)
-                        ? Guid.NewGuid().ToString("N")
-                        : envelope.RequestId;
-                    Log($"recv route={envelope.Type} req_id={incomingReqId} ip={remote}");
-                    var reqContext = new RequestServerContext(this, envelope.Token ?? string.Empty, remote, incomingReqId);
-                    if (_typedHandlers.TryGetValue(envelope.Type, out var strong))
+                    try
                     {
-                        var result = await strong.Invoke(envelope.Payload, reqContext);
-                        if (result != null)
+                        var incomingReqId = string.IsNullOrWhiteSpace(env.RequestId)
+                            ? Guid.NewGuid().ToString("N")
+                            : env.RequestId;
+                        Log($"recv route={env.Type} req_id={incomingReqId} ip={remote}");
+                        var reqContext = new RequestServerContext(this, env.Token ?? string.Empty, remote, incomingReqId);
+                        if (_typedHandlers.TryGetValue(env.Type, out var strong))
                         {
-                            await WriteEnvelopeAsync(stream, result.Value.responseType, result.Value.payload,
-                                envelope.RequestId, result.Value.errorCode, result.Value.errorMessage, token,
-                                _receiveTimeoutMs);
-                            Log($"send route={result.Value.responseType} req_id={envelope.RequestId} ip={remote} error_code={result.Value.errorCode}");
+                            var result = await strong.Invoke(env.Payload, reqContext);
+                            if (result != null)
+                            {
+                                await WriteEnvelopeAsync(stream, result.Value.responseType, result.Value.payload,
+                                    env.RequestId, result.Value.errorCode, result.Value.errorMessage, token,
+                                    _receiveTimeoutMs);
+                                Log($"send route={result.Value.responseType} req_id={env.RequestId} ip={remote} error_code={result.Value.errorCode}");
+                            }
+                        }
+                        else
+                        {
+                            Log($"未知消息类型: {env.Type}");
+                            CoreTelemetry.RecordUnknown(ServerName, env.Type);
                         }
                     }
-                    else
+                    catch (OperationCanceledException)
                     {
-                        Log($"未知消息类型: {envelope.Type}");
-                        CoreTelemetry.RecordUnknown(ServerName, envelope.Type);
+                        break;
+                    }
+                    catch (Exception e)
+                    {
+                        Log(e.Message);
                     }
                 }
-                catch (Exception e)
-                {
-                    Log(e.Message);
-                }
-            });
+            }, token);
 
             try
             {
@@ -619,7 +657,11 @@ public abstract class BaseGameServer : IServerContext
                         break;
                     }
                     if (!CheckMessageRateLimit(remote, remoteIp)) break;
-                    subject.OnNext(envelope);
+                    if (!requestChannel.Writer.TryWrite(envelope))
+                    {
+                        Log($"请求队列写入失败: {remote} route={envelope.Type}");
+                        break;
+                    }
                 }
             }
             catch (OperationCanceledException)
@@ -639,15 +681,11 @@ public abstract class BaseGameServer : IServerContext
                 Log($"客户端异常: {ex.Message}");
             }
 
-            try { subject.OnCompleted(); }
-            catch
+            requestChannel.Writer.TryComplete();
+            try { await requestProcessor; }
+            catch (Exception ex)
             {
-                // 结束事件流时的异常可忽略
-            }
-            try { sub.Dispose(); }
-            catch
-            {
-                // 释放订阅时的异常可忽略
+                Log($"请求处理器异常: {ex.Message}");
             }
             Log($"客户端断开: {remote}");
             Interlocked.Decrement(ref _currentConnections);
@@ -659,7 +697,7 @@ public abstract class BaseGameServer : IServerContext
         // 允许 remote 为 "IP:port"；按原样匹配并清理过期项
         if (_blacklist.TryGetValue(remote, out var until))
         {
-            if (DateTime.UtcNow < until) return true;
+            if (TimeManager.UtcNow < until) return true;
             _blacklist.TryRemove(remote, out _);
         }
 
@@ -668,7 +706,7 @@ public abstract class BaseGameServer : IServerContext
 
     private void AddToBlacklist(string remote, TimeSpan duration, string reason)
     {
-        _blacklist[remote] = DateTime.UtcNow.Add(duration);
+        _blacklist[remote] = TimeManager.UtcNow.Add(duration);
         Log($"加入黑名单: {remote} 原因={reason} 时长={duration}");
     }
 

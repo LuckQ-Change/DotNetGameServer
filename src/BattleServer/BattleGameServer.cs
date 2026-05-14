@@ -16,7 +16,7 @@ public class BattleGameServer(ILogger<BattleGameServer> logger) : BaseGameServer
 
         AddComponent(new HeartbeatClientComponent(
             LogHeartbeat,
-            type: nameof(BattleGameServer),
+            type: "battle",
             portProvider: () => ListeningPort,
             baseDir: AppContext.BaseDirectory
         ));

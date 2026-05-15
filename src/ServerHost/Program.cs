@@ -1,26 +1,30 @@
 using Core;
-using Microsoft.Extensions.Configuration;
-using Microsoft.Extensions.Logging;
-using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Hosting;
-using Core.Db;
-using Microsoft.EntityFrameworkCore;
-using ServerHost.HealthChecks;
+using Core.Configuration;
+using Core.Directory;
+using Core.Diagnostics;
+using Core.Heartbeat;
+using Core.Logging;
+using Core.Telemetry;
+using Shared.Constants;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
-using LoginServer.Components;
-using OpenTelemetry.Resources;
+using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 using OpenTelemetry.Metrics;
+using OpenTelemetry.Resources;
 using OpenTelemetry.Trace;
-using Core.Telemetry;
-using Core.Diagnostics;
+using ServerHost.Directory;
+using ServerHost.HealthChecks;
+using ServerHost.ServerTypes;
 using System.Net;
 
-using ServerHost; // 访问命名空间中的类型（HostingUtilities、GameServerService）
+using ServerHost;
 
 var builder = WebApplication.CreateBuilder(args);
 
-// 预解析命令行：统一抽取 service/port/healthCheckUrl 到配置键
 static IDictionary<string, string> PreParseArgs(string[] argv)
 {
     var dict = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
@@ -48,11 +52,11 @@ static IDictionary<string, string> PreParseArgs(string[] argv)
 
         if (string.IsNullOrWhiteSpace(key) || val is null) continue;
         if (string.Equals(key, "service", StringComparison.OrdinalIgnoreCase))
-            dict[Shared.Constants.ConfigKeys.ServiceConfigKey] = val;
+            dict[ConfigKeys.ServiceConfigKey] = val;
         else if (string.Equals(key, "port", StringComparison.OrdinalIgnoreCase))
             dict["port"] = val;
         else if (string.Equals(key, "healthCheckUrl", StringComparison.OrdinalIgnoreCase))
-            dict[Shared.Constants.ConfigKeys.ServiceHealthCheckUrlKeyLower] = val;
+            dict[ConfigKeys.ServiceHealthCheckUrlKeyLower] = val;
     }
 
     return dict;
@@ -64,32 +68,24 @@ builder.Configuration
     .SetBasePath(AppContext.BaseDirectory)
     .AddJsonFile("appsettings.json", optional: true, reloadOnChange: true)
     .AddJsonFile($"appsettings.{builder.Environment.EnvironmentName}.json", optional: true, reloadOnChange: true)
-    .AddEnvironmentVariables()
     .AddCommandLine(args, new Dictionary<string, string>
     {
-        ["--service"] = Shared.Constants.ConfigKeys.ServiceConfigKey,
+        ["--service"] = ConfigKeys.ServiceConfigKey,
         ["--port"] = "port",
-        ["--healthCheckUrl"] = Shared.Constants.ConfigKeys.ServiceHealthCheckUrlKeyLower
+        ["--healthCheckUrl"] = ConfigKeys.ServiceHealthCheckUrlKeyLower
     });
 
-builder.Services.AddDbContext<GameDbContext>(options =>
-{
-    if (builder.Environment.IsDevelopment())
-    {
-        options.UseInMemoryDatabase("GameDb");
-    }
-    else
-    {
-        options.UseNpgsql(builder.Configuration.GetConnectionString("DefaultConnection"));
-    }
-});
+// ----- Options binding -----
+builder.Services.Configure<ServerOptions>(builder.Configuration.GetSection("server"));
+builder.Services.Configure<LoggingOptions>(builder.Configuration.GetSection("logging"));
+builder.Services.Configure<DirectoryOptions>(builder.Configuration.GetSection("directory"));
+builder.Services.Configure<HeartbeatOptions>(builder.Configuration.GetSection("heartbeat"));
 
-builder.Services.AddScoped<IUserAuthComponent, DbUserAuthComponent>();
+// ----- LogCenter initialization -----
+LogCenter.ApplyOptions(builder.Configuration.GetSection("logging").Get<LoggingOptions>() ?? new LoggingOptions());
 
-var metricsEnabled = builder.Configuration.GetValue<bool?>(Shared.Constants.ConfigKeys.TelemetryMetricsEnabledKeyLower)
-                     ?? (bool.TryParse(
-                         Environment.GetEnvironmentVariable(Shared.Constants.ConfigKeys.TelemetryMetricsEnabledEnv),
-                         out var v) && v);
+// ----- OpenTelemetry -----
+var metricsEnabled = builder.Configuration.GetValue<bool?>(ConfigKeys.TelemetryMetricsEnabledKeyLower) ?? false;
 
 if (metricsEnabled)
 {
@@ -101,8 +97,7 @@ if (metricsEnabled)
             mb.AddHttpClientInstrumentation();
             mb.AddMeter(CoreTelemetry.Meter.Name);
 
-            var endpoint = builder.Configuration[Shared.Constants.ConfigKeys.TelemetryMetricsOtlpEndpointKeyLower]
-                           ?? Environment.GetEnvironmentVariable(Shared.Constants.ConfigKeys.OtlpEndpointEnv);
+            var endpoint = builder.Configuration[ConfigKeys.TelemetryMetricsOtlpEndpointKeyLower];
             if (!string.IsNullOrWhiteSpace(endpoint))
             {
                 mb.AddOtlpExporter(otlpOptions =>
@@ -115,8 +110,7 @@ if (metricsEnabled)
         .WithTracing(tb =>
         {
             tb.AddSource(CoreTelemetry.ActivitySource.Name);
-            var endpoint = builder.Configuration[Shared.Constants.ConfigKeys.TelemetryMetricsOtlpEndpointKeyLower]
-                           ?? Environment.GetEnvironmentVariable(Shared.Constants.ConfigKeys.OtlpEndpointEnv);
+            var endpoint = builder.Configuration[ConfigKeys.TelemetryMetricsOtlpEndpointKeyLower];
             if (!string.IsNullOrWhiteSpace(endpoint))
             {
                 tb.AddOtlpExporter(otlpOptions =>
@@ -128,8 +122,17 @@ if (metricsEnabled)
         });
 }
 
-builder.Services.AddHostedService<GameServerService>();
+// ----- DI services -----
 builder.Services.AddSingleton<CurrentServerAccessor>();
+builder.Services.AddSingleton<IServerRegistry>(sp =>
+{
+    var dirOpts = sp.GetRequiredService<IOptions<DirectoryOptions>>().Value;
+    if (string.Equals(dirOpts.Registry.Mode, "redis", StringComparison.OrdinalIgnoreCase))
+        return new RedisServerRegistry(dirOpts.Registry.Redis.ConnectionString, dirOpts.Registry.Redis.CleanupIntervalSeconds);
+    return new MemoryServerRegistry();
+});
+
+builder.Services.AddHostedService<GameServerService>();
 builder.Services.AddHostedService<AdminConsoleHostedService>();
 builder.Services.AddHealthChecks()
     .AddCheck<ServerHealthCheck>("liveness", tags: new[] { "liveness" })
@@ -138,26 +141,16 @@ builder.Services.AddHealthChecks()
 builder.Logging.ClearProviders();
 builder.Logging.AddConsole();
 
-var healthUrl = builder.Configuration[Shared.Constants.ConfigKeys.ServiceHealthCheckUrlKeyLower]
-                ?? Environment.GetEnvironmentVariable(Shared.Constants.ConfigKeys.ServiceHealthCheckUrlEnv)
-                ?? Environment.GetEnvironmentVariable(Shared.Constants.ConfigKeys.HealthCheckUrlEnv);
+var healthUrl = builder.Configuration[ConfigKeys.ServiceHealthCheckUrlKeyLower];
 
 var app = builder.Build();
 BasicCommands.RegisterAll();
 
 if (!string.IsNullOrWhiteSpace(healthUrl))
 {
-    try
-    {
-        app.Urls.Add(healthUrl);
-    }
-    catch
-    {
-        /* ignore*/
-    }
+    try { app.Urls.Add(healthUrl); }
+    catch (Exception ex) { System.Diagnostics.Debug.WriteLine($"[Program] 添加 health check URL 失败: {ex.Message}"); }
 }
-
-HostingUtilities.SeedDevelopmentDatabase(app.Services);
 
 app.MapHealthChecks("/health", new Microsoft.AspNetCore.Diagnostics.HealthChecks.HealthCheckOptions
 {
@@ -211,15 +204,15 @@ app.MapPost("/admin/command",
             var auth = context.Request.Headers["Authorization"].ToString();
             if (string.IsNullOrWhiteSpace(auth) || !auth.StartsWith("Bearer ")) return Results.Unauthorized();
             var token = auth.Substring("Bearer ".Length);
-            var expect = cfg["ADMIN_TOKEN"] ?? Environment.GetEnvironmentVariable("ADMIN_TOKEN");
+            var expect = cfg["ADMIN_TOKEN"];
             if (string.IsNullOrWhiteSpace(expect) || !string.Equals(token, expect)) return Results.Unauthorized();
             var ip = context.Connection.RemoteIpAddress;
             if (ip != null && !IPAddress.IsLoopback(ip))
             {
                 var allowed = (cfg["ADMIN_HTTP_ALLOWED_IPS"] ?? "127.0.0.1").Split(',',
                     StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
-                var hit = allowed.Any(a => string.Equals(a, ip.ToString(), StringComparison.OrdinalIgnoreCase));
-                if (!hit) return Results.Unauthorized();
+                if (!Array.Exists(allowed, a => string.Equals(a, ip.ToString(), StringComparison.OrdinalIgnoreCase)))
+                    return Results.Unauthorized();
             }
         }
 
@@ -231,8 +224,9 @@ app.MapPost("/admin/command",
             var doc = System.Text.Json.JsonDocument.Parse(body);
             cmdText = doc.RootElement.TryGetProperty("cmd", out var c) ? c.GetString() ?? string.Empty : string.Empty;
         }
-        catch
+        catch (Exception ex)
         {
+            System.Diagnostics.Debug.WriteLine($"[Program] 解析命令请求体失败: {ex.Message}");
             cmdText = body;
         }
 
@@ -241,29 +235,39 @@ app.MapPost("/admin/command",
         return Results.Json(res);
     });
 
-await app.RunAsync();
-
-namespace ServerHost
+// ----- Routing API -----
+app.MapGet("/api/routing/query", async (HttpContext context, IServerRegistry registry) =>
 {
-    public static class HostingUtilities
+    var serverType = context.Request.Query["type"].FirstOrDefault();
+    var region = context.Request.Query["region"].FirstOrDefault();
+    var strategy = context.Request.Query["strategy"].FirstOrDefault() ?? "load";
+    var limitStr = context.Request.Query["limit"].FirstOrDefault();
+    int.TryParse(limitStr, out var limit);
+    if (limit <= 0) limit = 10;
+
+    var candidates = await registry.QueryAsync(serverType, region);
+    var selector = Core.Directory.ServerSelectionStrategyFactory.Create(strategy);
+    var selected = selector.Select(candidates, limit);
+
+    var result = selected.Select(s => new
     {
-        public static void SeedDevelopmentDatabase(IServiceProvider services)
-        {
-            using var scope = services.CreateScope();
-            var serviceProvider = scope.ServiceProvider;
-            var env = serviceProvider.GetRequiredService<IHostEnvironment>();
-            if (env.IsDevelopment())
-            {
-                var dbContext = serviceProvider.GetRequiredService<GameDbContext>();
-                if (!dbContext.Users.Any())
-                {
-                    dbContext.Users.Add(new User { Username = "test", Password = "password" });
-                    dbContext.SaveChanges();
-                }
-            }
-        }
-    }
-}
+        id = s.ServerId,
+        type = s.ServerType,
+        region = s.Region,
+        host = s.Host,
+        port = s.Port,
+        playerCount = s.PlayerCount,
+        capacity = s.Capacity,
+        load = s.Load,
+        status = s.Status,
+        lastHeartbeat = s.LastHeartbeatUnix,
+        version = s.Version
+    }).ToArray();
+
+    return Results.Json(new { servers = result, count = result.Length, strategy });
+});
+
+await app.RunAsync();
 
 namespace ServerHost
 {
@@ -274,178 +278,135 @@ namespace ServerHost
         private readonly IServiceProvider _serviceProvider;
         private readonly IHostEnvironment _hostEnvironment;
         private readonly CurrentServerAccessor _accessor;
+        private readonly IServerRegistry _registry;
+        private readonly IOptions<ServerOptions> _serverOptions;
+        private readonly IOptions<HeartbeatOptions> _heartbeatOptions;
+        private readonly IOptions<DirectoryOptions> _directoryOptions;
         private readonly List<BaseGameServer> _servers = new();
-        private IServiceScope? _loginScope;
 
-        public GameServerService(ILogger<GameServerService> logger, IConfiguration configuration,
-            IServiceProvider serviceProvider, IHostEnvironment hostEnvironment, CurrentServerAccessor accessor)
+        public GameServerService(
+            ILogger<GameServerService> logger,
+            IConfiguration configuration,
+            IServiceProvider serviceProvider,
+            IHostEnvironment hostEnvironment,
+            CurrentServerAccessor accessor,
+            IServerRegistry registry,
+            IOptions<ServerOptions> serverOptions,
+            IOptions<HeartbeatOptions> heartbeatOptions,
+            IOptions<DirectoryOptions> directoryOptions)
         {
             _logger = logger;
             _configuration = configuration;
             _serviceProvider = serviceProvider;
             _hostEnvironment = hostEnvironment;
             _accessor = accessor;
+            _registry = registry;
+            _serverOptions = serverOptions;
+            _heartbeatOptions = heartbeatOptions;
+            _directoryOptions = directoryOptions;
         }
 
         public async Task StartAsync(CancellationToken cancellationToken)
         {
-            var service = _configuration[Shared.Constants.ConfigKeys.ServiceConfigKey] ??
-                          Environment.GetEnvironmentVariable(Shared.Constants.ConfigKeys.ServiceEnv) ?? "directory";
-            var portConfig = _configuration.GetValue<int?>("port") ??
-                             (int.TryParse(Environment.GetEnvironmentVariable(Shared.Constants.ConfigKeys.PortEnv),
-                                 out var p)
-                                 ? p
-                                 : 5500);
+            var service = _configuration[ConfigKeys.ServiceConfigKey] ?? "default";
+            var portConfig = _configuration.GetValue<int?>("port") ?? 5500;
 
-            // 配置链路校验与提示：记录 DirectoryTokenSecret 来源
-            Core.Config.ConfigurationBridge.ValidateAndLog(_configuration, _logger);
-
-            // 安全护栏：Production 环境下进行关键配置校验
             if (_hostEnvironment.IsProduction())
-            {
                 ValidateProductionConfiguration();
-            }
 
             if (string.Equals(service, "all", StringComparison.OrdinalIgnoreCase))
             {
-                // 单进程启动所有服务模式（开发环境专用）
-                await StartServerInstanceAsync("directory", 5500);
+                await StartDirectoryServer(5500);
                 await StartServerInstanceAsync("login", 5501);
-                await StartServerInstanceAsync("battle", 5502);
-                await StartServerInstanceAsync("logic", 5503);
-
-                // 将目录服务器设为控制台上下文默认目标
-                var dir = _servers.FirstOrDefault(s => s is DirectoryServer.DirectoryGameServer);
-                if (dir != null) _accessor.Set(dir);
-
-                try
-                {
-                    Console.Title = "All Servers (5500-5503)";
-                }
-                catch
-                {
-                    // ignore
-                }
+                await StartServerInstanceAsync("logic", 5502);
+                await StartServerInstanceAsync("battle", 5503);
+                try { Console.Title = "All Servers"; }
+                catch (Exception ex) { System.Diagnostics.Debug.WriteLine($"[Program] 设置控制台标题失败: {ex.Message}"); }
             }
             else
             {
-                await StartServerInstanceAsync(service, portConfig);
+                if (string.Equals(service, "directory", StringComparison.OrdinalIgnoreCase))
+                    await StartDirectoryServer(portConfig);
+                else
+                    await StartServerInstanceAsync(service, portConfig);
+
                 if (_servers.Count > 0)
                 {
-                    var s = _servers[0];
-                    _accessor.Set(s);
-                    try
-                    {
-                        Console.Title = $"{s.ServerName} : {portConfig}";
-                    }
-                    catch
-                    {
-                        // ignore
-                    }
+                    try { Console.Title = $"{_servers[0].ServerName} : {portConfig}"; }
+                    catch (Exception ex) { System.Diagnostics.Debug.WriteLine($"[Program] 设置控制台标题失败: {ex.Message}"); }
                 }
             }
         }
 
+        private async Task StartDirectoryServer(int port)
+        {
+            var dirOpts = _directoryOptions.Value;
+            var serverOpts = _serverOptions.Value;
+            var logger = _serviceProvider.GetRequiredService<ILogger<DirectoryGameServer>>();
+            var server = new DirectoryGameServer(logger, _registry, serverOpts);
+            server.AddComponent<IServerRegistry>(_registry);
+            server.AddComponent<DirectoryCleanupService>(new DirectoryCleanupService(_registry, dirOpts));
+            await server.StartAsync(port);
+            _servers.Add(server);
+            _accessor.Add(server.ServerName, server);
+            _logger.LogInformation("Directory server 启动成功, 监听端口={port}", port);
+        }
+
         private async Task StartServerInstanceAsync(string serviceType, int port)
         {
+            var serverOpts = _serverOptions.Value;
+            var hbOpts = _heartbeatOptions.Value;
+            var dirOpts = _directoryOptions.Value;
             BaseGameServer server = serviceType.ToLowerInvariant() switch
             {
-                "directory" => new DirectoryServer.DirectoryGameServer(
-                    _serviceProvider.GetRequiredService<ILogger<DirectoryServer.DirectoryGameServer>>(),
-                    _configuration),
-                "login" => CreateLoginServer(),
-                "battle" => new BattleServer.BattleGameServer(_serviceProvider
-                    .GetRequiredService<ILogger<BattleServer.BattleGameServer>>()),
-                "logic" => new LogicServer.LogicGameServer(_serviceProvider
-                    .GetRequiredService<ILogger<LogicServer.LogicGameServer>>()),
-                _ => throw new ArgumentException($"未知服务类型: {serviceType}")
+                "login" => new LoginGameServer(
+                    _serviceProvider.GetRequiredService<ILogger<LoginGameServer>>(), serverOpts),
+                "logic" => new LogicGameServer(
+                    _serviceProvider.GetRequiredService<ILogger<LogicGameServer>>(), serverOpts),
+                "battle" => new BattleGameServer(
+                    _serviceProvider.GetRequiredService<ILogger<BattleGameServer>>(), serverOpts),
+                _ => new DefaultGameServer(
+                    _serviceProvider.GetRequiredService<ILogger<DefaultGameServer>>(), serverOpts),
             };
+
+            var tokenSecret = dirOpts.TokenSecret;
+            if (string.IsNullOrWhiteSpace(tokenSecret))
+                tokenSecret = "dev-secret";
+            server.AddComponent<Core.Components.ITokenSecretProvider>(new Core.Components.TokenSecretProviderComponent(tokenSecret));
+
+            hbOpts.ServerType = serviceType;
+            hbOpts.Port = port;
+            hbOpts.DirectoryPort = _configuration.GetValue<int?>("directory:registry:port") ?? 5500;
+            server.AddComponent<HeartbeatSenderService>(new HeartbeatSenderService(hbOpts, tokenSecret, _logger));
 
             await server.StartAsync(port);
             _servers.Add(server);
-            _logger.LogInformation("服务启动成功: {server} 正在监听 {port}, 环境={env}", server.ServerName, port,
-                _hostEnvironment.EnvironmentName);
+            _accessor.Add(server.ServerName, server);
+            _logger.LogInformation("服务启动成功: {serverType} 监听 {port}", serviceType, port);
         }
 
         public async Task StopAsync(CancellationToken cancellationToken)
         {
             foreach (var server in _servers)
-            {
                 await server.StopAsync();
-            }
-
             _servers.Clear();
-            try
-            {
-                _accessor.Set(null);
-            }
-            catch
-            {
-                // ignore
-            }
-
-            try
-            {
-                _loginScope?.Dispose();
-            }
-            catch
-            {
-                // ignore
-            }
-
-            _loginScope = null;
-        }
-
-        private BaseGameServer CreateLoginServer()
-        {
-            _loginScope = _serviceProvider.CreateScope();
-            var sp = _loginScope.ServiceProvider;
-            var logger = sp.GetRequiredService<ILogger<LoginServer.LoginGameServer>>();
-            var auth = sp.GetRequiredService<IUserAuthComponent>();
-            return new LoginServer.LoginGameServer(logger, auth);
+            try { _accessor.Clear(); }
+            catch (Exception ex) { System.Diagnostics.Debug.WriteLine($"[Program] 清除访问器失败: {ex.Message}"); }
         }
 
         private void ValidateProductionConfiguration()
         {
-            // 目录令牌密钥校验：禁止使用默认 dev-secret/changeme
-            var secret = Core.Config.SimpleConfigLoader.LoadDirectoryTokenSecret(AppContext.BaseDirectory);
-            if (string.IsNullOrWhiteSpace(secret) || secret is "dev-secret" or "changeme" or "changeme-dev")
-            {
-                throw new InvalidOperationException(
-                    "[Guard] 生产环境必须通过 Secret/环境变量提供非默认的 DIRECTORY_TOKEN_SECRET，当前值非法（dev-secret / changeme）。");
-            }
+            var secret = _directoryOptions.Value.TokenSecret;
+            if (string.IsNullOrWhiteSpace(secret) || secret is "dev-secret" or "changeme")
+                throw new InvalidOperationException("[Guard] 生产环境必须通过配置提供非默认的 TokenSecret。");
+        }
+    }
 
-            // Redis 连接串校验（当目录注册模式为 redis）
-            var registryMode = (_configuration[Shared.Constants.ConfigKeys.DirectoryRegistryModeLower] ??
-                                Environment.GetEnvironmentVariable(Shared.Constants.ConfigKeys.DirectoryRegistryEnv) ??
-                                Shared.Constants.ConfigKeys.DirectoryRegistryModeValueMemory).ToLowerInvariant();
-            if (registryMode == Shared.Constants.ConfigKeys.DirectoryRegistryModeValueRedis)
-            {
-                var conn = _configuration[Shared.Constants.ConfigKeys.DirectoryRegistryRedisConnectionStringLower] ??
-                           Environment.GetEnvironmentVariable(Shared.Constants.ConfigKeys.RedisConnectionEnv);
-                if (string.IsNullOrWhiteSpace(conn))
-                {
-                    throw new InvalidOperationException(
-                        "[Guard] 生产环境启用 Redis 注册表时必须提供 REDIS_CONNECTION（含密码/鉴权或采用 TLS），当前缺失。");
-                }
-
-                if (conn.Contains("localhost", StringComparison.OrdinalIgnoreCase) ||
-                    conn.Contains("changeme", StringComparison.OrdinalIgnoreCase))
-                {
-                    throw new InvalidOperationException(
-                        "[Guard] 生产环境的 REDIS_CONNECTION 不应为 localhost 或包含默认口令（changeme）。请改为内网地址/域名并通过 Secret 注入强口令或证书。");
-                }
-            }
-
-            // 数据库连接串（如果不是内存）
-            if (!_hostEnvironment.IsDevelopment())
-            {
-                var dbConn = _configuration.GetConnectionString("DefaultConnection");
-                if (string.IsNullOrWhiteSpace(dbConn))
-                {
-                    throw new InvalidOperationException("[Guard] 生产环境需要有效的数据库连接串（DefaultConnection）。当前缺失。");
-                }
-            }
+    public class DefaultGameServer : BaseGameServer
+    {
+        public DefaultGameServer(ILogger<DefaultGameServer> logger, ServerOptions? options = null)
+            : base("Default", logger, options)
+        {
         }
     }
 }

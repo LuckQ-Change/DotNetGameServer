@@ -1,88 +1,45 @@
 syntax = "proto3";
 package DotNetGameServer;
 
-// 服务器基础信息
-message server_info {
-  string id = 1;
-  string type = 2;    // Login/Battle/Logic/Directory 等
-  string region = 3;  // 区域/分区，例如: CN-1
-  string host = 4;
-  int32 port = 5;
-  int32 playerCount = 6;
-  int32 capacity = 7;
-  string status = 8;  // online/offline/maintain
-  int64 lastHeartbeat = 9; // unix ms
-  // 目录侧评估的平均往返延迟毫秒（或由心跳提供），用于选择策略
-  int32 avgRttMs = 10;
-}
-
-// 查询服务器列表（支持智能策略）
-message c2s_query_servers {
-  // 选择策略："load"（按负载从低到高）、"latency"（按心跳新鲜度模拟延迟，从低到高）
-  string strategy = 1;
-  // 区域过滤（可选）：仅返回指定区域的服务器
-  string region = 2;
-  // 限制返回数量（可选）：例如 Top N
-  int32 limit = 3;
-  // 演进扩展：用于携带附加参数（例如区域偏好、权重），保持向后兼容
-  oneof ext {
-    bytes ext_payload = 100;
-  }
-}
-message s2c_query_servers {
-  repeated server_info servers = 1;
-}
-
-// 查询单服状态
-message c2s_query_server_status {
-  string serverId = 1;
-}
-message s2c_query_server_status {
-  bool found = 1;
-  server_info info = 2;
-}
-
-// 切换服务器（返回临时令牌）
-message c2s_switch_server {
-  string serverId = 1;
-  string userId = 2;
-}
-message s2c_switch_server {
-  bool success = 1;
-  string message = 2;
+message HeartbeatRequest {
+  string server_id = 1;
+  string server_type = 2;
   string host = 3;
   int32 port = 4;
-  string token = 5;
-  int64 expireAt = 6; // unix ms
+  int32 player_count = 5;
+  int32 capacity = 6;
+  string region = 7;
+  string version = 8;
+  int64 timestamp = 9;
 }
 
-// 切服令牌验证（服务端二次校验，可选）
-message c2s_verify_switch_token {
-  string userId = 1;    // 令牌绑定的用户
-  string serverId = 2;  // 目标服务器ID
-  string token = 3;     // 客户端携带的已签名令牌
-  bool consume = 4;     // 是否在验证通过后消费（防重放）
-}
-
-message s2c_verify_switch_token {
-  bool valid = 1;
-  string message = 2;
-  int64 expireAt = 3;   // 若有效，返回过期时间（unix ms）
-}
-
-// 业务服心跳上报
-message c2s_heartbeat {
-  string id = 1;
-  string type = 2;
-  string region = 3;
-  string host = 4;
-  int32 port = 5;
-  int32 playerCount = 6;
-  int32 capacity = 7;
-  string status = 8;
-  // 可选：业务服上报平均延迟（如自测目录往返），未上报则目录按心跳新鲜度估算
-  int32 avgRttMs = 9;
-}
-message s2c_heartbeat {
+message HeartbeatResponse {
   bool accepted = 1;
+  string message = 2;
+  int64 next_heartbeat_interval = 3;
+}
+
+message ServerQueryRequest {
+  string server_type = 1;
+  string region = 2;
+  string strategy = 3;
+  int32 limit = 4;
+}
+
+message ServerInfo {
+  string server_id = 1;
+  string server_type = 2;
+  string host = 3;
+  int32 port = 4;
+  int32 player_count = 5;
+  int32 capacity = 6;
+  float load = 7;
+  string region = 8;
+  string version = 9;
+  int64 last_heartbeat = 10;
+  string status = 11;
+}
+
+message ServerQueryResponse {
+  repeated ServerInfo servers = 1;
 }

@@ -5,7 +5,6 @@ namespace Core.Diagnostics;
 public static class CommandRegistry
 {
     private static readonly ConcurrentDictionary<string, ICommand> Commands = new(StringComparer.OrdinalIgnoreCase);
-    private static readonly SemaphoreSlim Sema = new(1, 1);
 
     public static void Register(ICommand cmd, params string[] aliases)
     {
@@ -45,17 +44,9 @@ public static class CommandRegistry
         if (tokens.Length == 0) return new { ok = false, error = "empty" };
         var name = tokens[0];
         if (!Commands.TryGetValue(name, out var cmd)) return new { ok = false, error = "not_found", name };
-        await Sema.WaitAsync();
-        try
-        {
-            var args = tokens.Skip(1).ToArray();
-            var r = await cmd.ExecuteAsync(args, context);
-            return new { ok = true, result = r };
-        }
-        finally
-        {
-            Sema.Release();
-        }
+        var args = tokens.Skip(1).ToArray();
+        var r = await cmd.ExecuteAsync(args, context);
+        return new { ok = true, result = r };
     }
 
     private static string[] Tokenize(string text)

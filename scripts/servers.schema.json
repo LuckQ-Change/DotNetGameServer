@@ -1,0 +1,32 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Game Server Instances Configuration",
+  "description": "Define which server instances to launch during local development",
+  "type": "object",
+  "required": ["build", "servers"],
+  "properties": {
+    "build": {
+      "type": "object",
+      "required": ["project"],
+      "properties": {
+        "project": { "type": "string", "description": "Path to csproj to build" },
+        "configuration": { "type": "string", "enum": ["Debug", "Release"], "default": "Debug" }
+      }
+    },
+    "servers": {
+      "type": "array",
+      "description": "List of server instances to launch",
+      "items": {
+        "type": "object",
+        "required": ["name", "type", "port"],
+        "properties": {
+          "name": { "type": "string", "description": "Display name for the server window" },
+          "type": { "type": "string", "description": "Server type: directory, login, logic, battle, or custom" },
+          "port": { "type": "integer", "description": "TCP listen port", "minimum": 1024, "maximum": 65535 },
+          "healthPort": { "type": "integer", "description": "HTTP health check port", "minimum": 1024, "maximum": 65535 },
+          "default": { "type": "boolean", "description": "Mark as default for single-server mode", "default": false }
+        }
+      }
+    }
+  }
+}

@@ -1,6 +1,7 @@
 using System.Collections.Concurrent;
 using System.Text.Json;
 
+using Core.Configuration;
 using Microsoft.Extensions.Logging;
 
 using R3;
@@ -9,10 +10,6 @@ using Shared.Time;
 
 namespace Core.Logging;
 
-/// <summary>
-/// 日志中心。
-/// 负责日志级别控制、分类开关、内存缓存以及导出。
-/// </summary>
 public static class LogCenter
 {
     private static readonly Subject<LogEvent> Subject = new();
@@ -25,23 +22,23 @@ public static class LogCenter
 
     public static Subject<LogEvent> Stream => Subject;
 
-    public static LogLevel MinimumLevel { get; private set; } = ResolveDefaultLevel();
+    public static LogLevel MinimumLevel { get; private set; } = LogLevel.Warning;
 
-    public static bool GlobalEnabled { get; private set; } = ResolveDefaultGlobalEnabled();
+    public static bool GlobalEnabled { get; private set; }
 
     public static bool CacheEnabled { get; private set; } = true;
 
-    public static int CacheCapacity { get; private set; } = ResolveDefaultCacheCapacity();
+    public static int CacheCapacity { get; private set; } = 2000;
 
     private static readonly ConcurrentDictionary<string, bool> CategoryEnabled = new(StringComparer.OrdinalIgnoreCase);
 
-    static LogCenter()
+    public static void ApplyOptions(LoggingOptions options)
     {
-        var hb = Environment.GetEnvironmentVariable("LOG_HEARTBEAT_ENABLED");
-        if (!string.IsNullOrWhiteSpace(hb) && bool.TryParse(hb, out var enabled))
-            CategoryEnabled["Heartbeat"] = enabled;
-        else
-            CategoryEnabled["Heartbeat"] = false;
+        MinimumLevel = options.MinimumLevel;
+        GlobalEnabled = options.Enabled;
+        CacheCapacity = Math.Max(1, options.CacheCapacity);
+        if (options.HeartbeatEnabled) CategoryEnabled["Heartbeat"] = true;
+        TrimCache();
     }
 
     public static void SetMinimumLevel(LogLevel level) => MinimumLevel = level;
@@ -86,9 +83,9 @@ public static class LogCenter
         {
             Subject.OnNext(logEvent);
         }
-        catch
+        catch (Exception ex)
         {
-            // 忽略订阅回调异常，确保日志主流程不中断。
+            System.Diagnostics.Debug.WriteLine($"[LogCenter] 订阅回调异常: {ex.Message}");
         }
     }
 
@@ -115,10 +112,10 @@ public static class LogCenter
         }
 
         var resolvedPath = ResolveExportPath(path);
-        var directory = Path.GetDirectoryName(resolvedPath);
-        if (!string.IsNullOrWhiteSpace(directory))
+        var dir = Path.GetDirectoryName(resolvedPath);
+        if (!string.IsNullOrWhiteSpace(dir))
         {
-            Directory.CreateDirectory(directory);
+            System.IO.Directory.CreateDirectory(dir);
         }
 
         await using var stream = new FileStream(
@@ -174,47 +171,6 @@ public static class LogCenter
         }
     }
 
-    private static LogLevel ResolveDefaultLevel()
-    {
-        try
-        {
-            var envLevel = Environment.GetEnvironmentVariable("LOG_LEVEL");
-            if (!string.IsNullOrWhiteSpace(envLevel) &&
-                Enum.TryParse<LogLevel>(envLevel, true, out var parsed))
-            {
-                return parsed;
-            }
-
-            var env = Environment.GetEnvironmentVariable("DOTNET_ENVIRONMENT")
-                      ?? Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT");
-            return string.Equals(env, "Development", StringComparison.OrdinalIgnoreCase)
-                ? LogLevel.Information
-                : LogLevel.Warning;
-        }
-        catch
-        {
-            return LogLevel.Information;
-        }
-    }
-
-    private static bool ResolveDefaultGlobalEnabled()
-    {
-        var env = Environment.GetEnvironmentVariable("LOG_ENABLED");
-        if (!string.IsNullOrWhiteSpace(env) && bool.TryParse(env, out var enabled))
-        {
-            return enabled;
-        }
-
-        var runtimeEnv = Environment.GetEnvironmentVariable("DOTNET_ENVIRONMENT")
-                         ?? Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT");
-        return string.Equals(runtimeEnv, "Development", StringComparison.OrdinalIgnoreCase);
-    }
-
-    private static int ResolveDefaultCacheCapacity()
-    {
-        var env = Environment.GetEnvironmentVariable("LOG_CACHE_CAPACITY");
-        return int.TryParse(env, out var capacity) && capacity > 0 ? capacity : 2000;
-    }
 }
 
 /// <summary>

@@ -57,11 +57,5 @@ public static class TokenSigner
         return TryVerify(signedToken, "heartbeat", serverId, secret, out tokenId, out expireUnixSec);
     }
 
-    private static int GetAllowedSkewSeconds()
-    {
-        // 允许通过环境变量调整时钟偏差容忍度（默认 60s）
-        var env = Environment.GetEnvironmentVariable("TOKEN_TIME_SKEW_SEC");
-        if (int.TryParse(env, out var sec) && sec >= 0 && sec <= 600) return sec;
-        return 60;
-    }
+    private static int GetAllowedSkewSeconds() => 60;
 }

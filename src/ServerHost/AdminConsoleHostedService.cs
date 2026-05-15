@@ -1,12 +1,10 @@
 using Core.Diagnostics;
 
 using Microsoft.Extensions.Hosting;
-using Microsoft.Extensions.Logging;
 
 namespace ServerHost;
 
 public sealed class AdminConsoleHostedService(
-    ILogger<AdminConsoleHostedService> logger,
     IHostEnvironment env,
     CurrentServerAccessor accessor)
     : IHostedService
@@ -32,9 +30,9 @@ public sealed class AdminConsoleHostedService(
                 {
                     Console.WriteLine(System.Text.Json.JsonSerializer.Serialize(res));
                 }
-                catch
+                catch (Exception ex)
                 {
-                    // ignored
+                    System.Diagnostics.Debug.WriteLine($"[AdminConsole] 序列化命令结果失败: {ex.Message}");
                 }
             }
         }, _cts.Token);
@@ -47,18 +45,18 @@ public sealed class AdminConsoleHostedService(
         {
             await _cts?.CancelAsync()!;
         }
-        catch
+        catch (Exception ex)
         {
-            // ignored
+            System.Diagnostics.Debug.WriteLine($"[AdminConsole] 取消令牌失败: {ex.Message}");
         }
 
         try
         {
             await (_task ?? Task.CompletedTask);
         }
-        catch
+        catch (Exception ex)
         {
-            // ignored
+            System.Diagnostics.Debug.WriteLine($"[AdminConsole] 等待控制台任务失败: {ex.Message}");
         }
     }
 }

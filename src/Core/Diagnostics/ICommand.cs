@@ -11,7 +11,12 @@ public interface ICommandContext
     public BaseGameServer? Server { get; }
 }
 
-public sealed class DefaultCommandContext(BaseGameServer? server) : ICommandContext
+public sealed class DefaultCommandContext : ICommandContext
 {
-    public BaseGameServer? Server { get; } = server;
+    public BaseGameServer? Server { get; }
+
+    public DefaultCommandContext(BaseGameServer? server = null)
+    {
+        Server = server;
+    }
 }

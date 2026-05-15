@@ -14,28 +14,25 @@ using Core.Telemetry;
 using Core.Logging;
 using Core.Components;
 using Shared.Time;
+using Core.Configuration;
 
 namespace Core;
 
-/// <summary>
-/// 基础游戏服务器类，采用ECS架构
-/// </summary>
-public abstract class BaseGameServer : IServerContext
-{
-    private readonly int _maxMessageSize; // 可配置消息长度上限
-    private readonly int _maxConcurrentConnections; // 可配置连接上限
-    private readonly int _receiveTimeoutMs; // 收发超时（软限制）
-    private readonly int _acceptBackoffMs; // 接受失败退避毫秒
-    private int _currentConnections;
-    private TcpListener? _listener;
+    public abstract class BaseGameServer : IServerContext
+    {
+        private readonly int _maxMessageSize;
+        private readonly int _maxConcurrentConnections;
+        private readonly int _receiveTimeoutMs;
+        private readonly int _acceptBackoffMs;
+        private int _currentConnections;
+        private TcpListener? _listener;
 
-    private CancellationTokenSource? _cts; // 用于取消监听
+        private CancellationTokenSource? _cts;
 
-    // ECS 更新循环通过后台 Task 驱动，无需持有字段引用。
-    private IWebHost? _webHost; // 用于后台监控
+        private IWebHost? _webHost;
 
-    private readonly ILogger _logger; // 日志
-    private readonly bool _forwardToILogger;
+        private readonly ILogger _logger;
+        private readonly bool _forwardToILogger;
 
     // 连接数指标通过 Meter 注册，无需持有字段引用。
     private readonly ConcurrentDictionary<string, IHandlerInvoker> _typedHandlers = new();
@@ -53,7 +50,7 @@ public abstract class BaseGameServer : IServerContext
     private readonly ConcurrentDictionary<string, IpSlidingRate> _ipRates = new();
     private readonly int _ipMaxBytesPerSecond; // 0 表示禁用
     private readonly int _ipMaxMessagesPerSecond; // 0 表示禁用
-    private IDisposable? _ecsSubscription;
+
     private int _rateEventCount;
     private IDisposable? _rateSub;
 
@@ -71,62 +68,38 @@ public abstract class BaseGameServer : IServerContext
     /// <summary>
     /// 当前监听端口；未启动或已停止时为 <c>null</c>。
     /// </summary>
-    protected int? ListeningPort { get; private set; }
+    public int? ListeningPort { get; private set; }
+    public bool IsRunning => _listener != null;
 
-    protected BaseGameServer(string serverName, ILogger? logger)
+    protected BaseGameServer(string serverName, ILogger? logger, ServerOptions? options = null, string? tokenSecret = null, bool forwardToILogger = false)
     {
         ServerName = serverName;
         _logger = logger ?? new DelegateLogger(Console.WriteLine, serverName);
-        _forwardToILogger = ResolveForwardToILogger();
-        var settings = Config.SimpleConfigLoader.LoadServerSettings(AppContext.BaseDirectory);
+        _forwardToILogger = forwardToILogger;
+        var settings = options ?? new ServerOptions();
         _maxMessageSize = Math.Max(1024, settings.MaxMessageSizeBytes);
         _maxConcurrentConnections = Math.Max(1, settings.MaxConcurrentConnections);
         _receiveTimeoutMs = Math.Max(0, settings.ReceiveTimeoutMs);
         _acceptBackoffMs = Math.Max(0, settings.AcceptBackoffMs);
+        _maxBytesPerSecond = Math.Max(1, settings.MaxBytesPerSecond);
+        _maxMessagesPerSecond = Math.Max(1, settings.MaxMessagesPerSecond);
+        _idleTimeoutMs = Math.Max(0, settings.IdleTimeoutMs);
+        _ipMaxBytesPerSecond = Math.Max(0, settings.IpMaxBytesPerSecond);
+        _ipMaxMessagesPerSecond = Math.Max(0, settings.IpMaxMessagesPerSecond);
         CoreTelemetry.CreateConnectionsGauge(() => _currentConnections, ServerName);
-        // 设定默认网络限速与空闲超时
-        _maxBytesPerSecond = 1_000_000;
-        _maxMessagesPerSecond = 200;
-        _idleTimeoutMs = 120_000;
-        // 若后续提供配置，可在此覆盖默认值（环境变量或配置）
-        if (int.TryParse(Environment.GetEnvironmentVariable(Shared.Constants.ConfigKeys.ServerMaxBpsEnv),
-                out var bps) && bps > 0)
-            _maxBytesPerSecond = bps;
-        if (int.TryParse(Environment.GetEnvironmentVariable(Shared.Constants.ConfigKeys.ServerMaxMsgsEnv),
-                out var mps) && mps > 0)
-            _maxMessagesPerSecond = mps;
-        if (int.TryParse(Environment.GetEnvironmentVariable(Shared.Constants.ConfigKeys.ServerIdleMsEnv),
-                out var idle) && idle > 0)
-            _idleTimeoutMs = idle;
-        // 按 IP 的聚合限流阈值（可选）：未设置或 <=0 则禁用
-        _ipMaxBytesPerSecond =
-            int.TryParse(Environment.GetEnvironmentVariable("SERVER_IP_MAX_BPS"), out var ipBps) && ipBps > 0
-                ? ipBps
-                : 0;
-        _ipMaxMessagesPerSecond =
-            int.TryParse(Environment.GetEnvironmentVariable("SERVER_IP_MAX_MSGS"), out var ipMps) && ipMps > 0
-                ? ipMps
-                : 0;
 
-        // 集中密钥提供组件：统一加载并缓存鉴权密钥
         try
         {
-            AddComponent<ITokenSecretProvider>(new TokenSecretProviderComponent(AppContext.BaseDirectory));
+            AddComponent<ITokenSecretProvider>(new TokenSecretProviderComponent(tokenSecret));
             AddComponent<ITokenRevocationStore>(new InMemoryTokenRevocationStore());
         }
         catch (Exception ex)
         {
-            // 鉴权密钥提供组件初始化失败不影响服务器启动（仅影响需要认证的场景），记录后继续。
             Log($"初始化 TokenSecretProviderComponent 失败: {ex.Message}");
         }
     }
 
-    /// <summary>
-    /// 添加服务器组件并按类型注册，供运行期检索与使用。
-    /// </summary>
-    /// <typeparam name="T">组件接口或具体类型。</typeparam>
-    /// <param name="component">组件实例，必须实现 <see cref="IServerComponent"/>。</param>
-    protected void AddComponent<T>(T component) where T : class, IServerComponent
+    public void AddComponent<T>(T component) where T : class, IServerComponent
     {
         _components[typeof(T)] = component;
     }
@@ -207,23 +180,6 @@ public abstract class BaseGameServer : IServerContext
         Log($"服务器已启动，端口 {port}");
 
         _ = Task.Run(() => AcceptLoop(_cts.Token));
-        var interval = TimeSpan.FromSeconds(1);
-        _ecsSubscription = Observable.Interval(interval)
-            .Subscribe(_ =>
-            {
-                try
-                {
-                    var ecs = GetComponent<Ecs.EcsWorldComponent>();
-                    if (ecs != null)
-                    {
-                        Task.Run(() => ecs.World.UpdateAsync(interval));
-                    }
-                }
-                catch (Exception ex)
-                {
-                    Log($"ECS 更新异常: {ex.Message}");
-                }
-            });
         _rateSub = Observable.Interval(TimeSpan.FromSeconds(1)).Subscribe(_ =>
         {
             var c = Interlocked.Exchange(ref _rateEventCount, 0);
@@ -269,12 +225,6 @@ public abstract class BaseGameServer : IServerContext
         _listener = null;
         ListeningPort = null;
 
-        try { _ecsSubscription?.Dispose(); }
-        catch
-        {
-            // 释放订阅失败可忽略：不影响关闭流程
-        }
-        _ecsSubscription = null;
         try { _rateSub?.Dispose(); }
         catch
         {
@@ -343,12 +293,6 @@ public abstract class BaseGameServer : IServerContext
                 UserId = string.IsNullOrWhiteSpace(userId) ? null : userId
             });
         }
-    }
-
-    private static bool ResolveForwardToILogger()
-    {
-        var v = Environment.GetEnvironmentVariable("LOG_FORWARD_TO_ILOGGER");
-        return !string.IsNullOrWhiteSpace(v) && bool.TryParse(v, out var enabled) && enabled;
     }
 
     private async Task AcceptLoop(CancellationToken token)
@@ -728,6 +672,11 @@ public abstract class BaseGameServer : IServerContext
     public string[] ListHandlerNames()
     {
         return _typedHandlers.Keys.ToArray();
+    }
+
+    internal IReadOnlyDictionary<string, IHandlerInvoker> ListHandlerInvokers()
+    {
+        return _typedHandlers;
     }
 
     public object GetLimitsSnapshot()

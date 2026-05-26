@@ -5,7 +5,7 @@ namespace Core.MessagePipeline;
 
 public static class AuthMiddleware
 {
-    public static MessagePipeline UseAuth(this MessagePipeline pipeline)
+    public static MessagePipelineBuilder UseAuth(this MessagePipelineBuilder pipeline)
     {
         return pipeline.Use(next => async ctx =>
         {

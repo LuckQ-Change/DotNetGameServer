@@ -87,7 +87,8 @@ public class HeartbeatSenderService : IServerComponent
             Token = Shared.TokenSigner.ComposeHeartbeatToken(serverId, _secret, _options.IntervalSeconds * 3)
         }.ToByteArray();
 
-        var lenBuf = BitConverter.GetBytes(System.Net.IPAddress.HostToNetworkOrder(envBytes.Length));
+        // 长度前缀使用与服务端读取一致的主机字节序（BaseGameServer 用 BitConverter.ToInt32 解析）。
+        var lenBuf = BitConverter.GetBytes(envBytes.Length);
         await stream.WriteAsync(lenBuf, cts.Token);
         await stream.WriteAsync(envBytes, cts.Token);
         _logger?.LogDebug("心跳已发送: {ServerId}", serverId);

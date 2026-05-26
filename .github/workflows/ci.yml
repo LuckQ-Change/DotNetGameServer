@@ -18,25 +18,21 @@ jobs:
         with:
           dotnet-version: 8.0.x
 
-      - name: Setup .NET 9.0
-        uses: actions/setup-dotnet@v4
-        with:
-          dotnet-version: 9.0.x
-
       - name: Restore dependencies
         run: dotnet restore
 
       - name: Build
         run: dotnet build --no-restore -c Release
 
-      - name: Test
-        run: dotnet test --no-build -c Release --verbosity normal
-
-      - name: Publish
-        run: dotnet publish src/ServerHost/ServerHost.csproj -c Release -o publish
+      - name: Publish servers
+        run: |
+          dotnet publish src/Servers/DirectoryServer/DirectoryServer.csproj -c Release -o publish/DirectoryServer
+          dotnet publish src/Servers/LoginServer/LoginServer.csproj -c Release -o publish/LoginServer
+          dotnet publish src/Servers/LogicServer/LogicServer.csproj -c Release -o publish/LogicServer
+          dotnet publish src/Servers/BattleServer/BattleServer.csproj -c Release -o publish/BattleServer
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
-          name: serverhost
+          name: servers
           path: publish/

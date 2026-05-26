@@ -1,12 +1,12 @@
 apiVersion: autoscaling/v2
 kind: HorizontalPodAutoscaler
 metadata:
-  name: game-server-hpa
+  name: directory-server-hpa
 spec:
   scaleTargetRef:
     apiVersion: apps/v1
     kind: Deployment
-    name: game-server
+    name: directory-server
   minReplicas: 2
   maxReplicas: 10
   metrics:

@@ -3,10 +3,10 @@ kind: Service
 metadata:
   name: game-server-metrics
   labels:
-    app: game-server
+    app: directory-server
 spec:
   selector:
-    app: game-server
+    app: directory-server
   ports:
     - name: metrics
       protocol: TCP

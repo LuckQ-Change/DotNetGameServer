@@ -1,6 +1,6 @@
 ## DotNetGameServer 运行与配置指南
 
-本项目由多种微服务组成（Directory/Login/Logic/Battle），使用统一的 TCP + Protobuf Envelope 协议与 Unity 客户端通信。服务实例通过 `ServerHost.dll` 统一启动，由 `--service` 参数决定运行的角色。
+本项目由多种微服务组成（Directory/Login/Logic/Battle），使用统一的 TCP + Protobuf Envelope 协议与 Unity 客户端通信。每个角色是 `src/Servers/` 下的**独立可执行项目**（`DirectoryServer`/`LoginServer`/`LogicServer`/`BattleServer`），均复用 `src/Hosting` 共享宿主库启动。`src/Core` 为框架内核，`src/Shared` 为协议与原语。
 
 ### 1. 配置方式
 
@@ -10,9 +10,10 @@
 
 | 参数 | 说明 | 示例 |
 |---|---|---|
-| `--service` | 服务类型：`directory`/`login`/`logic`/`battle`/`all` | `--service login` |
 | `--port` | TCP 监听端口 | `--port 5501` |
-| `--healthCheckUrl` | 健康检查 HTTP 地址 | `--healthCheckUrl http://localhost:5102` |
+| `--healthCheckUrl` | 健康检查 / 管理 / 路由 API 的 HTTP 地址 | `--healthCheckUrl http://localhost:5102` |
+
+> 角色不再由 `--service` 决定，而是由所启动的项目（`DirectoryServer`/`LoginServer`/`LogicServer`/`BattleServer`）决定。每个项目有独立的 `appsettings.json`。
 
 #### 1.2 appsettings.json 核心配置段
 
@@ -42,13 +43,14 @@ scripts\start-all.ps1
 2. 执行 `dotnet build`
 3. 为每个服务打开独立窗口启动
 
-添加新服务类型只需编辑 `scripts/servers.json`：
+添加/调整服务实例只需编辑 `scripts/servers.json`（指向各服务器项目）：
 ```json
 {
-    "name": "MyService",
-    "type": "login",
-    "port": 5510,
-    "healthPort": 5110
+    "name": "Login",
+    "project": "src/Servers/LoginServer/LoginServer.csproj",
+    "dll": "LoginServer.dll",
+    "port": 5501,
+    "healthPort": 5102
 }
 ```
 
@@ -58,14 +60,16 @@ scripts\start-all.ps1
 scripts\start-all.ps1 -Single
 ```
 
-所有服务运行在同一控制台窗口（`--service all`）。
+四个服务器作为子进程运行在同一控制台窗口（日志交织输出；如需交互式命令 REPL，建议用默认多窗模式）。
 
 #### 2.3 单服务手动启动
 
 ```powershell
-dotnet build src\ServerHost\ServerHost.csproj -c Debug
-dotnet exec src\ServerHost\bin\Debug\net8.0\ServerHost.dll -- --service directory --port 5500 --healthCheckUrl http://localhost:5101
+dotnet build src\Servers\DirectoryServer\DirectoryServer.csproj -c Debug
+dotnet exec src\Servers\DirectoryServer\bin\Debug\net8.0\DirectoryServer.dll -- --port 5500 --healthCheckUrl http://localhost:5101
 ```
+
+其余角色同理：`LoginServer.dll`(5501) / `LogicServer.dll`(5502) / `BattleServer.dll`(5503)。
 
 #### 2.4 批处理兼容
 

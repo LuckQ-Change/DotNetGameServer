@@ -5,7 +5,7 @@ namespace Core.MessagePipeline;
 
 public static class TelemetryMiddleware
 {
-    public static MessagePipeline UseTelemetry(this MessagePipeline pipeline)
+    public static MessagePipelineBuilder UseTelemetry(this MessagePipelineBuilder pipeline)
     {
         return pipeline.Use(next => async ctx =>
         {

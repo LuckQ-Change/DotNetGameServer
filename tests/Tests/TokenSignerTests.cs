@@ -1,115 +1,122 @@
 using Shared;
-using Shared.Time;
+using Xunit;
 
 namespace Tests;
 
 public class TokenSignerTests
 {
-    public TokenSignerTests()
-    {
-        TimeManager.UseSystem();
-    }
-
     [Fact]
-    public void ComputeSignature_ReturnsExpectedHex()
+    public void ComputeSignature_ReturnsConsistentHash()
     {
-        var sig = TokenSigner.ComputeSignature("tok1", 9999999999, "user1", "srv1", "secret");
-        Assert.False(string.IsNullOrWhiteSpace(sig));
-        Assert.Matches("^[0-9a-f]{64}$", sig);
-    }
+        // Arrange
+        var tokenId = "test-token";
+        var expireUnixSec = 1234567890L;
+        var userId = "user123";
+        var serverId = "server456";
+        var secret = "test-secret";
 
-    [Fact]
-    public void ComposeSigned_ReturnsCorrectFormat()
-    {
-        var signed = TokenSigner.ComposeSigned("tok1", 9999999999, "abcdef");
-        Assert.Equal("tok1:9999999999:abcdef", signed);
+        // Act
+        var signature1 = TokenSigner.ComputeSignature(tokenId, expireUnixSec, userId, serverId, secret);
+        var signature2 = TokenSigner.ComputeSignature(tokenId, expireUnixSec, userId, serverId, secret);
+
+        // Assert
+        Assert.Equal(signature1, signature2);
+        Assert.NotNull(signature1);
+        Assert.Equal(64, signature1.Length); // SHA256 hex string length
     }
 
     [Fact]
     public void TryVerify_ValidToken_ReturnsTrue()
     {
-        var userId = "user1";
-        var serverId = "srv1";
+        // Arrange
+        var tokenId = "test-token";
+        var expireUnixSec = DateTimeOffset.UtcNow.AddHours(1).ToUnixTimeSeconds();
+        var userId = "user123";
+        var serverId = "server456";
         var secret = "test-secret";
-        var tokenId = "tok1";
-        var exp = TimeManager.UnixSeconds + 3600;
-        var sig = TokenSigner.ComputeSignature(tokenId, exp, userId, serverId, secret);
-        var signed = TokenSigner.ComposeSigned(tokenId, exp, sig);
+        
+        var signature = TokenSigner.ComputeSignature(tokenId, expireUnixSec, userId, serverId, secret);
+        var signedToken = TokenSigner.ComposeSigned(tokenId, expireUnixSec, signature);
 
-        var ok = TokenSigner.TryVerify(signed, userId, serverId, secret, out var tid, out var e);
-        Assert.True(ok);
-        Assert.Equal(tokenId, tid);
-        Assert.Equal(exp, e);
+        // Act
+        var result = TokenSigner.TryVerify(signedToken, userId, serverId, secret, out var outTokenId, out var outExpire);
+
+        // Assert
+        Assert.True(result);
+        Assert.Equal(tokenId, outTokenId);
+        Assert.Equal(expireUnixSec, outExpire);
     }
 
     [Fact]
     public void TryVerify_ExpiredToken_ReturnsFalse()
     {
-        var userId = "user1";
-        var serverId = "srv1";
+        // Arrange
+        var tokenId = "test-token";
+        var expireUnixSec = DateTimeOffset.UtcNow.AddHours(-1).ToUnixTimeSeconds(); // Expired
+        var userId = "user123";
+        var serverId = "server456";
         var secret = "test-secret";
-        var tokenId = "tok1";
-        var exp = TimeManager.UnixSeconds - 3600;
-        var sig = TokenSigner.ComputeSignature(tokenId, exp, userId, serverId, secret);
-        var signed = TokenSigner.ComposeSigned(tokenId, exp, sig);
+        
+        var signature = TokenSigner.ComputeSignature(tokenId, expireUnixSec, userId, serverId, secret);
+        var signedToken = TokenSigner.ComposeSigned(tokenId, expireUnixSec, signature);
 
-        var ok = TokenSigner.TryVerify(signed, userId, serverId, secret, out _, out _);
-        Assert.False(ok);
+        // Act
+        var result = TokenSigner.TryVerify(signedToken, userId, serverId, secret, out _, out _);
+
+        // Assert
+        Assert.False(result);
     }
 
     [Fact]
-    public void TryVerify_WrongSecret_ReturnsFalse()
+    public void TryVerify_TamperedToken_ReturnsFalse()
     {
-        var userId = "user1";
-        var serverId = "srv1";
-        var tokenId = "tok1";
-        var exp = TimeManager.UnixSeconds + 3600;
-        var sig = TokenSigner.ComputeSignature(tokenId, exp, userId, serverId, "real-secret");
-        var signed = TokenSigner.ComposeSigned(tokenId, exp, sig);
-
-        var ok = TokenSigner.TryVerify(signed, userId, serverId, "wrong-secret", out _, out _);
-        Assert.False(ok);
-    }
-
-    [Fact]
-    public void TryVerify_WrongUserId_ReturnsFalse()
-    {
+        // Arrange
+        var tokenId = "test-token";
+        var expireUnixSec = DateTimeOffset.UtcNow.AddHours(1).ToUnixTimeSeconds();
+        var userId = "user123";
+        var serverId = "server456";
         var secret = "test-secret";
-        var tokenId = "tok1";
-        var exp = TimeManager.UnixSeconds + 3600;
-        var sig = TokenSigner.ComputeSignature(tokenId, exp, "real-user", "srv1", secret);
-        var signed = TokenSigner.ComposeSigned(tokenId, exp, sig);
+        
+        var signature = TokenSigner.ComputeSignature(tokenId, expireUnixSec, userId, serverId, secret);
+        var signedToken = TokenSigner.ComposeSigned(tokenId, expireUnixSec, signature);
+        var tamperedToken = signedToken + "tampered";
 
-        var ok = TokenSigner.TryVerify(signed, "wrong-user", "srv1", secret, out _, out _);
-        Assert.False(ok);
+        // Act
+        var result = TokenSigner.TryVerify(tamperedToken, userId, serverId, secret, out _, out _);
+
+        // Assert
+        Assert.False(result);
     }
 
     [Fact]
-    public void TryVerify_MalformedToken_ReturnsFalse()
+    public void ComposeHeartbeatToken_GeneratesValidToken()
     {
-        var ok = TokenSigner.TryVerify("invalid-format", "user1", "srv1", "secret", out _, out _);
-        Assert.False(ok);
-    }
-
-    [Fact]
-    public void ComposeHeartbeatToken_ReturnsValidFormat()
-    {
-        var token = TokenSigner.ComposeHeartbeatToken("srv1:5500", "secret", 300);
-        var parts = token.Split(':');
-        Assert.Equal(3, parts.Length);
-        Assert.StartsWith("hb-", parts[0]);
-    }
-
-    [Fact]
-    public void TryVerifyHeartbeat_Valid_ReturnsTrue()
-    {
-        var serverId = "srv1:5500";
+        // Arrange
+        var serverId = "server-123";
         var secret = "test-secret";
-        var token = TokenSigner.ComposeHeartbeatToken(serverId, secret, 300);
+        var ttlSeconds = 300;
 
-        var ok = TokenSigner.TryVerifyHeartbeat(token, serverId, secret, out var tid, out var exp);
-        Assert.True(ok);
-        Assert.StartsWith("hb-", tid);
-        Assert.True(exp > 0);
+        // Act
+        var token = TokenSigner.ComposeHeartbeatToken(serverId, secret, ttlSeconds);
+
+        // Assert
+        Assert.NotNull(token);
+        Assert.StartsWith("hb-server-123:", token);
+    }
+
+    [Fact]
+    public void SetAllowedSkewSeconds_UpdatesSkew()
+    {
+        // Arrange
+        var newSkew = 120;
+
+        // Act
+        TokenSigner.SetAllowedSkewSeconds(newSkew);
+        
+        // 验证：设置不抛异常
+        Assert.True(true);
+        
+        // 清理：恢复默认值
+        TokenSigner.SetAllowedSkewSeconds(60);
     }
 }

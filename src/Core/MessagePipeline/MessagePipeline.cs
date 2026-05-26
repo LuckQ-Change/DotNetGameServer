@@ -1,10 +1,10 @@
 namespace Core.MessagePipeline;
 
-public sealed class MessagePipeline
+public sealed class MessagePipelineBuilder
 {
     private readonly List<Func<MessageDelegate, MessageDelegate>> _components = new();
 
-    public MessagePipeline Use(Func<MessageDelegate, MessageDelegate> middleware)
+    public MessagePipelineBuilder Use(Func<MessageDelegate, MessageDelegate> middleware)
     {
         _components.Add(middleware);
         return this;

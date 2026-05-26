@@ -5,34 +5,33 @@ using System.Threading.Channels;
 using DotNetGameServer;
 using Google.Protobuf;
 using System.Diagnostics;
-using Microsoft.AspNetCore.Builder;
-using Microsoft.AspNetCore.Hosting;
-using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Logging;
 using R3;
 using Core.Telemetry;
 using Core.Logging;
 using Core.Components;
+using Core.MessagePipeline;
 using Shared.Time;
 using Core.Configuration;
 
 namespace Core;
 
-    public abstract class BaseGameServer : IServerContext
-    {
-        private readonly int _maxMessageSize;
-        private readonly int _maxConcurrentConnections;
-        private readonly int _receiveTimeoutMs;
-        private readonly int _acceptBackoffMs;
-        private int _currentConnections;
-        private TcpListener? _listener;
+public abstract class BaseGameServer : IServerContext
+{
+    private readonly int _maxMessageSize;
+    private readonly int _maxConcurrentConnections;
+    private readonly int _receiveTimeoutMs;
+    private readonly int _acceptBackoffMs;
+    private int _currentConnections;
+    private TcpListener? _listener;
 
-        private CancellationTokenSource? _cts;
+    private CancellationTokenSource? _cts;
 
-        private IWebHost? _webHost;
+    // 请求处理管线：遥测 -> 鉴权 -> 处理器分发。
+    private MessageDelegate? _pipeline;
 
-        private readonly ILogger _logger;
-        private readonly bool _forwardToILogger;
+    private readonly ILogger _logger;
+    private readonly bool _forwardToILogger;
 
     // 连接数指标通过 Meter 注册，无需持有字段引用。
     private readonly ConcurrentDictionary<string, IHandlerInvoker> _typedHandlers = new();
@@ -152,30 +151,12 @@ namespace Core;
         _listener.Start();
         ListeningPort = port;
 
-        // 健康检查连接
-        try
-        {
-            _webHost = new WebHostBuilder()
-                .UseKestrel()
-                .UseUrls($"http://*:{port + 10000}")
-                .Configure(app =>
-                {
-                    app.Run(async context =>
-                    {
-                        if (context.Request.Path == "/health")
-                        {
-                            context.Response.StatusCode = 200;
-                            await context.Response.WriteAsync("Healthy");
-                        }
-                    });
-                })
-                .Build();
-            _ = _webHost.RunAsync(_cts.Token);
-        }
-        catch (Exception ex)
-        {
-            Log($"健康检查端点启动失败: {ex.Message}");
-        }
+        // 构建请求处理管线（健康检查端点由宿主统一提供，基类不再内嵌 Web 服务器）。
+        _pipeline = new MessagePipelineBuilder()
+            .UseTelemetry()
+            .UseAuth()
+            .UseHandler()
+            .Build();
 
         Log($"服务器已启动，端口 {port}");
 
@@ -212,18 +193,9 @@ namespace Core;
             Log($"停止 TCP 监听器失败: {ex.Message}");
         }
 
-        try
-        {
-            _webHost?.StopAsync().Wait();
-        }
-        catch (Exception ex)
-        {
-            // WebHost 停止失败时继续执行组件销毁，避免阻塞关机。
-            Log($"停止健康检查端点失败: {ex.Message}");
-        }
-
         _listener = null;
         ListeningPort = null;
+        _pipeline = null;
 
         try { _rateSub?.Dispose(); }
         catch
@@ -493,7 +465,7 @@ namespace Core;
                     reason = "bytes_rate_limit_exceeded";
                     Log($"限速超限(字节): {remoteEndpoint} {bps}B/s > {_maxBytesPerSecond}B/s，断开");
                     Interlocked.Increment(ref _rateEventCount);
-                    AddToBlacklist(remoteEndpoint, TimeSpan.FromMinutes(2), reason);
+                    AddToBlacklist(remoteIpOnly, TimeSpan.FromMinutes(2), reason);
                     return false;
                 }
                 return true;
@@ -521,7 +493,7 @@ namespace Core;
                     reason = "message_rate_limit_exceeded";
                     Log($"限速超限(频率): {remoteEndpoint} {mps}/s > {_maxMessagesPerSecond}/s，断开");
                     Interlocked.Increment(ref _rateEventCount);
-                    AddToBlacklist(remoteEndpoint, TimeSpan.FromMinutes(2), reason);
+                    AddToBlacklist(remoteIpOnly, TimeSpan.FromMinutes(2), reason);
                     return false;
                 }
                 return true;
@@ -544,22 +516,24 @@ namespace Core;
                             ? Guid.NewGuid().ToString("N")
                             : env.RequestId;
                         Log($"recv route={env.Type} req_id={incomingReqId} ip={remote}");
-                        var reqContext = new RequestServerContext(this, env.Token ?? string.Empty, remote, incomingReqId);
-                        if (_typedHandlers.TryGetValue(env.Type, out var strong))
+
+                        var msgContext = new MessageContext
                         {
-                            var result = await strong.Invoke(env.Payload, reqContext);
-                            if (result != null)
-                            {
-                                await WriteEnvelopeAsync(stream, result.Value.responseType, result.Value.payload,
-                                    env.RequestId, result.Value.errorCode, result.Value.errorMessage, token,
-                                    _receiveTimeoutMs);
-                                Log($"send route={result.Value.responseType} req_id={env.RequestId} ip={remote} error_code={result.Value.errorCode}");
-                            }
-                        }
-                        else
+                            Envelope = env,
+                            Server = this,
+                            RemoteAddress = remote,
+                            RequestId = incomingReqId,
+                            Token = token
+                        };
+
+                        await (_pipeline?.Invoke(msgContext) ?? Task.CompletedTask);
+
+                        if (msgContext.HasResponse)
                         {
-                            Log($"未知消息类型: {env.Type}");
-                            CoreTelemetry.RecordUnknown(ServerName, env.Type);
+                            await WriteEnvelopeAsync(stream, msgContext.ResponseType!, msgContext.ResponsePayload ?? [],
+                                env.RequestId, msgContext.ResponseErrorCode, msgContext.ResponseErrorMessage, token,
+                                _receiveTimeoutMs);
+                            Log($"send route={msgContext.ResponseType} req_id={env.RequestId} ip={remote} error_code={msgContext.ResponseErrorCode}");
                         }
                     }
                     catch (OperationCanceledException)
@@ -757,4 +731,4 @@ namespace Core;
         }
     }
 }
-    
+

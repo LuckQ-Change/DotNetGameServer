@@ -1,9 +1,9 @@
 apiVersion: policy/v1
 kind: PodDisruptionBudget
 metadata:
-  name: game-server-pdb
+  name: directory-server-pdb
 spec:
   minAvailable: 1
   selector:
     matchLabels:
-      app: game-server
+      app: directory-server

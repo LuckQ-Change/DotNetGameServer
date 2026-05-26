@@ -1,13 +1,13 @@
 apiVersion: networking.k8s.io/v1
 kind: NetworkPolicy
 metadata:
-  name: game-server-network-policy
+  name: directory-server-network-policy
   labels:
-    app: game-server
+    app: directory-server
 spec:
   podSelector:
     matchLabels:
-      app: game-server
+      app: directory-server
   policyTypes:
     - Ingress
     - Egress

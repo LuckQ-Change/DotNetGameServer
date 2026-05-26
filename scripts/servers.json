@@ -1,32 +1,36 @@
 {
   "$schema": "./servers.schema.json",
   "build": {
-    "project": "src/ServerHost/ServerHost.csproj",
+    "solution": "DotNetGameServer.sln",
     "configuration": "Debug"
   },
   "servers": [
     {
       "name": "Directory",
-      "type": "directory",
+      "project": "src/Servers/DirectoryServer/DirectoryServer.csproj",
+      "dll": "DirectoryServer.dll",
       "port": 5500,
       "healthPort": 5101,
       "default": true
     },
     {
       "name": "Login",
-      "type": "login",
+      "project": "src/Servers/LoginServer/LoginServer.csproj",
+      "dll": "LoginServer.dll",
       "port": 5501,
       "healthPort": 5102
     },
     {
-      "name": "Battle",
-      "type": "battle",
+      "name": "Logic",
+      "project": "src/Servers/LogicServer/LogicServer.csproj",
+      "dll": "LogicServer.dll",
       "port": 5502,
       "healthPort": 5103
     },
     {
-      "name": "Logic",
-      "type": "logic",
+      "name": "Battle",
+      "project": "src/Servers/BattleServer/BattleServer.csproj",
+      "dll": "BattleServer.dll",
       "port": 5503,
       "healthPort": 5104
     }

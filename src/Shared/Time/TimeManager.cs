@@ -27,9 +27,7 @@ public sealed class SystemTimeProvider : ITimeProvider
 /// </summary>
 public sealed class OffsetTimeProvider(TimeSpan offset) : ITimeProvider
 {
-#pragma warning disable S3604 // 主构造器参数初始化属性 - 需要显式初始化以保持一致性
-    public TimeSpan Offset { get; } = offset;
-#pragma warning restore S3604
+    public TimeSpan Offset { get; }
 
     public OffsetTimeProvider() : this(TimeSpan.Zero) { }
 

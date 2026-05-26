@@ -4,7 +4,7 @@ namespace Core.MessagePipeline;
 
 public static class HandlerMiddleware
 {
-    public static MessagePipeline UseHandler(this MessagePipeline pipeline)
+    public static MessagePipelineBuilder UseHandler(this MessagePipelineBuilder pipeline)
     {
         return pipeline.Use(next => async ctx =>
         {

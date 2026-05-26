@@ -57,5 +57,16 @@ public static class TokenSigner
         return TryVerify(signedToken, "heartbeat", serverId, secret, out tokenId, out expireUnixSec);
     }
 
-    private static int GetAllowedSkewSeconds() => 60;
+    /// <summary>
+    /// 时钟偏差容忍窗口（秒）。可通过 <see cref="SetAllowedSkewSeconds"/> 修改。
+    /// </summary>
+    private static int _allowedSkewSeconds = 60;
+
+    public static void SetAllowedSkewSeconds(int seconds)
+    {
+        if (seconds < 0) throw new ArgumentOutOfRangeException(nameof(seconds), "时钟偏差不允许为负值");
+        _allowedSkewSeconds = seconds;
+    }
+
+    private static int GetAllowedSkewSeconds() => _allowedSkewSeconds;
 }

@@ -1,3 +1,5 @@
+using System.Collections.Concurrent;
+
 namespace Core.Directory;
 
 public interface IServerSelectionStrategy
@@ -45,15 +47,26 @@ public class RoundRobinStrategy : IServerSelectionStrategy
     }
 }
 
+/// <summary>
+/// 服务器选择策略工厂。
+/// 使用 <see cref="ConcurrentDictionary"/> 缓存策略实例为单例，
+/// 避免每次请求重新创建导致的 RoundRobin 计数器被重置。
+/// </summary>
 public static class ServerSelectionStrategyFactory
 {
+    /// <summary>
+    /// 策略实例缓存，按策略名重用，保证 RoundRobin 跨请求轮询。
+    /// </summary>
+    private static readonly ConcurrentDictionary<string, IServerSelectionStrategy> _strategyCache = new();
+
     public static IServerSelectionStrategy Create(string? strategy)
     {
-        return (strategy ?? "load").ToLowerInvariant() switch
+        var strategyName = (strategy ?? "load").ToLowerInvariant();
+        return _strategyCache.GetOrAdd(strategyName, name => name switch
         {
             "random" => new RandomStrategy(),
             "round_robin" => new RoundRobinStrategy(),
             _ => new LoadBasedStrategy(),
-        };
+        });
     }
 }

@@ -1,19 +1,128 @@
 version: "3.8"
+
+# 每个服务器为独立可执行项目，通过 build args 选择构建/运行的项目。
+# 角色/运行期配置经 CLI 参数传入（本项目 config 仅来自 appsettings + CLI，CLI 优先）。
+# 机密通过 compose 变量插值进 CLI（如 ${DIRECTORY_TOKEN_SECRET}）。
 services:
   directory:
-    build: .
+    build:
+      context: .
+      args:
+        SERVER_PROJECT: src/Servers/DirectoryServer/DirectoryServer.csproj
+        SERVER_DLL: DirectoryServer.dll
     environment:
       ASPNETCORE_ENVIRONMENT: "Development"
-      SERVICE: "directory"
       PORT: 5500
-      DIRECTORY_REGISTRY: "memory"
-      REDIS_PASSWORD: ${REDIS_PASSWORD:-dev_password}
-      REDIS_CONNECTION: "redis:6379,password=${REDIS_PASSWORD:-dev_password}"
-      DIRECTORY_TOKEN_SECRET: ${DIRECTORY_TOKEN_SECRET:-dev-secret}
+    command:
+      - "--port=5500"
+      - "--healthCheckUrl=http://+:8080"
+      - "--directory:registry:mode=redis"
+      - "--directory:registry:redis:connectionString=redis:6379,password=${REDIS_PASSWORD:-dev_password}"
+      - "--directory:tokenSecret=${DIRECTORY_TOKEN_SECRET:-dev-secret}"
     ports:
       - "5500:5500"
+      - "5101:8080"
     depends_on:
       - redis
+    healthcheck:
+      test: ["CMD-SHELL", "bash -c 'echo > /dev/tcp/127.0.0.1/$PORT' || exit 1"]
+      interval: 20s
+      timeout: 3s
+      retries: 3
+      start_period: 10s
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+    restart: unless-stopped
+
+  login:
+    build:
+      context: .
+      args:
+        SERVER_PROJECT: src/Servers/LoginServer/LoginServer.csproj
+        SERVER_DLL: LoginServer.dll
+    environment:
+      ASPNETCORE_ENVIRONMENT: "Development"
+      PORT: 5501
+    command:
+      - "--port=5501"
+      - "--healthCheckUrl=http://+:8080"
+      - "--directory:tokenSecret=${DIRECTORY_TOKEN_SECRET:-dev-secret}"
+      - "--heartbeat:directoryHost=directory"
+      - "--heartbeat:directoryPort=5500"
+    ports:
+      - "5501:5501"
+      - "5102:8080"
+    depends_on:
+      - directory
+    healthcheck:
+      test: ["CMD-SHELL", "bash -c 'echo > /dev/tcp/127.0.0.1/$PORT' || exit 1"]
+      interval: 20s
+      timeout: 3s
+      retries: 3
+      start_period: 10s
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+    restart: unless-stopped
+
+  logic:
+    build:
+      context: .
+      args:
+        SERVER_PROJECT: src/Servers/LogicServer/LogicServer.csproj
+        SERVER_DLL: LogicServer.dll
+    environment:
+      ASPNETCORE_ENVIRONMENT: "Development"
+      PORT: 5502
+    command:
+      - "--port=5502"
+      - "--healthCheckUrl=http://+:8080"
+      - "--directory:tokenSecret=${DIRECTORY_TOKEN_SECRET:-dev-secret}"
+      - "--heartbeat:directoryHost=directory"
+      - "--heartbeat:directoryPort=5500"
+    ports:
+      - "5502:5502"
+      - "5103:8080"
+    depends_on:
+      - directory
+    healthcheck:
+      test: ["CMD-SHELL", "bash -c 'echo > /dev/tcp/127.0.0.1/$PORT' || exit 1"]
+      interval: 20s
+      timeout: 3s
+      retries: 3
+      start_period: 10s
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+    restart: unless-stopped
+
+  battle:
+    build:
+      context: .
+      args:
+        SERVER_PROJECT: src/Servers/BattleServer/BattleServer.csproj
+        SERVER_DLL: BattleServer.dll
+    environment:
+      ASPNETCORE_ENVIRONMENT: "Development"
+      PORT: 5503
+    command:
+      - "--port=5503"
+      - "--healthCheckUrl=http://+:8080"
+      - "--directory:tokenSecret=${DIRECTORY_TOKEN_SECRET:-dev-secret}"
+      - "--heartbeat:directoryHost=directory"
+      - "--heartbeat:directoryPort=5500"
+    ports:
+      - "5503:5503"
+      - "5104:8080"
+    depends_on:
+      - directory
     healthcheck:
       test: ["CMD-SHELL", "bash -c 'echo > /dev/tcp/127.0.0.1/$PORT' || exit 1"]
       interval: 20s
@@ -39,78 +148,10 @@ services:
       - postgres_data:/var/lib/postgresql/data
     restart: unless-stopped
 
-  login:
-    build: .
-    environment:
-      ASPNETCORE_ENVIRONMENT: "Development"
-      SERVICE: "login"
-      PORT: 5501
-      MYSQL_HOST: ${MYSQL_HOST:-mysql}
-      MYSQL_PORT: ${MYSQL_PORT:-3306}
-      MYSQL_USER: ${MYSQL_USER:-root}
-      MYSQL_PASSWORD: ${MYSQL_PASSWORD:-password}
-      MYSQL_DB: ${MYSQL_DB:-game}
-    ports:
-      - "5501:5501"
-    healthcheck:
-      test: ["CMD-SHELL", "bash -c 'echo > /dev/tcp/127.0.0.1/$PORT' || exit 1"]
-      interval: 20s
-      timeout: 3s
-      retries: 3
-      start_period: 10s
-    logging:
-      driver: "json-file"
-      options:
-        max-size: "10m"
-        max-file: "3"
-    restart: unless-stopped
-
-  logic:
-    build: .
-    environment:
-      ASPNETCORE_ENVIRONMENT: "Development"
-      SERVICE: "logic"
-      PORT: 5502
-    ports:
-      - "5502:5502"
-    healthcheck:
-      test: ["CMD-SHELL", "bash -c 'echo > /dev/tcp/127.0.0.1/$PORT' || exit 1"]
-      interval: 20s
-      timeout: 3s
-      retries: 3
-      start_period: 10s
-    logging:
-      driver: "json-file"
-      options:
-        max-size: "10m"
-        max-file: "3"
-    restart: unless-stopped
-
-  battle:
-    build: .
-    environment:
-      ASPNETCORE_ENVIRONMENT: "Development"
-      SERVICE: "battle"
-      PORT: 5503
-    ports:
-      - "5503:5503"
-    healthcheck:
-      test: ["CMD-SHELL", "bash -c 'echo > /dev/tcp/127.0.0.1/$PORT' || exit 1"]
-      interval: 20s
-      timeout: 3s
-      retries: 3
-      start_period: 10s
-    logging:
-      driver: "json-file"
-      options:
-        max-size: "10m"
-        max-file: "3"
-    restart: unless-stopped
-
   redis:
     image: redis:7
     environment:
-      REDIS_PASSWORD: ${REDIS_PASSWORD:-changeme}
+      REDIS_PASSWORD: ${REDIS_PASSWORD:-dev_password}
     ports:
       - "6379:6379"
     command: ["sh", "-c", "redis-server --save 20 1 --appendonly yes --loglevel warning --requirepass \"$REDIS_PASSWORD\""]

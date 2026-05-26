@@ -10,7 +10,7 @@ $ErrorActionPreference = "Stop"
 if ($Help) {
     Write-Host 'Usage: .\scripts\start-all.ps1 [options]'
     Write-Host '  -Config <path>    servers.json path (default: scripts/servers.json)'
-    Write-Host '  -Single           Single window mode (--service all)'
+    Write-Host '  -Single           Run all servers in the current window (no separate windows)'
     Write-Host '  -Release          Release build (default: Debug)'
     Write-Host '  -Help             Show this help'
     exit 0
@@ -25,60 +25,58 @@ if (-not (Test-Path $ConfigPath)) {
 }
 
 $cfg = Get-Content $ConfigPath -Raw | ConvertFrom-Json
-$buildCfg = if ($Release) { "Release" } else { $cfg.build.configuration }
-$projectPath = Join-Path $ProjectRoot $cfg.build.project
+$buildCfg = if ($Release) { "Release" } elseif ($cfg.build.configuration) { $cfg.build.configuration } else { "Debug" }
+$tfm = "net8.0"
 
-Write-Host "Building $projectPath ($buildCfg) ..."
-$buildResult = dotnet build $projectPath -c $buildCfg 2>&1
+# Build the whole solution once; each server is its own executable project.
+$solution = if ($cfg.build.solution) { $cfg.build.solution } else { "DotNetGameServer.sln" }
+$solutionPath = Join-Path $ProjectRoot $solution
+Write-Host "Building $solutionPath ($buildCfg) ..."
+dotnet build $solutionPath -c $buildCfg
 if ($LASTEXITCODE -ne 0) {
     Write-Error "Build failed."
-    exit 1
-}
-
-$tfm = "net8.0"
-$dllPath = Join-Path $ProjectRoot "src\ServerHost\bin\$buildCfg\$tfm\ServerHost.dll"
-if (-not (Test-Path $dllPath)) {
-    $dllPath = Join-Path $ProjectRoot "src\ServerHost\bin\$buildCfg\net9.0\ServerHost.dll"
-    if (Test-Path $dllPath) { $tfm = "net9.0" }
-}
-if (-not (Test-Path $dllPath)) {
-    Write-Error "ServerHost.dll not found after build."
     exit 1
 }
 
 $env:DOTNET_ENVIRONMENT = "Development"
 $env:ASPNETCORE_ENVIRONMENT = "Development"
 
-if ($Single) {
-    Write-Host "Launching all services in one window..."
-    dotnet exec $dllPath -- --service all
-    exit 0
+function Get-DllPath($svr) {
+    $projDir = Split-Path -Parent (Join-Path $ProjectRoot $svr.project)
+    return Join-Path $projDir "bin\$buildCfg\$tfm\$($svr.dll)"
 }
 
-Write-Host "Starting server instances from $dllPath ..."
+$procs = @()
 foreach ($svr in $cfg.servers) {
-    $type = $svr.type
-    $port = $svr.port
-    $healthPort = $svr.healthPort
-    $healthUrl = "http://localhost:$healthPort"
+    $dllPath = Get-DllPath $svr
+    if (-not (Test-Path $dllPath)) {
+        Write-Warning "  Missing dll: $dllPath (skipped)"
+        continue
+    }
 
-    Write-Host "  Starting $type on port $port (health: $healthUrl)"
-    $psi = New-Object System.Diagnostics.ProcessStartInfo
-    $psi.FileName = "dotnet"
-    $psi.Arguments = "exec `"$dllPath`" -- --service $type --port $port --healthCheckUrl $healthUrl"
-    $psi.WindowStyle = [System.Diagnostics.ProcessWindowStyle]::Normal
-    $psi.UseShellExecute = $true
-    $psi.LoadUserProfile = $false
-    $psi.CreateNoWindow = $false
+    $healthUrl = "http://localhost:$($svr.healthPort)"
+    $argList = @("exec", "`"$dllPath`"", "--", "--port", "$($svr.port)", "--healthCheckUrl", $healthUrl)
+    Write-Host "  Starting $($svr.name) on port $($svr.port) (health: $healthUrl)"
 
     try {
-        [System.Diagnostics.Process]::Start($psi) | Out-Null
-        Start-Sleep -Milliseconds 1000
+        if ($Single) {
+            $procs += Start-Process -FilePath "dotnet" -ArgumentList $argList -NoNewWindow -PassThru
+        }
+        else {
+            Start-Process -FilePath "dotnet" -ArgumentList $argList -PassThru | Out-Null
+            Start-Sleep -Milliseconds 800
+        }
     }
     catch {
-        Write-Warning "  Failed to start $type`: $($_.Exception.Message)"
+        Write-Warning "  Failed to start $($svr.name): $($_.Exception.Message)"
     }
 }
 
-Write-Host "All servers launched."
-Write-Host "NOTE: configuration is read from appsettings.json and CLI args only (no env vars)."
+if ($Single) {
+    Write-Host "All servers running in this window. Press Ctrl+C to stop."
+    if ($procs.Count -gt 0) { Wait-Process -Id ($procs.Id) }
+}
+else {
+    Write-Host "All servers launched in separate windows."
+}
+Write-Host "NOTE: each server reads its own appsettings.json + CLI args only (no env vars)."

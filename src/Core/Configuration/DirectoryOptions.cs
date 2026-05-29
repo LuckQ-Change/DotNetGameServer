@@ -9,6 +9,16 @@ public class DirectoryOptions
 public class RegistryOptions
 {
     public string Mode { get; set; } = "memory";
+
+    /// <summary>心跳超时后标记为 offline 的秒数（与存储后端无关）。</summary>
+    public int OfflineTtlSeconds { get; set; } = 120;
+
+    /// <summary>超过此时长未心跳则从注册表移除（与存储后端无关）。</summary>
+    public int RemoveTtlSeconds { get; set; } = 600;
+
+    /// <summary>清理周期（秒）（与存储后端无关）。</summary>
+    public int CleanupIntervalSeconds { get; set; } = 10;
+
     public RedisRegistryOptions Redis { get; set; } = new();
 }
 

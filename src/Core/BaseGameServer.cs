@@ -1,6 +1,9 @@
 using System.Collections.Concurrent;
 using System.Net;
+using System.Net.Security;
 using System.Net.Sockets;
+using System.Security.Authentication;
+using System.Security.Cryptography.X509Certificates;
 using System.Threading.Channels;
 using DotNetGameServer;
 using Google.Protobuf;
@@ -45,6 +48,10 @@ public abstract class BaseGameServer : IServerContext
 
     private readonly ConcurrentDictionary<string, DateTime> _blacklist = new();
 
+    // TLS
+    private readonly TlsOptions _tlsOptions;
+    private X509Certificate2? _serverCert;
+
     // 聚合的滑动窗口限流
     private readonly ConcurrentDictionary<string, IpSlidingRate> _ipRates = new();
     private readonly int _ipMaxBytesPerSecond; // 0 表示禁用
@@ -85,6 +92,7 @@ public abstract class BaseGameServer : IServerContext
         _idleTimeoutMs = Math.Max(0, settings.IdleTimeoutMs);
         _ipMaxBytesPerSecond = Math.Max(0, settings.IpMaxBytesPerSecond);
         _ipMaxMessagesPerSecond = Math.Max(0, settings.IpMaxMessagesPerSecond);
+        _tlsOptions = settings.Tls ?? new TlsOptions();
         CoreTelemetry.CreateConnectionsGauge(() => _currentConnections, ServerName);
 
         try
@@ -146,6 +154,17 @@ public abstract class BaseGameServer : IServerContext
             await component.InitializeAsync();
         }
 
+        // TLS 证书加载（仅 Enabled=true 时执行）
+        if (_tlsOptions.Enabled)
+        {
+            if (string.IsNullOrWhiteSpace(_tlsOptions.CertificatePath))
+                throw new InvalidOperationException("TLS 已启用但未配置 CertificatePath。");
+            _serverCert = string.IsNullOrWhiteSpace(_tlsOptions.CertificatePassword)
+                ? new X509Certificate2(_tlsOptions.CertificatePath)
+                : new X509Certificate2(_tlsOptions.CertificatePath, _tlsOptions.CertificatePassword);
+            Log($"TLS 已启用，证书: {_serverCert.Subject}，指纹: {_serverCert.Thumbprint}");
+        }
+
         _cts = new CancellationTokenSource();
         _listener = new TcpListener(IPAddress.Any, port);
         _listener.Start();
@@ -196,6 +215,8 @@ public abstract class BaseGameServer : IServerContext
         _listener = null;
         ListeningPort = null;
         _pipeline = null;
+        _serverCert?.Dispose();
+        _serverCert = null;
 
         try { _rateSub?.Dispose(); }
         catch
@@ -275,9 +296,10 @@ public abstract class BaseGameServer : IServerContext
             try
             {
                 var client = await _listener!.AcceptTcpClientAsync(token);
-                // 黑名单：立即拒绝
+                // 黑名单：立即拒绝（按 IP 匹配，与限速加黑的键保持一致）
                 var remoteEp = client.Client.RemoteEndPoint?.ToString() ?? "未知";
-                if (IsBlacklisted(remoteEp))
+                var remoteIpAccept = (client.Client.RemoteEndPoint as IPEndPoint)?.Address?.ToString() ?? remoteEp;
+                if (IsBlacklisted(remoteIpAccept))
                 {
                     try
                     {
@@ -386,7 +408,33 @@ public abstract class BaseGameServer : IServerContext
         using (client)
         {
             Interlocked.Increment(ref _currentConnections);
-            var stream = client.GetStream();
+            Stream stream = client.GetStream();
+
+            // TLS 握手：在读写任何业务数据之前完成，握手失败立即断开
+            if (_tlsOptions.Enabled && _serverCert != null)
+            {
+                var sslStream = new SslStream(stream, leaveInnerStreamOpen: false);
+                try
+                {
+                    await sslStream.AuthenticateAsServerAsync(new SslServerAuthenticationOptions
+                    {
+                        ServerCertificate = _serverCert,
+                        ClientCertificateRequired = _tlsOptions.RequireClientCertificate,
+                        EnabledSslProtocols = SslProtocols.Tls12 | SslProtocols.Tls13,
+                        CertificateRevocationCheckMode = X509RevocationMode.NoCheck
+                    });
+                    stream = sslStream;
+                    Log($"TLS 握手成功: {remote} 协议={sslStream.SslProtocol}");
+                }
+                catch (Exception ex)
+                {
+                    Log($"TLS 握手失败，断开: {remote} {ex.Message}", LogLevel.Warning);
+                    await sslStream.DisposeAsync();
+                    Interlocked.Decrement(ref _currentConnections);
+                    return;
+                }
+            }
+
             try
             {
                 try { client.Client.SetSocketOption(SocketOptionLevel.Socket, SocketOptionName.KeepAlive, true); }
@@ -681,7 +729,7 @@ public abstract class BaseGameServer : IServerContext
     }
 
     /// <summary>
-    /// IP 滑动窗口限流器
+    /// IP 滑动窗口限流器（线程安全：可被多个连接的读取任务并发访问）
     /// </summary>
     private sealed class IpSlidingRate
     {
@@ -691,8 +739,8 @@ public abstract class BaseGameServer : IServerContext
         private long _bucketWindowStartTicks = Stopwatch.GetTimestamp();
         private readonly int[] _messageBuckets = new int[BucketCount];
         private readonly int[] _byteBuckets = new int[BucketCount];
+        private readonly object _lock = new();
 
-        // 检查并更新滑动窗口
         private void AdvanceBucketsIfNeeded()
         {
             var elapsedMs = (Stopwatch.GetTimestamp() - _bucketWindowStartTicks) * 1000.0 / Stopwatch.Frequency;
@@ -705,29 +753,32 @@ public abstract class BaseGameServer : IServerContext
                     _messageBuckets[_currentBucketIndex] = 0;
                     _byteBuckets[_currentBucketIndex] = 0;
                 }
-
                 _bucketWindowStartTicks = Stopwatch.GetTimestamp();
             }
         }
 
-        // 添加字节
         public int AddBytesAndGetRate(int bytes)
         {
-            AdvanceBucketsIfNeeded();
-            _byteBuckets[_currentBucketIndex] += bytes;
-            var sum = 0;
-            for (var i = 0; i < BucketCount; i++) sum += _byteBuckets[i];
-            return sum;
+            lock (_lock)
+            {
+                AdvanceBucketsIfNeeded();
+                _byteBuckets[_currentBucketIndex] += bytes;
+                var sum = 0;
+                for (var i = 0; i < BucketCount; i++) sum += _byteBuckets[i];
+                return sum;
+            }
         }
 
-        // 添加消息
         public int AddMessagesAndGetRate(int inc)
         {
-            AdvanceBucketsIfNeeded();
-            _messageBuckets[_currentBucketIndex] += inc;
-            var sum = 0;
-            for (var i = 0; i < BucketCount; i++) sum += _messageBuckets[i];
-            return sum;
+            lock (_lock)
+            {
+                AdvanceBucketsIfNeeded();
+                _messageBuckets[_currentBucketIndex] += inc;
+                var sum = 0;
+                for (var i = 0; i < BucketCount; i++) sum += _messageBuckets[i];
+                return sum;
+            }
         }
     }
 }

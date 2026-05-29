@@ -32,15 +32,15 @@ public class DirectoryCleanupService : IServerComponent
 
     private async Task RunCleanupLoop(CancellationToken token)
     {
-        var interval = TimeSpan.FromSeconds(Math.Max(1, _options.Registry.Redis.CleanupIntervalSeconds));
+        var interval = TimeSpan.FromSeconds(Math.Max(1, _options.Registry.CleanupIntervalSeconds));
         while (!token.IsCancellationRequested)
         {
             try
             {
                 await Task.Delay(interval, token);
                 await _registry.CleanupStaleAsync(
-                    _options.Registry.Redis.OfflineTtlSeconds,
-                    _options.Registry.Redis.RemoveTtlSeconds);
+                    _options.Registry.OfflineTtlSeconds,
+                    _options.Registry.RemoveTtlSeconds);
             }
             catch (OperationCanceledException) { break; }
             catch (Exception ex)

@@ -1,3 +1,4 @@
+using System.Net;
 using System.Net.Http.Headers;
 using System.Text;
 
@@ -14,6 +15,34 @@ builder.Services.AddOptions<ControlPlaneOptions>()
 var app = builder.Build();
 
 const string JsonContentType = "application/json";
+
+// IP 访问控制：CONTROL_PLANE_ALLOWED_IPS 未配置时默认仅允许回环地址。
+// 生产部署时应显式配置允许的运维网段，格式：逗号分隔 IP（支持 ::1）。
+app.Use(async (ctx, next) =>
+{
+    if (ctx.Request.Path.StartsWithSegments("/api") &&
+        !ctx.Request.Path.StartsWithSegments("/api/health"))
+    {
+        var remoteIp = ctx.Connection.RemoteIpAddress;
+        var allowedRaw = ctx.RequestServices
+            .GetRequiredService<IConfiguration>()["CONTROL_PLANE_ALLOWED_IPS"];
+        var allowed = string.IsNullOrWhiteSpace(allowedRaw)
+            ? ["127.0.0.1", "::1"]
+            : allowedRaw.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+
+        var pass = remoteIp != null &&
+                   (IPAddress.IsLoopback(remoteIp) ||
+                    Array.Exists(allowed, a =>
+                        IPAddress.TryParse(a, out var ip) && ip.Equals(remoteIp)));
+        if (!pass)
+        {
+            ctx.Response.StatusCode = 403;
+            await ctx.Response.WriteAsync("Forbidden");
+            return;
+        }
+    }
+    await next();
+});
 
 app.UseDefaultFiles();
 app.UseStaticFiles();

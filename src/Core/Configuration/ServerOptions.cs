@@ -11,4 +11,7 @@ public class ServerOptions
     public int IdleTimeoutMs { get; set; } = 120_000;
     public int IpMaxBytesPerSecond { get; set; }
     public int IpMaxMessagesPerSecond { get; set; }
+
+    /// <summary>TCP 层 TLS 配置；Enabled=false 时使用明文传输。</summary>
+    public TlsOptions Tls { get; set; } = new();
 }

@@ -27,12 +27,12 @@ public static class AuthMiddleware
                             foreach (var s in verifySecrets)
                             {
                                 if (string.IsNullOrWhiteSpace(s)) continue;
-                                if (TokenSigner.TryVerify(token, "user", "server", s, out var tid, out var exp))
+                                if (TokenSigner.TryVerify(token, "server", s, out var tid, out var uid, out var exp))
                                 {
                                     var revocation = ctx.Server.GetComponent<ITokenRevocationStore>();
                                     if (revocation == null || !revocation.IsRevoked(tid))
                                     {
-                                        reqContext.SetAuth(new AuthInfo { UserId = "user", TokenId = tid, ExpireUnixSeconds = exp });
+                                        reqContext.SetAuth(new AuthInfo { UserId = uid, TokenId = tid, ExpireUnixSeconds = exp });
                                     }
                                     break;
                                 }

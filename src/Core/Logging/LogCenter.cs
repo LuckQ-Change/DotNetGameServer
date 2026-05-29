@@ -140,15 +140,26 @@ public static class LogCenter
 
     private static string ResolveExportPath(string? path)
     {
+        var exportRoot = Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "exports"));
+
         if (!string.IsNullOrWhiteSpace(path))
         {
-            return Path.IsPathRooted(path)
-                ? path
-                : Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, path));
+            // 将调用方路径限制在 exports/ 目录内，防止任意文件写入
+            var candidate = Path.IsPathRooted(path)
+                ? Path.GetFullPath(path)
+                : Path.GetFullPath(Path.Combine(exportRoot, path));
+
+            if (!candidate.StartsWith(exportRoot + Path.DirectorySeparatorChar, StringComparison.OrdinalIgnoreCase)
+                && !string.Equals(candidate, exportRoot, StringComparison.OrdinalIgnoreCase))
+            {
+                throw new InvalidOperationException($"日志导出路径必须在 exports/ 目录内，拒绝: {path}");
+            }
+
+            return candidate;
         }
 
         var fileName = $"logs-{TimeManager.UtcNow:yyyyMMdd-HHmmss}.jsonl";
-        return Path.Combine(AppContext.BaseDirectory, "exports", fileName);
+        return Path.Combine(exportRoot, fileName);
     }
 
     private static void TrimCache()

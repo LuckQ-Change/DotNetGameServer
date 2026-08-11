@@ -17,9 +17,28 @@ public interface IServerComponent
     public Task InitializeAsync();
 
     /// <summary>
+    /// 初始化组件，并在宿主停止启动流程时接收取消通知。
+    /// 旧组件无需修改；默认实现会转发到无参数重载。
+    /// </summary>
+    public Task InitializeAsync(CancellationToken cancellationToken)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+        return InitializeAsync();
+    }
+
+    /// <summary>
     /// 销毁组件，释放运行期资源。
     /// </summary>
     /// <returns>表示异步完成的任务。</returns>
     public Task DestroyAsync();
+
+    /// <summary>
+    /// 销毁组件，并接收宿主的关停截止时间通知。
+    /// 旧组件无需修改；默认实现会转发到无参数重载。
+    /// </summary>
+    public Task DestroyAsync(CancellationToken cancellationToken)
+    {
+        return DestroyAsync();
+    }
 }
 

@@ -13,4 +13,10 @@ public class TlsOptions
 
     /// <summary>是否要求客户端提供证书（mTLS）。</summary>
     public bool RequireClientCertificate { get; set; } = false;
+
+    /// <summary>TLS 握手截止时间，防止半开连接长期占用连接槽。</summary>
+    public int HandshakeTimeoutMs { get; set; } = 10_000;
+
+    /// <summary>启用 mTLS 时是否在线检查客户端证书吊销状态。</summary>
+    public bool CheckClientCertificateRevocation { get; set; } = true;
 }

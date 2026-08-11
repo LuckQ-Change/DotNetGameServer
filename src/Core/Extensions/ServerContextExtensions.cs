@@ -34,5 +34,12 @@ namespace Core
             component = ctx.GetComponent<T>();
             return component != null;
         }
+
+        /// <summary>尝试读取经过内部服务令牌验证的调用方服务器 ID。</summary>
+        public static bool TryGetCallingServerId(this IServerContext context, out string serverId)
+        {
+            ArgumentNullException.ThrowIfNull(context);
+            return Shared.TokenSigner.TryGetServiceIdentity(context.Auth?.UserId, out serverId);
+        }
     }
 }

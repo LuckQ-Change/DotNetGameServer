@@ -1,0 +1,15 @@
+syntax = "proto3";
+package DotNetGameServer;
+option csharp_namespace = "DotNetGameServer.UnityClient.Generated";
+
+message ClientHeartbeatRequest {
+  int64 client_time_unix = 1;
+}
+
+message ClientHeartbeatResponse {
+  bool success = 1;
+  int32 code = 2;
+  string message = 3;
+  int64 server_time_unix = 4;
+  int32 recommended_interval_seconds = 5;
+}

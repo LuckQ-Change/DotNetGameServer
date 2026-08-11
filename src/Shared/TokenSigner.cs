@@ -1,12 +1,11 @@
 using System.Security.Cryptography;
 using System.Text;
 
-using Shared.Time;
-
 namespace Shared;
 
 public static class TokenSigner
 {
+    public const string ServiceIdentityPrefix = "service.";
     public static string ComputeSignature(string tokenId, long expireUnixSec, string userId, string serverId,
         string secret)
     {
@@ -30,7 +29,7 @@ public static class TokenSigner
     /// userId 不再作为输入参数，而是从 token payload 中解析后再参与签名校验。
     /// </summary>
     public static bool TryVerify(string signedToken, string serverId, string secret, out string tokenId,
-        out string userId, out long expireUnixSec)
+        out string userId, out long expireUnixSec, int allowedClockSkewSeconds = 30)
     {
         tokenId = string.Empty;
         userId = string.Empty;
@@ -45,8 +44,8 @@ public static class TokenSigner
         if (string.IsNullOrWhiteSpace(userId)) return false;
 
         // 先检查是否过期（UTC时间，单位秒），允许有限的时钟偏差容忍窗口
-        var nowUnix = TimeManager.UnixSeconds;
-        var skew = GetAllowedSkewSeconds();
+        var nowUnix = DateTimeOffset.UtcNow.ToUnixTimeSeconds();
+        var skew = Math.Max(0, allowedClockSkewSeconds);
         if (expireUnixSec + skew < nowUnix) return false;
 
         var expected = ComputeSignature(tokenId, expireUnixSec, userId, serverId, secret);
@@ -54,33 +53,50 @@ public static class TokenSigner
             Encoding.UTF8.GetBytes(sigHex));
     }
 
-    // 心跳令牌辅助：固定 userId 为 "heartbeat"
-    public static string ComposeHeartbeatToken(string serverId, string secret, int ttlSeconds = 300)
+    /// <summary>签发服务器内部调用令牌。</summary>
+    public static string ComposeServiceToken(
+        string sourceServerId,
+        string targetAudience,
+        string secret,
+        int ttlSeconds = 30)
     {
-        var tokenId = "hb-" + serverId.Replace(":", string.Empty);
-        var exp = TimeManager.UnixSeconds + Math.Max(1, ttlSeconds);
-        var sig = ComputeSignature(tokenId, exp, "heartbeat", serverId, secret);
-        return ComposeSigned(tokenId, exp, "heartbeat", sig);
+        ArgumentException.ThrowIfNullOrWhiteSpace(sourceServerId);
+        ArgumentException.ThrowIfNullOrWhiteSpace(targetAudience);
+        ArgumentException.ThrowIfNullOrWhiteSpace(secret);
+
+        var tokenId = $"svc-{Guid.NewGuid():N}";
+        var serviceIdentity = ServiceIdentityPrefix + EncodeBase64Url(sourceServerId);
+        var expireUnix = DateTimeOffset.UtcNow.ToUnixTimeSeconds() + Math.Max(1, ttlSeconds);
+        var signature = ComputeSignature(tokenId, expireUnix, serviceIdentity, targetAudience, secret);
+        return ComposeSigned(tokenId, expireUnix, serviceIdentity, signature);
     }
 
-    public static bool TryVerifyHeartbeat(string signedToken, string serverId, string secret, out string tokenId,
-        out long expireUnixSec)
+    /// <summary>从已验证的服务身份中读取来源服务器 ID。</summary>
+    public static bool TryGetServiceIdentity(string? identity, out string sourceServerId)
     {
-        if (!TryVerify(signedToken, serverId, secret, out tokenId, out var uid, out expireUnixSec))
+        sourceServerId = string.Empty;
+        if (string.IsNullOrWhiteSpace(identity)
+            || !identity.StartsWith(ServiceIdentityPrefix, StringComparison.Ordinal))
             return false;
-        return string.Equals(uid, "heartbeat", StringComparison.Ordinal);
+        try
+        {
+            var encoded = identity[ServiceIdentityPrefix.Length..]
+                .Replace('-', '+')
+                .Replace('_', '/');
+            encoded = encoded.PadRight(encoded.Length + ((4 - encoded.Length % 4) % 4), '=');
+            sourceServerId = Encoding.UTF8.GetString(Convert.FromBase64String(encoded));
+            return !string.IsNullOrWhiteSpace(sourceServerId);
+        }
+        catch (FormatException)
+        {
+            return false;
+        }
     }
 
-    /// <summary>
-    /// 时钟偏差容忍窗口（秒）。可通过 <see cref="SetAllowedSkewSeconds"/> 修改，默认 30s。
-    /// </summary>
-    private static int _allowedSkewSeconds = 30;
+    private static string EncodeBase64Url(string value) =>
+        Convert.ToBase64String(Encoding.UTF8.GetBytes(value))
+            .TrimEnd('=')
+            .Replace('+', '-')
+            .Replace('/', '_');
 
-    public static void SetAllowedSkewSeconds(int seconds)
-    {
-        if (seconds < 0) throw new ArgumentOutOfRangeException(nameof(seconds), "时钟偏差不允许为负值");
-        _allowedSkewSeconds = seconds;
-    }
-
-    private static int GetAllowedSkewSeconds() => _allowedSkewSeconds;
 }

@@ -1,4 +1,4 @@
-﻿using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging;
 
 namespace Core;
 
@@ -31,6 +31,9 @@ public interface IServerContext
     /// 请求级身份信息（若令牌可校验则填充）。
     /// </summary>
     public AuthInfo? Auth { get; }
+
+    /// <summary>当连接关闭、服务器停止或请求被取消时触发。</summary>
+    public CancellationToken CancellationToken { get; }
 
     /// <summary>
     /// 写入日志消息，默认为 Information 级别。

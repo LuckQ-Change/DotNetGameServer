@@ -1,0 +1,16 @@
+* text=auto
+
+*.cs text
+*.csproj text
+*.props text
+*.proto text
+*.json text
+*.md text
+*.yml text
+*.yaml text
+
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.pfx binary
+*.dll binary

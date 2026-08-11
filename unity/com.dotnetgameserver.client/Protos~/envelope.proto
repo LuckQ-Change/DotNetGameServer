@@ -1,0 +1,19 @@
+syntax = "proto3";
+package DotNetGameServer;
+
+enum CommunicationChannel {
+  CHANNEL_UNSPECIFIED = 0;
+  CLIENT = 1;
+  INTERNAL = 2;
+}
+
+message envelope {
+  string type = 1;
+  bytes payload = 2;
+  string token = 3;
+  string request_id = 4;
+  string version = 5;
+  int32 error_code = 6;
+  string error_message = 7;
+  CommunicationChannel channel = 8;
+}

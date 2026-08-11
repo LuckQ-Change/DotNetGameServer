@@ -1,6 +1,4 @@
 using System.Collections.Concurrent;
-using Shared.Time;
-
 namespace Core.Components;
 
 public interface ITokenRevocationStore : IServerComponent
@@ -10,10 +8,24 @@ public interface ITokenRevocationStore : IServerComponent
     /// </summary>
     public void Revoke(string tokenId, DateTimeOffset expireAt);
 
+    public ValueTask RevokeAsync(
+        string tokenId,
+        DateTimeOffset expireAt,
+        CancellationToken cancellationToken = default)
+    {
+        Revoke(tokenId, expireAt);
+        return ValueTask.CompletedTask;
+    }
+
     /// <summary>
     /// 检查 tokenId 是否已被撤销，并自动清理过期条目。
     /// </summary>
     public bool IsRevoked(string tokenId);
+
+    public ValueTask<bool> IsRevokedAsync(
+        string tokenId,
+        CancellationToken cancellationToken = default) =>
+        ValueTask.FromResult(IsRevoked(tokenId));
 }
 
 /// <summary>
@@ -40,7 +52,7 @@ public sealed class InMemoryTokenRevocationStore : ITokenRevocationStore
         CleanupExpired();
         if (_revoked.TryGetValue(tokenId, out var expireAt))
         {
-            if (TimeManager.UtcNow <= expireAt.UtcDateTime) return true;
+            if (DateTime.UtcNow <= expireAt.UtcDateTime) return true;
             _revoked.TryRemove(tokenId, out _);
         }
 
@@ -49,7 +61,7 @@ public sealed class InMemoryTokenRevocationStore : ITokenRevocationStore
 
     private void CleanupExpired()
     {
-        var now = TimeManager.UtcNow;
+        var now = DateTime.UtcNow;
         foreach (var item in _revoked)
         {
             if (item.Value.UtcDateTime < now)

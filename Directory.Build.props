@@ -2,9 +2,20 @@
   <!-- 全局引入 C# 分析器，用于检测“魔法字符串”等问题 -->
   <ItemGroup>
     <!-- Sonar C# 分析器：提供 S1192（重复字符串字面量）等规则 -->
-    <PackageReference Include="SonarAnalyzer.CSharp" Version="9.10.0.77988" PrivateAssets="All" />
+    <PackageReference Include="SonarAnalyzer.CSharp" PrivateAssets="All" />
   </ItemGroup>
   <PropertyGroup>
+    <LangVersion>12.0</LangVersion>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
+    <EnforceCodeStyleInBuild>true</EnforceCodeStyleInBuild>
+    <GenerateDocumentationFile>true</GenerateDocumentationFile>
+    <NoWarn>$(NoWarn);CS1591</NoWarn>
+    <Deterministic>true</Deterministic>
+    <RestorePackagesWithLockFile>true</RestorePackagesWithLockFile>
+    <NuGetAudit>true</NuGetAudit>
+    <ContinuousIntegrationBuild Condition="'$(CI)' == 'true'">true</ContinuousIntegrationBuild>
     <!-- 启用 .NET 内置分析器 -->
     <EnableNETAnalyzers>true</EnableNETAnalyzers>
     <!-- 使用最新分析级别，获得更多规则与改进 -->

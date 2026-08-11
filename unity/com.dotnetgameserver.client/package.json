@@ -1,0 +1,29 @@
+{
+  "name": "com.dotnetgameserver.client",
+  "version": "0.1.1",
+  "displayName": "DotNet Game Server Client",
+  "description": "Unity client SDK for DotNetGameServer: transport adapters, service discovery, protobuf workflow and a dedicated network console.",
+  "unity": "2022.3",
+  "author": {
+    "name": "DotNetGameServer"
+  },
+  "keywords": [
+    "network",
+    "tcp",
+    "protobuf",
+    "game-server",
+    "service-discovery"
+  ],
+  "samples": [
+    {
+      "displayName": "Basic Client",
+      "description": "Connects to BasicServer through discovery and sends a Ping request.",
+      "path": "Samples~/BasicClient"
+    },
+    {
+      "displayName": "Third-party Transport Adapter",
+      "description": "Skeleton adapter for an existing message-based networking framework.",
+      "path": "Samples~/ThirdPartyTransport"
+    }
+  ]
+}

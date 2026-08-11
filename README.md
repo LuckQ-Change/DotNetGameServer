@@ -1,114 +1,68 @@
-## DotNetGameServer 运行与配置指南
+# DotNetGameServer
 
-本项目由多种微服务组成（Directory/Login/Logic/Battle），使用统一的 TCP + Protobuf Envelope 协议与 Unity 客户端通信。每个角色是 `src/Servers/` 下的**独立可执行项目**（`DirectoryServer`/`LoginServer`/`LogicServer`/`BattleServer`），均复用 `src/Hosting` 共享宿主库启动。`src/Core` 为框架内核，`src/Shared` 为协议与原语。
+一个与游戏类型无关的 .NET 8 服务器基础框架。仓库不再内置登录服、逻辑服、战斗服、目录服、GM、运维后台或部署方案；应用层示例统一放在 `Demo/`，框架源码仅位于 `src/`。
 
-### 1. 配置方式
+## 工程结构
 
-配置按优先级覆盖：**CLI 参数** > **appsettings.json** > **默认值**。
-
-#### 1.1 CLI 参数
-
-| 参数 | 说明 | 示例 |
-|---|---|---|
-| `--port` | TCP 监听端口 | `--port 5501` |
-| `--healthCheckUrl` | 健康检查 / 管理 / 路由 API 的 HTTP 地址 | `--healthCheckUrl http://localhost:5102` |
-
-> 角色不再由 `--service` 决定，而是由所启动的项目（`DirectoryServer`/`LoginServer`/`LogicServer`/`BattleServer`）决定。每个项目有独立的 `appsettings.json`。
-
-#### 1.2 appsettings.json 核心配置段
-
-| 段 | 绑定的 Options 类 | 用途 |
-|---|---|---|
-| `server` | `ServerOptions` | 网络限制、超时、限流 |
-| `logging` | `LoggingOptions` | 日志级别、开关、缓存容量 |
-| `directory` | `DirectoryOptions` | 注册表模式（memory/redis）、TokenSecret、Redis 连接 |
-| `heartbeat` | `HeartbeatOptions` | 心跳间隔、目录地址、地域标识 |
-
-详细子键见 `src/Core/Configuration/` 中各 Options 类的属性。
-
-#### 1.3 无环境变量
-
-所有配置仅通过 CLI 参数和 `appsettings.json` 提供。不再读取任何环境变量。
-
-### 2. 本地开发（Windows）
-
-#### 2.1 一键多窗启动（推荐）
-
-```
-scripts\start-all.ps1
+```text
+src/
+  Shared/   通用信封协议、服务发现协议、令牌与时间转换工具
+  Core/     TCP 服务器、消息管线、组件、鉴权、数据库和分流接口
+  Hosting/  .NET Host 集成、配置、健康检查与 OpenTelemetry
+Demo/
+  BasicServer/  最小可运行示例
+  BasicClient/  可直接调用 Ping 的 .NET 客户端
+unity/
+  com.dotnetgameserver.client/  可直接安装的 Unity UPM 客户端、Editor 工具与示例
+tests/
+  Tests/        核心单元测试与 TCP 集成测试
 ```
 
-脚本自动完成：
-1. 读取 `scripts/servers.json` 中的服务定义
-2. 执行 `dotnet build`
-3. 为每个服务打开独立窗口启动
+`src` 不包含具体游戏的房间、账号、角色、战斗规则或运营功能。业务工程通过以下接口组合能力：
 
-添加/调整服务实例只需编辑 `scripts/servers.json`（指向各服务器项目）：
-```json
-{
-    "name": "Login",
-    "project": "src/Servers/LoginServer/LoginServer.csproj",
-    "dll": "LoginServer.dll",
-    "port": 5501,
-    "healthPort": 5102
-}
-```
+- `BaseGameServer`：有界请求队列、连接上限、超时、限流、TLS、完整读写和优雅关闭；
+- `IMessageHandler<TRequest,TResponse>`：强类型 protobuf 消息处理；
+- `IServerComponent` / `IServerComponentHealth`：资源生命周期与就绪检查；
+- `IGameDatabase` / `IGameDatabaseSession`：数据库厂商无关的查询、命令和事务；
+- `IServerRegistry` / `IServerSelectionStrategy`：服务注册与负载、轮询、加权随机、一致性哈希分流；
+- `IServerRpcClient`：类型安全跨服调用、长连接复用、请求关联、超时和幂等重试；
+- `GameServerDefinition`：统一启动、依赖注入、HTTP 扩展点和健康检查。
 
-#### 2.2 单窗全服务
+客户端与服务器内部通讯虽然共用 Protobuf 信封，但使用不同通信通道和处理器路由。客户端服务器默认只允许 `CLIENT`，服务发现服务器只允许 `INTERNAL`；内部通道默认强制校验服务令牌。客户端心跳默认关闭，仅需要维持客户端会话的服务器按需启用。
 
-```
-scripts\start-all.ps1 -Single
-```
-
-四个服务器作为子进程运行在同一控制台窗口（日志交织输出；如需交互式命令 REPL，建议用默认多窗模式）。
-
-#### 2.3 单服务手动启动
+## 快速开始
 
 ```powershell
-dotnet build src\Servers\DirectoryServer\DirectoryServer.csproj -c Debug
-dotnet exec src\Servers\DirectoryServer\bin\Debug\net8.0\DirectoryServer.dll -- --port 5500 --healthCheckUrl http://localhost:5101
+dotnet restore DotNetGameServer.sln
+dotnet run --project Demo/BasicServer/BasicServer.csproj
 ```
 
-其余角色同理：`LoginServer.dll`(5501) / `LogicServer.dll`(5502) / `BattleServer.dll`(5503)。
+另开一个终端调用服务端：
 
-#### 2.4 批处理兼容
-
-`start_all_servers.bat` / `start_all_single_window.bat` 保持一致，内部调用 PowerShell 脚本。
-
-### 3. Docker 运行
-
-`docker-compose.yml` 提供示例服务（directory/login/logic/battle/redis/postgres）。部署前配置：
-
-```
-DIRECTORY_TOKEN_SECRET=please-change-to-strong-secret
-REDIS_PASSWORD=please-change
+```powershell
+dotnet run --project Demo/BasicClient/BasicClient.csproj -- 127.0.0.1 5500 hello
 ```
 
-详细配置项见 `appsettings.Production.json` 的 `directory:registry:redis` 段。
+默认 TCP 地址为 `127.0.0.1:5500`，健康检查为 `http://127.0.0.1:8080/health` 和 `/ready`。新游戏可复制 `Demo/BasicServer`，替换 protobuf、处理器和组件，无需修改框架源码。第一次使用请从[五分钟入门](docs/tutorials/01-FIRST-RUN.md)开始。
 
-### 4. Kubernetes 部署
+Unity 项目在 Package Manager 选择 **Add package from disk**，指向
+`unity/com.dotnetgameserver.client/package.json`。UPM 包提供自动服务发现、TCP/TLS、可插拔第三方
+Transport、Proto Generator、独立网络日志和 Network Console；详见包内 `README.md`。
 
-`k8s/secret.yaml` 和 `k8s/configmap.yaml` 提供基础样例。通过 `kubectl apply` 配置后注入 Deployment。
+严格验证：
 
-### 5. 安全注意事项
+```powershell
+dotnet build DotNetGameServer.sln -c Release -p:TreatWarningsAsErrors=true
+dotnet test DotNetGameServer.sln -c Release
+```
 
-- **TokenSecret**：`directory:tokenSecret`（或 `TOKEN_SECRET` 环境变量）必须为强随机字符串，生产不可为空或默认值
-- **注册表模式**：`directory:registry:mode` 可选 `memory`（开发）或 `redis`（生产）
-- **时间偏差容忍**：`TOKEN_TIME_SKEW_SEC` 控制令牌/心跳的过期校验误差窗口
-- **心跳签名**：目录心跳和请求令牌的校验已严格化，签名缺失将拒绝
-- **传输安全**：建议在公网入口启用 TLS/反向代理，服务间暂未内建 mTLS
-- **时钟同步**：令牌/心跳依赖 UTC 时间，请确保各节点同步 NTP
+## 文档导航
 
-### 6. TLS/反向代理实践
-
-核心服务对外暴露为原始 TCP（Envelope 协议），以及 HTTP 健康端点。建议在公网入口使用反向代理或边车提供 TLS：
-
-- **HTTP 健康端点（Kestrel HTTPS）**：配置 `ASPNETCORE_Kestrel__Certificates__Default__Path` 等 Kestrel 证书变量
-- **TCP 服务加密**：推荐 Nginx stream / Envoy TCP proxy / stunnel 三种方案
-- **mTLS（可选）**：在网关开启客户端证书校验，Redis 亦支持 `directory:registry:redis:ssl`
-
-### 7. 故障排查
-
-- 启动即失败：检查 `directory:tokenSecret` 是否为空
-- 心跳被拒绝：确认各服务加载同一密钥，并排查服务器时间是否同步
-- 客户端请求未认证：检查是否正确附带登录令牌以及服务端能否解析 `userId` 与 `serverId`
+- [五分钟跑通服务器](docs/tutorials/01-FIRST-RUN.md)
+- [增加一条业务消息](docs/tutorials/02-ADD-MESSAGE.md)
+- [从 Demo 到生产服务](docs/tutorials/03-PRODUCTION.md)
+- [常见问题排查](docs/TROUBLESHOOTING.md)
+- [框架扩展指南](DEVELOPER.md)
+- [客户端接入协议](CLIENT_INTEGRATION.md)
+- [贡献与本地质量门禁](CONTRIBUTING.md)
+- [质量完成定义](docs/QUALITY_GATE.md)

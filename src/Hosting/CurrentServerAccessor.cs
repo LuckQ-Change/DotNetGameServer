@@ -1,4 +1,3 @@
-using System.Collections.Concurrent;
 using Core;
 
 namespace Hosting;
@@ -9,27 +8,11 @@ namespace Hosting;
 /// </summary>
 public sealed class CurrentServerAccessor
 {
-    private readonly ConcurrentDictionary<string, BaseGameServer> _servers = new(StringComparer.OrdinalIgnoreCase);
+    private BaseGameServer? _server;
 
-    public BaseGameServer? Server => _servers.Values.FirstOrDefault();
+    public BaseGameServer? Server => Volatile.Read(ref _server);
 
-    public IReadOnlyCollection<BaseGameServer> GetAllServers() => _servers.Values.ToArray();
+    public void Set(BaseGameServer? server) => Interlocked.Exchange(ref _server, server);
 
-    public void Add(string name, BaseGameServer server) => _servers[name] = server;
-
-    public void Set(BaseGameServer? server)
-    {
-        if (server != null)
-            _servers[server.ServerName] = server;
-    }
-
-    public BaseGameServer? Get(string name)
-    {
-        _servers.TryGetValue(name, out var server);
-        return server;
-    }
-
-    public void Remove(string name) => _servers.TryRemove(name, out _);
-
-    public void Clear() => _servers.Clear();
+    public void Clear() => Interlocked.Exchange(ref _server, null);
 }

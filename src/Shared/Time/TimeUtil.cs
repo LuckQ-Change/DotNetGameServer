@@ -5,17 +5,17 @@ namespace Shared.Time;
 
 /// <summary>
 /// 时间工具类。
-/// 与业务时间相关的当前时间统一走 TimeManager，单调时钟仍使用 Stopwatch。
+/// 提供 UTC 时间转换和单调时钟耗时计算。
 /// </summary>
 public static class TimeUtil
 {
-    public static DateTime UtcNow() => TimeManager.UtcNow;
+    public static DateTime UtcNow() => DateTime.UtcNow;
 
-    public static DateTime Now() => TimeManager.Now;
+    public static DateTime Now() => DateTime.Now;
 
-    public static long UnixNowSeconds() => TimeManager.UnixSeconds;
+    public static long UnixNowSeconds() => DateTimeOffset.UtcNow.ToUnixTimeSeconds();
 
-    public static long UnixNowMilliseconds() => TimeManager.UnixMilliseconds;
+    public static long UnixNowMilliseconds() => DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
 
     public static long ToUnixSeconds(DateTime utc) =>
         new DateTimeOffset(DateTime.SpecifyKind(utc, DateTimeKind.Utc)).ToUnixTimeSeconds();

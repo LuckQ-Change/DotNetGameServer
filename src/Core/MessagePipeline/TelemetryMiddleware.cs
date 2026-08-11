@@ -1,4 +1,5 @@
 using System.Diagnostics;
+
 using Core.Telemetry;
 
 namespace Core.MessagePipeline;
@@ -9,22 +10,28 @@ public static class TelemetryMiddleware
     {
         return pipeline.Use(next => async ctx =>
         {
-            var reqType = ctx.Envelope.Type;
+            var reqType = ctx.Server.TryGetHandler(ctx.EffectiveChannel, ctx.Envelope.Type, out _)
+                ? ctx.Envelope.Type
+                : "unknown";
             var sw = Stopwatch.StartNew();
-            var activity = CoreTelemetry.ActivitySource.StartActivity($"Handle {reqType}", ActivityKind.Server);
+            var activity = CoreTelemetry.ActivitySource.StartActivity("game_server.request", ActivityKind.Server);
             activity?.AddTag("server_name", ctx.Server.ServerName);
+            activity?.AddTag("message_type", reqType);
             activity?.AddTag("client_ip", ctx.RemoteAddress);
 
             string status = "ok";
             try
             {
                 await next(ctx);
-                if (!ctx.HasResponse) status = "no_response";
+                if (!ctx.HasResponse)
+                    status = "no_response";
+                else if (ctx.ResponseErrorCode != 0)
+                    status = "rejected";
             }
-            catch (Exception ex)
+            catch (Exception)
             {
                 status = "error";
-                activity?.AddTag("exception", ex.Message);
+                activity?.SetStatus(ActivityStatusCode.Error, "request_processing_failed");
                 throw;
             }
             finally

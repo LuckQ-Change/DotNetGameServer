@@ -8,12 +8,11 @@ using Microsoft.Extensions.DependencyInjection;
 namespace Hosting;
 
 /// <summary>
-/// 单个服务器角色的宿主定义。各服务器项目通过它向通用宿主声明：
-/// 如何创建实例、注册角色特有的 DI 服务、扩展 HTTP 端点。
+/// 单个游戏服务的宿主定义。应用通过它声明如何创建实例、注册依赖与扩展 HTTP 端点。
 /// </summary>
 public sealed class GameServerDefinition
 {
-    /// <summary>角色名（directory/login/logic/battle），用于日志与诊断。</summary>
+    /// <summary>服务名，用于日志与诊断。</summary>
     public required string Role { get; init; }
 
     /// <summary>未通过 --port 指定时的默认监听端口。</summary>
@@ -22,13 +21,19 @@ public sealed class GameServerDefinition
     /// <summary>生产环境是否强制要求非默认 TokenSecret。</summary>
     public bool RequiresProductionTokenSecret { get; init; } = true;
 
+    /// <summary>对 Unity 等客户端公开的服务职责，例如 gameplay、login、lobby。</summary>
+    public IReadOnlyList<string> Responsibilities { get; init; } = [];
+
+    /// <summary>公开给客户端的协议版本。</summary>
+    public string ProtocolVersion { get; init; } = "1.0.0";
+
     /// <summary>创建服务器实例并注册其消息处理器与组件。</summary>
     public required Func<HostServerContext, BaseGameServer> CreateServer { get; init; }
 
-    /// <summary>可选：注册角色特有的 DI 服务（如目录的注册表）。</summary>
+    /// <summary>可选：注册应用特有的 DI 服务。</summary>
     public Action<IServiceCollection, IConfiguration>? ConfigureServices { get; init; }
 
-    /// <summary>可选：映射角色特有的 HTTP 端点（如目录的路由查询 API）。</summary>
+    /// <summary>可选：映射应用特有的 HTTP 端点。</summary>
     public Action<WebApplication>? ConfigureEndpoints { get; init; }
 }
 
@@ -40,5 +45,7 @@ public sealed class HostServerContext
     public required IServiceProvider Services { get; init; }
     public required IConfiguration Configuration { get; init; }
     public required ServerOptions ServerOptions { get; init; }
+    public required AuthenticationOptions AuthenticationOptions { get; init; }
+    public required ClientHeartbeatOptions ClientHeartbeatOptions { get; init; }
     public required int Port { get; init; }
 }

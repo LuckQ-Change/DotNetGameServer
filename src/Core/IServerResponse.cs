@@ -9,12 +9,12 @@ public interface IServerResponse
     /// 请求是否成功
     /// </summary>
     bool Success { get; }
-    
+
     /// <summary>
     /// 响应代码（0 表示成功）
     /// </summary>
     int Code { get; }
-    
+
     /// <summary>
     /// 响应消息
     /// </summary>

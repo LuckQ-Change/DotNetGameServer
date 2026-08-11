@@ -1,0 +1,63 @@
+syntax = "proto3";
+package DotNetGameServer;
+
+message HeartbeatRequest {
+  string server_id = 1;
+  string server_type = 2;
+  string host = 3;
+  int32 port = 4;
+  int32 player_count = 5;
+  int32 capacity = 6;
+  string region = 7;
+  string version = 8;
+  int64 timestamp = 9;
+  string token_audience = 10;
+  bool tls_enabled = 11;
+  string tls_server_name = 12;
+}
+
+message HeartbeatResponse {
+  bool accepted = 1;
+  string message = 2;
+  int64 next_heartbeat_interval = 3;
+}
+
+message ServerUnregisterRequest {
+  string server_id = 1;
+}
+
+message ServerUnregisterResponse {
+  bool success = 1;
+  int32 code = 2;
+  string message = 3;
+}
+
+message ServerQueryRequest {
+  string server_type = 1;
+  string region = 2;
+  string strategy = 3;
+  int32 limit = 4;
+  // 用于粘滞分流的业务键，例如用户 ID 或队伍 ID。
+  string routing_key = 5;
+}
+
+message ServerInfo {
+  string server_id = 1;
+  string server_type = 2;
+  string host = 3;
+  int32 port = 4;
+  int32 player_count = 5;
+  int32 capacity = 6;
+  float load = 7;
+  string region = 8;
+  string version = 9;
+  int64 last_heartbeat = 10;
+  string status = 11;
+  string token_audience = 12;
+  bool tls_enabled = 13;
+  string tls_server_name = 14;
+}
+
+message ServerQueryResponse {
+  repeated ServerInfo servers = 1;
+}

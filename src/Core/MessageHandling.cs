@@ -1,5 +1,7 @@
 using System.Reflection;
+
 using DotNetGameServer;
+
 using Google.Protobuf;
 
 namespace Core;
@@ -22,7 +24,7 @@ internal sealed class HandlerInvoker<TReq, TResp> : IHandlerInvoker
 {
     private readonly IMessageHandler<TReq, TResp> _handler;
     private static readonly MessageParser<TReq> _reqParser = (MessageParser<TReq>)new TReq().Descriptor.Parser;
-    private static readonly string _respTypeName = new TResp().Descriptor.Name;
+    private static readonly string _respTypeName = new TResp().Descriptor.FullName;
     private static readonly PropertyInfo? _respSuccessProp = typeof(TResp).GetProperty("Success");
     private static readonly PropertyInfo? _respCodeProp = typeof(TResp).GetProperty("Code")
         ?? typeof(TResp).GetProperty("ErrorCode")
@@ -37,16 +39,30 @@ internal sealed class HandlerInvoker<TReq, TResp> : IHandlerInvoker
 
     public async Task<(string responseType, byte[] payload, int errorCode, string errorMessage)?> Invoke(ByteString payload, IServerContext context)
     {
-        var reqObj = _reqParser.ParseFrom(payload);
+        TReq reqObj;
+        try
+        {
+            reqObj = _reqParser.ParseFrom(payload);
+        }
+        catch (InvalidProtocolBufferException ex)
+        {
+            context.Log($"请求载荷解析失败 {typeof(TReq).Name}: {ex.Message}", Microsoft.Extensions.Logging.LogLevel.Warning);
+            return (_respTypeName, [], ProtocolError.InvalidRequest, "invalid_request_payload");
+        }
 
         TResp? respObj;
         try
         {
             respObj = await _handler.HandleAsync(reqObj, context);
         }
+        catch (OperationCanceledException) when (context.CancellationToken.IsCancellationRequested)
+        {
+            throw;
+        }
         catch (Exception ex)
         {
-            return (_respTypeName, [], 500, ex.Message);
+            context.Log($"处理器异常: {typeof(TReq).Name}: {ex}", Microsoft.Extensions.Logging.LogLevel.Error);
+            return (_respTypeName, [], ProtocolError.InternalError, "internal_error");
         }
 
         if (respObj == null) return null;
@@ -100,7 +116,7 @@ internal sealed class HandlerInvoker<TReq, TResp> : IHandlerInvoker
             return heartbeat.AsServerResponse();
         if (resp is ServerQueryResponse query)
             return query.AsServerResponse();
-        
+
         return null;
     }
 

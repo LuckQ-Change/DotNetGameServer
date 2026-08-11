@@ -1,0 +1,14 @@
+syntax = "proto3";
+package DotNetGameServer.Demo;
+option csharp_namespace = "DotNetGameServer.UnityClient.Samples.Generated";
+
+message PingRequest {
+  string message = 1;
+}
+
+message PingResponse {
+  bool success = 1;
+  int32 code = 2;
+  string message = 3;
+  int64 server_time_unix = 4;
+}

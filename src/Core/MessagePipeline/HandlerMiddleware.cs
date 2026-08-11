@@ -9,8 +9,7 @@ public static class HandlerMiddleware
         return pipeline.Use(next => async ctx =>
         {
             var env = ctx.Envelope;
-            var typedHandlers = ctx.Server.ListHandlerInvokers();
-            if (typedHandlers.TryGetValue(env.Type, out var invoker))
+            if (ctx.Server.TryGetHandler(ctx.EffectiveChannel, env.Type, out var invoker) && invoker is not null)
             {
                 var context = ctx.RequestContext as IServerContext ?? ctx.Server;
                 var result = await invoker.Invoke(env.Payload, context);
@@ -24,8 +23,12 @@ public static class HandlerMiddleware
             }
             else
             {
-                ctx.Server.Log($"未知消息类型: {env.Type}");
-                CoreTelemetry.RecordUnknown(ctx.Server.ServerName, env.Type);
+                ctx.Server.Log($"未知消息类型: {env.Type}", Microsoft.Extensions.Logging.LogLevel.Warning);
+                CoreTelemetry.RecordUnknown(ctx.Server.ServerName);
+                ctx.ResponseType = string.IsNullOrWhiteSpace(env.Type) ? "unknown" : env.Type;
+                ctx.ResponsePayload = [];
+                ctx.ResponseErrorCode = ProtocolError.UnknownMessageType;
+                ctx.ResponseErrorMessage = "unknown_message_type";
             }
 
             await next(ctx);

@@ -3,7 +3,7 @@ using Microsoft.Extensions.Logging;
 namespace Core.Logging;
 
 /// <summary>
-/// 适配器：将 Action<string> 包装为 ILogger 以统一日志管道。
+/// 适配器：将 <see cref="Action{T}"/> 包装为 <see cref="ILogger"/> 以统一日志管道。
 /// </summary>
 public sealed class DelegateLogger : ILogger
 {

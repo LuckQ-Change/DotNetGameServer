@@ -1,6 +1,12 @@
 syntax = "proto3";
 package DotNetGameServer;
 
+enum CommunicationChannel {
+  CHANNEL_UNSPECIFIED = 0;
+  CLIENT = 1;
+  INTERNAL = 2;
+}
+
 // 通用消息封装
 message envelope {
   string type = 1;
@@ -14,4 +20,6 @@ message envelope {
   // 错误编码与消息：服务端在响应时填充（成功为0/空）
   int32 error_code = 6;
   string error_message = 7;
+  // 通信通道用于隔离客户端协议与服务器内部协议。
+  CommunicationChannel channel = 8;
 }

@@ -17,6 +17,7 @@ public static class CoreTelemetry
     private const string TagServerName = "server_name";
     private const string TagMessageType = "message_type";
     private const string TagStatus = "status";
+    private const string TagTargetServer = "target_server";
 
     // 请求指标
     private static readonly Counter<long> RequestsTotal = Meter.CreateCounter<long>(
@@ -35,16 +36,27 @@ public static class CoreTelemetry
         unit: UnitCount,
         description: "收到但无法路由的未知类型消息总数");
 
+    private static readonly Counter<long> RpcCallsTotal = Meter.CreateCounter<long>(
+        name: "server_rpc_calls_total",
+        unit: UnitCount,
+        description: "服务器内部 RPC 调用总数");
+
+    private static readonly Histogram<double> RpcLatencySeconds = Meter.CreateHistogram<double>(
+        name: "server_rpc_latency_seconds",
+        unit: UnitSeconds,
+        description: "服务器内部 RPC 调用耗时（秒）");
+
+    private static readonly UpDownCounter<long> ActiveConnections = Meter.CreateUpDownCounter<long>(
+        name: "active_connections",
+        unit: UnitCount,
+        description: "当前活动 TCP 连接数");
+
     /// <summary>
     /// 为指定服务器创建并注册当前连接数的观测指标。
     /// </summary>
-    public static Instrument CreateConnectionsGauge(Func<int> getter, string serverName)
+    public static void RecordConnectionDelta(string serverName, int delta)
     {
-        return Meter.CreateObservableGauge(
-            name: "current_connections",
-            observeValue: () => new Measurement<int>(getter(), [new KeyValuePair<string, object?>(TagServerName, serverName)]),
-            unit: UnitCount,
-            description: "当前并发连接数量");
+        ActiveConnections.Add(delta, new KeyValuePair<string, object?>(TagServerName, serverName));
     }
 
     /// <summary>
@@ -65,13 +77,24 @@ public static class CoreTelemetry
     /// <summary>
     /// 记录未知类型消息事件。
     /// </summary>
-    public static void RecordUnknown(string serverName, string messageType)
+    public static void RecordUnknown(string serverName)
     {
         var tags = new KeyValuePair<string, object?>[]
         {
-            new(TagServerName, serverName),
-            new(TagMessageType, messageType)
+            new(TagServerName, serverName)
         };
         UnknownMessagesTotal.Add(1, tags);
+    }
+
+    /// <summary>记录一次服务器内部 RPC 调用。</summary>
+    public static void RecordServerRpc(string targetServer, string status, double elapsedSeconds)
+    {
+        var tags = new KeyValuePair<string, object?>[]
+        {
+            new(TagTargetServer, targetServer),
+            new(TagStatus, status)
+        };
+        RpcCallsTotal.Add(1, tags);
+        RpcLatencySeconds.Record(elapsedSeconds, tags);
     }
 }

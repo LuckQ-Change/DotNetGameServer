@@ -1,4 +1,4 @@
-﻿using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging;
 
 namespace Core;
 
@@ -12,12 +12,18 @@ internal class RequestServerContext : IServerContext
     private AuthInfo? _auth;
     private readonly string _requestId;
 
-    public RequestServerContext(BaseGameServer server, string? token, string remote, string requestId)
+    public RequestServerContext(
+        BaseGameServer server,
+        string? token,
+        string remote,
+        string requestId,
+        CancellationToken cancellationToken)
     {
         _server = server;
         _token = token ?? string.Empty;
         RemoteAddress = remote;
         _requestId = string.IsNullOrWhiteSpace(requestId) ? Guid.NewGuid().ToString("N") : requestId;
+        CancellationToken = cancellationToken;
     }
 
     public string ServerName => _server.ServerName;
@@ -25,6 +31,7 @@ internal class RequestServerContext : IServerContext
     public string RemoteAddress { get; }
     public string RequestId => _requestId;
     public AuthInfo? Auth => _auth;
+    public CancellationToken CancellationToken { get; }
 
     public void Log(string message) =>
         _server.LogWithContext(message, ServerName, LogLevel.Information, RemoteAddress, RequestId, _auth?.UserId);

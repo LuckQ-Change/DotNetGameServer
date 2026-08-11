@@ -9,6 +9,7 @@ public class MessageContext
     public required string RemoteAddress { get; init; }
     public required string RequestId { get; init; }
     public CancellationToken Token { get; init; }
+    public CommunicationChannel EffectiveChannel { get; set; }
 
     public string? ResponseType { get; set; }
     public byte[]? ResponsePayload { get; set; }

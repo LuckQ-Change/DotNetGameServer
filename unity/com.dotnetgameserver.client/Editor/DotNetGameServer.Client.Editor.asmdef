@@ -1,0 +1,17 @@
+{
+  "name": "DotNetGameServer.Client.Editor",
+  "rootNamespace": "DotNetGameServer.UnityClient.Editor",
+  "references": [
+    "DotNetGameServer.Client"
+  ],
+  "includePlatforms": [
+    "Editor"
+  ],
+  "excludePlatforms": [],
+  "allowUnsafeCode": false,
+  "overrideReferences": false,
+  "autoReferenced": true,
+  "defineConstraints": [],
+  "versionDefines": [],
+  "noEngineReferences": false
+}

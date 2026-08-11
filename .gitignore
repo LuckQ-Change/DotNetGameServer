@@ -17,6 +17,7 @@ Thumbs.db
 [Bb]in/
 [Oo]bj/
 [Ll]og/
+[Ll]ogs/
 build/
 bld/
 artifacts/
@@ -93,4 +94,8 @@ appsettings.Local.json
 
 # 永远跟踪所有 .proto 文件（即使位于被忽略的目录中）
 !**/*.proto
+
+# Unity UPM 客户端自带的 Google.Protobuf 运行时（BSD-3-Clause）。
+!unity/com.dotnetgameserver.client/Runtime/Plugins/Google.Protobuf.dll
+!unity/com.dotnetgameserver.client/Runtime/Plugins/System.Runtime.CompilerServices.Unsafe.dll
 /.vs

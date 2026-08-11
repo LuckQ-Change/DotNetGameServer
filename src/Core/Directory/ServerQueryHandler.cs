@@ -6,9 +6,12 @@ public class ServerQueryHandler(IServerRegistry registry) : IMessageHandler<Serv
 {
     public async Task<ServerQueryResponse?> HandleAsync(ServerQueryRequest request, IServerContext context)
     {
-        var candidates = await registry.QueryAsync(request.ServerType, request.Region);
+        var candidates = await registry.QueryAsync(
+            request.ServerType,
+            request.Region,
+            context.CancellationToken);
         var strategy = ServerSelectionStrategyFactory.Create(request.Strategy);
-        var selected = strategy.Select(candidates, request.Limit > 0 ? request.Limit : 10);
+        var selected = strategy.Select(candidates, request.Limit > 0 ? request.Limit : 10, request.RoutingKey);
 
         var response = new ServerQueryResponse();
         foreach (var s in selected)
@@ -25,7 +28,10 @@ public class ServerQueryHandler(IServerRegistry registry) : IMessageHandler<Serv
                 Region = s.Region,
                 Version = s.Version,
                 LastHeartbeat = s.LastHeartbeatUnix,
-                Status = s.Status
+                Status = s.Status,
+                TokenAudience = s.TokenAudience,
+                TlsEnabled = s.TlsEnabled,
+                TlsServerName = s.TlsServerName
             });
         }
         return response;

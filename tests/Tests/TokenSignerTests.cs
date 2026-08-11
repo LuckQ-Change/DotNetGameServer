@@ -1,4 +1,5 @@
 using Shared;
+
 using Xunit;
 
 namespace Tests;
@@ -19,7 +20,7 @@ public class TokenSignerTests
 
         Assert.Equal(signature1, signature2);
         Assert.NotNull(signature1);
-        Assert.Equal(64, signature1.Length); // SHA256 hex string length
+        Assert.Equal(64, signature1.Length); // SHA-256 十六进制字符串长度
     }
 
     [Fact]
@@ -94,43 +95,26 @@ public class TokenSignerTests
     }
 
     [Fact]
-    public void ComposeHeartbeatToken_GeneratesValidToken()
+    public void ComposeServiceToken_GeneratesValidInternalIdentity()
     {
-        var serverId = "server-123";
-        var secret = "test-secret";
+        var sourceServerId = "server-123";
+        var targetAudience = "target-server";
+        var secret = "test-secret-at-least-32-characters";
         var ttlSeconds = 300;
 
-        var token = TokenSigner.ComposeHeartbeatToken(serverId, secret, ttlSeconds);
+        var token = TokenSigner.ComposeServiceToken(sourceServerId, targetAudience, secret, ttlSeconds);
 
         Assert.NotNull(token);
-        Assert.StartsWith("hb-server-123:", token);
-
-        var ok = TokenSigner.TryVerifyHeartbeat(token, serverId, secret, out _, out _);
-        Assert.True(ok);
+        Assert.True(TokenSigner.TryVerify(
+            token,
+            targetAudience,
+            secret,
+            out var tokenId,
+            out var identity,
+            out _));
+        Assert.StartsWith("svc-", tokenId);
+        Assert.True(TokenSigner.TryGetServiceIdentity(identity, out var parsedSourceServerId));
+        Assert.Equal(sourceServerId, parsedSourceServerId);
     }
 
-    [Fact]
-    public void TryVerifyHeartbeat_NonHeartbeatUserId_ReturnsFalse()
-    {
-        var tokenId = "hb-server123";
-        var expireUnixSec = DateTimeOffset.UtcNow.AddHours(1).ToUnixTimeSeconds();
-        var serverId = "server123";
-        var secret = "test-secret";
-
-        // 签名时 userId 为普通用户，而非 "heartbeat"
-        var signature = TokenSigner.ComputeSignature(tokenId, expireUnixSec, "attacker", serverId, secret);
-        var fakeToken = TokenSigner.ComposeSigned(tokenId, expireUnixSec, "attacker", signature);
-
-        var result = TokenSigner.TryVerifyHeartbeat(fakeToken, serverId, secret, out _, out _);
-
-        Assert.False(result);
-    }
-
-    [Fact]
-    public void SetAllowedSkewSeconds_UpdatesSkew()
-    {
-        TokenSigner.SetAllowedSkewSeconds(120);
-        Assert.True(true);
-        TokenSigner.SetAllowedSkewSeconds(30); // 恢复新默认值
-    }
 }

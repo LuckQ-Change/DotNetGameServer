@@ -6,33 +6,53 @@ on:
   pull_request:
     branches: [main, master]
 
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   build:
-    runs-on: ubuntu-latest
-
+    name: ${{ matrix.os }}
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 15
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest]
     steps:
       - uses: actions/checkout@v4
-
-      - name: Setup .NET 8.0
+      - name: Setup .NET 8
         uses: actions/setup-dotnet@v4
         with:
           dotnet-version: 8.0.x
-
-      - name: Restore dependencies
-        run: dotnet restore
-
+      - name: Restore
+        run: dotnet restore DotNetGameServer.sln --locked-mode --configfile NuGet.Config
+      - name: Verify formatting
+        run: dotnet format DotNetGameServer.sln --verify-no-changes --no-restore --severity warn
       - name: Build
-        run: dotnet build --no-restore -c Release
-
-      - name: Publish servers
-        run: |
-          dotnet publish src/Servers/DirectoryServer/DirectoryServer.csproj -c Release -o publish/DirectoryServer
-          dotnet publish src/Servers/LoginServer/LoginServer.csproj -c Release -o publish/LoginServer
-          dotnet publish src/Servers/LogicServer/LogicServer.csproj -c Release -o publish/LogicServer
-          dotnet publish src/Servers/BattleServer/BattleServer.csproj -c Release -o publish/BattleServer
-
-      - name: Upload artifact
+        run: dotnet build DotNetGameServer.sln --no-restore -c Release
+      - name: Test Unity client contract
+        run: dotnet test tests/UnityClientContractTests/UnityClientContractTests.csproj --no-build -c Release --logger "console;verbosity=minimal"
+      - name: Test server with coverage
+        run: dotnet test tests/Tests/Tests.csproj --no-build -c Release --logger "console;verbosity=minimal" --collect:"XPlat Code Coverage" --results-directory TestResults
+      - name: Verify coverage
+        run: pwsh -File scripts/verify-coverage.ps1 -ResultsDirectory TestResults -MinimumLineRate 0.60 -MinimumBranchRate 0.45
+      - name: Upload test results
+        if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: servers
-          path: publish/
+          name: test-results-${{ runner.os }}
+          path: TestResults/
+          if-no-files-found: error
+      - name: Publish demo
+        if: runner.os == 'Linux'
+        run: dotnet publish Demo/BasicServer/BasicServer.csproj --no-build -c Release -o publish/BasicServer
+      - name: Upload demo artifact
+        if: runner.os == 'Linux'
+        uses: actions/upload-artifact@v4
+        with:
+          name: basic-server-demo
+          path: publish/BasicServer/

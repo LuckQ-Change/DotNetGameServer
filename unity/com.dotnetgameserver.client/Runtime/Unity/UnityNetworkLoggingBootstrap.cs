@@ -30,6 +30,7 @@ namespace DotNetGameServer.UnityClient.Unity
                     (long)settings.MaxLogFileKilobytes * 1024,
                     settings.LogRetentionDays));
             NetworkLogHub.Information("Bootstrap", "Dedicated network logging initialized: " + LogDirectory);
+            Debug.Log("[NetWork Bootstrap] Dedicated network logging initialized: " + LogDirectory);
         }
     }
 }

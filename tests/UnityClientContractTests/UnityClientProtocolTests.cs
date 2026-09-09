@@ -1,3 +1,5 @@
+using System;
+using System.Collections.Concurrent;
 using System.Linq;
 using System.Threading;
 using System.Threading.Channels;
@@ -10,6 +12,7 @@ using DotNetGameServer;
 using DotNetGameServer.UnityClient;
 using DotNetGameServer.UnityClient.Discovery;
 using DotNetGameServer.UnityClient.Protocol;
+using DotNetGameServer.UnityClient.Samples.Generated;
 using DotNetGameServer.UnityClient.Transport;
 
 using Google.Protobuf;
@@ -20,6 +23,13 @@ namespace UnityClientContractTests;
 
 public sealed class UnityClientProtocolTests
 {
+    [Fact]
+    public void BasicClientGeneratedProto_MatchesServerWireType()
+    {
+        Assert.Equal("DotNetGameServer.Demo.PingRequest", PingRequest.Descriptor.FullName);
+        Assert.Equal("DotNetGameServer.Demo.PingResponse", PingResponse.Descriptor.FullName);
+    }
+
     [Fact]
     public void UnityCodec_IsWireCompatibleWithServerGeneratedEnvelope()
     {
@@ -96,6 +106,43 @@ public sealed class UnityClientProtocolTests
     }
 
     [Fact]
+    public async Task Client_DispatchesNotificationsThroughConfiguredEventDispatcher()
+    {
+        var codec = new ProtobufEnvelopeCodec();
+        using var transport = new EchoTransport(codec);
+        var dispatcher = new QueuedEventDispatcher();
+        var endpoint = new ServiceEndpoint
+        {
+            ServiceId = "demo-1",
+            Role = "demo",
+            Host = "127.0.0.1",
+            Port = 5500,
+            Responsibilities = ["gameplay"]
+        };
+        using var client = new GameNetworkClient(
+            transport,
+            new StaticServiceDiscoveryProvider([endpoint]),
+            codec,
+            dispatcher);
+        NetworkEnvelope received = null;
+        client.NotificationReceived += envelope => received = envelope;
+
+        await client.ConnectAsync(new ServiceQuery { Responsibility = "gameplay" }, CancellationToken.None);
+        await transport.PushAsync(new NetworkEnvelope
+        {
+            Type = "Game.Notification",
+            Payload = [4, 2],
+            Channel = DotNetGameServer.UnityClient.Protocol.CommunicationChannel.Client
+        });
+        await dispatcher.WaitForPostAsync();
+
+        Assert.Null(received);
+        dispatcher.RunAll();
+        Assert.NotNull(received);
+        Assert.Equal("Game.Notification", received.Type);
+    }
+
+    [Fact]
     public async Task UnityTcpTransport_ExchangesGeneratedProtoWithRealServer()
     {
         var server = new HeartbeatServer();
@@ -164,6 +211,9 @@ public sealed class UnityClientProtocolTests
             return _responses.Writer.WriteAsync(_codec.Encode(response), cancellationToken).AsTask();
         }
 
+        public Task PushAsync(NetworkEnvelope envelope) =>
+            _responses.Writer.WriteAsync(_codec.Encode(envelope)).AsTask();
+
         public Task<byte[]> ReceiveAsync(CancellationToken cancellationToken) =>
             _responses.Reader.ReadAsync(cancellationToken).AsTask();
 
@@ -175,6 +225,26 @@ public sealed class UnityClientProtocolTests
         }
 
         public void Dispose() { }
+    }
+
+    private sealed class QueuedEventDispatcher : IClientEventDispatcher
+    {
+        private readonly ConcurrentQueue<Action> _callbacks = new();
+        private readonly TaskCompletionSource<bool> _posted =
+            new(TaskCreationOptions.RunContinuationsAsynchronously);
+
+        public void Post(Action callback)
+        {
+            _callbacks.Enqueue(callback);
+            _posted.TrySetResult(true);
+        }
+
+        public Task WaitForPostAsync() => _posted.Task.WaitAsync(TimeSpan.FromSeconds(2));
+
+        public void RunAll()
+        {
+            while (_callbacks.TryDequeue(out var callback)) callback();
+        }
     }
 
     private sealed class HeartbeatServer() : BaseGameServer(

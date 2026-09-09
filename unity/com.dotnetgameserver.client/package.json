@@ -1,11 +1,14 @@
 {
   "name": "com.dotnetgameserver.client",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "displayName": "DotNet Game Server Client",
   "description": "Unity client SDK for DotNetGameServer: transport adapters, service discovery, protobuf workflow and a dedicated network console.",
   "unity": "2022.3",
   "author": {
     "name": "DotNetGameServer"
+  },
+  "dependencies": {
+    "com.unity.modules.imgui": "1.0.0"
   },
   "keywords": [
     "network",

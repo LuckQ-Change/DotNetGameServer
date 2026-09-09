@@ -17,11 +17,19 @@
 
 ## 第一次使用
 
-1. 打开 **Edit > Project Settings > DotNet Game Server**，点击 `Create/Repair Runtime Settings`。
-2. 默认 Bootstrap URL 为 `http://127.0.0.1:8080`，服务职责为 `gameplay`。
-3. 打开 **Tools > DotNet Game Server > Proto Generator**，选择 `protoc` 并生成协议代码。
-4. 导入 `Basic Client` Sample，启动仓库中的 `Demo/BasicServer` 后进入 Play Mode。
-5. 网络日志在 **Window > DotNet Game Server > Network Console** 查看。
+首次验证不需要安装 `protoc`、编写脚本或手工创建 GameObject：
+
+1. 在 Package Manager 中导入 `Basic Client` Sample。
+2. 在仓库根目录运行 `dotnet run --project Demo/BasicServer/BasicServer.csproj`。
+3. 打开 Sample 中的 `BasicClient` 场景并进入 Play Mode。
+4. Game 视图出现“连接成功 ✓”和 `pong: hello from Unity` 即表示接入完成。
+
+SDK 在本机开发时默认使用 `http://127.0.0.1:8080` 和 `gameplay` 职责。需要修改地址或生成构建配置时，打开
+**Edit > Project Settings > DotNet Game Server** 并点击 `Create/Repair Runtime Settings`。
+
+为自己的业务新增或修改 `.proto` 后，再打开
+**Tools > DotNet Game Server > Proto Generator** 生成协议代码。网络日志在
+**Window > DotNet Game Server > Network Console** 查看。
 
 服务器发现地址：
 
@@ -34,6 +42,13 @@ GET /.well-known/dotnet-game-server/services?responsibility=gameplay&region=
 实现 `INetworkTransport` 即可。传输层收发的每个 `byte[]` 必须是一条完整 Envelope；长度前缀、WebSocket message 或第三方框架 packet header 均由适配器自行处理。客户端的请求关联、协议错误、Proto 序列化、日志与服务发现无需修改。
 
 详见 `Documentation~/third-party-transport.md`。
+
+## Unity 线程约定
+
+请在 Unity 主线程调用 `UnityGameNetworkClientFactory.CreateDefault()`。工厂会捕获 Unity 的
+`SynchronizationContext`，保证 `NotificationReceived` 与 `ConnectionClosed` 回调派发到主线程，
+可以安全更新 GameObject 和 UI。直接构造 `GameNetworkClient` 时可传入自定义
+`IClientEventDispatcher`；未传入时事件在收包线程执行。
 
 ## 内置运行时依赖
 

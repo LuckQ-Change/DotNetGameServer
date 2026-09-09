@@ -28,10 +28,12 @@
   </ItemGroup>
 
   <ItemGroup>
+    <Compile Include="..\..\unity\com.dotnetgameserver.client\Runtime\ClientEventDispatchers.cs" Link="Runtime\ClientEventDispatchers.cs" />
     <Compile Include="..\..\unity\com.dotnetgameserver.client\Runtime\GameNetworkClient.cs" Link="Runtime\GameNetworkClient.cs" />
     <Compile Include="..\..\unity\com.dotnetgameserver.client\Runtime\Discovery\**\*.cs" Link="Runtime\Discovery\%(RecursiveDir)%(Filename)%(Extension)" />
     <Compile Include="..\..\unity\com.dotnetgameserver.client\Runtime\Logging\**\*.cs" Link="Runtime\Logging\%(RecursiveDir)%(Filename)%(Extension)" />
     <Compile Include="..\..\unity\com.dotnetgameserver.client\Runtime\Protocol\**\*.cs" Link="Runtime\Protocol\%(RecursiveDir)%(Filename)%(Extension)" />
     <Compile Include="..\..\unity\com.dotnetgameserver.client\Runtime\Transport\**\*.cs" Link="Runtime\Transport\%(RecursiveDir)%(Filename)%(Extension)" />
+    <Compile Include="..\..\unity\com.dotnetgameserver.client\Samples~\BasicClient\Generated\Demo.cs" Link="Samples\BasicClient\Generated\Demo.cs" />
   </ItemGroup>
 </Project>

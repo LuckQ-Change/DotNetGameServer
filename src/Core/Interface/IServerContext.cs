@@ -13,7 +13,7 @@ public interface IServerContext
     public string ServerName { get; }
 
     /// <summary>
-    /// 请求级访问令牌（来自 Envelope.token），无则为空字符串。
+    /// 请求级访问令牌
     /// </summary>
     public string AccessToken { get; }
 

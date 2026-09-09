@@ -1,5 +1,4 @@
 using BasicServer;
-
 using Hosting;
 
 await GameServerHost.RunAsync(args, new GameServerDefinition

@@ -1,8 +1,8 @@
 namespace Core.MessagePipeline;
 
-/// <summary>校验通信通道，并将兼容模式下的未声明通道归一化。</summary>
 public static class ChannelValidationMiddleware
 {
+    /// <summary>校验通信通道，并将兼容模式下的未声明通道归一化。</summary>
     public static MessagePipelineBuilder UseChannelValidation(this MessagePipelineBuilder pipeline)
     {
         return pipeline.Use(next => async context =>

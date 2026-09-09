@@ -14,6 +14,11 @@
 - 在 Editor 提供 Proto Generator、Service Browser 与独立 Network Console；
 - 网络日志单独保存在 `Library/DotNetGameServer/NetworkLogs`，不会混入普通业务日志。
 
+第一次验证可直接导入 UPM 包中的 `Basic Client` Sample，启动 `Demo/BasicServer`，打开
+`BasicClient` 场景并进入 Play Mode。Sample 已携带 Ping 的生成代码，不需要先安装 `protoc`。
+`UnityGameNetworkClientFactory.CreateDefault()` 应在 Unity 主线程调用；通过该工厂创建的客户端会把
+通知与断线事件派发回 Unity 主线程。
+
 服务器通过 `GameServerDefinition.Responsibilities` 声明职责。Unity 可以按 `gameplay`、`login`、
 `lobby` 等职责查找服务，不需要硬编码具体服务器角色。
 

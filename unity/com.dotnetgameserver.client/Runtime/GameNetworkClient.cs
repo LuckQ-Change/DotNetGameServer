@@ -19,6 +19,7 @@ namespace DotNetGameServer.UnityClient
         private readonly INetworkTransport _transport;
         private readonly IServiceDiscoveryProvider _discovery;
         private readonly IEnvelopeCodec _codec;
+        private readonly IClientEventDispatcher _eventDispatcher;
         private readonly ConcurrentDictionary<string, TaskCompletionSource<NetworkEnvelope>> _pending =
             new ConcurrentDictionary<string, TaskCompletionSource<NetworkEnvelope>>(StringComparer.Ordinal);
         private readonly SemaphoreSlim _connectGate = new SemaphoreSlim(1, 1);
@@ -28,11 +29,13 @@ namespace DotNetGameServer.UnityClient
         public GameNetworkClient(
             INetworkTransport transport,
             IServiceDiscoveryProvider discovery,
-            IEnvelopeCodec codec = null)
+            IEnvelopeCodec codec = null,
+            IClientEventDispatcher eventDispatcher = null)
         {
             _transport = transport ?? throw new ArgumentNullException(nameof(transport));
             _discovery = discovery ?? throw new ArgumentNullException(nameof(discovery));
             _codec = codec ?? new ProtobufEnvelopeCodec();
+            _eventDispatcher = eventDispatcher ?? ImmediateClientEventDispatcher.Instance;
         }
 
         public bool IsConnected { get { return _transport.IsConnected; } }
@@ -222,8 +225,7 @@ namespace DotNetGameServer.UnityClient
                     {
                         NetworkLogHub.Warning("Connection", "Cleanup disconnect failed.", exception: exception);
                     }
-                    var handler = ConnectionClosed;
-                    if (handler != null) handler(failure);
+                    SafeConnectionClosed(failure);
                 }
             }
         }
@@ -232,11 +234,36 @@ namespace DotNetGameServer.UnityClient
         {
             var handler = NotificationReceived;
             if (handler == null) return;
-            foreach (var subscriber in handler.GetInvocationList().Cast<Action<NetworkEnvelope>>())
+            var subscribers = handler.GetInvocationList().Cast<Action<NetworkEnvelope>>().ToArray();
+            DispatchEvent(() =>
             {
-                try { subscriber(envelope); }
-                catch (Exception exception) { NetworkLogHub.Warning("Notification", "Notification handler failed.", exception: exception); }
-            }
+                foreach (var subscriber in subscribers)
+                {
+                    try { subscriber(envelope); }
+                    catch (Exception exception) { NetworkLogHub.Warning("Notification", "Notification handler failed.", exception: exception); }
+                }
+            });
+        }
+
+        private void SafeConnectionClosed(Exception failure)
+        {
+            var handler = ConnectionClosed;
+            if (handler == null) return;
+            var subscribers = handler.GetInvocationList().Cast<Action<Exception>>().ToArray();
+            DispatchEvent(() =>
+            {
+                foreach (var subscriber in subscribers)
+                {
+                    try { subscriber(failure); }
+                    catch (Exception exception) { NetworkLogHub.Warning("Connection", "ConnectionClosed handler failed.", exception: exception); }
+                }
+            });
+        }
+
+        private void DispatchEvent(Action callback)
+        {
+            try { _eventDispatcher.Post(callback); }
+            catch (Exception exception) { NetworkLogHub.Warning("Events", "Client event dispatch failed.", exception: exception); }
         }
 
         private void FailPending(Exception exception)

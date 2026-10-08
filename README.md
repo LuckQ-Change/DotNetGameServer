@@ -8,11 +8,10 @@
 src/
   Shared/   通用信封协议、服务发现协议、令牌与时间转换工具
   Core/     TCP 服务器、消息管线、组件、鉴权、数据库和分流接口
-  Client/   不依赖 Core 的 .NET 客户端：发现、请求、推送订阅、心跳、重连与令牌刷新
   Hosting/  .NET Host 集成、配置、健康检查与 OpenTelemetry
 Demo/
-  BasicServer/  最小可运行示例
-  BasicClient/  游客登录后调用 Ping 的 .NET 客户端
+  BasicServer/      最小可运行服务器，监视 plugins 目录并热更新
+  HotReloadPlugin/  可反复编译装入的 Ping 插件
 unity/
   com.dotnetgameserver.client/  可直接安装的 Unity UPM 客户端、Editor 工具与示例
 tests/
@@ -38,13 +37,13 @@ dotnet restore DotNetGameServer.sln
 dotnet run --project Demo/BasicServer/BasicServer.csproj
 ```
 
-另开一个终端调用服务端：
+另开一个终端，把 Ping 逻辑热更新进正在运行的进程：
 
 ```powershell
-dotnet run --project Demo/BasicClient/BasicClient.csproj -- 127.0.0.1 5500 hello
+dotnet build Demo/HotReloadPlugin/HotReloadPlugin.csproj -o Demo/BasicServer/plugins
 ```
 
-默认 TCP 地址为 `127.0.0.1:5500`，健康检查为 `http://127.0.0.1:8080/health` 和 `/ready`。新游戏可复制 `Demo/BasicServer`，替换 protobuf、处理器和组件，无需修改框架源码。第一次使用请从[五分钟入门](docs/tutorials/01-FIRST-RUN.md)开始。
+默认 TCP 地址为 `127.0.0.1:5500`，健康检查为 `http://127.0.0.1:8080/health` 和 `/ready`。服务器日志出现 `热更新已生效: hot-reload-1` 即表示插件已经装上。新游戏可复制 `Demo/BasicServer` 和 `Demo/HotReloadPlugin`。第一次使用请从[五分钟入门](docs/tutorials/01-FIRST-RUN.md)开始。
 
 Unity 项目在 Package Manager 选择 **Add package from disk**，指向
 `unity/com.dotnetgameserver.client/package.json`。UPM 包提供自动服务发现、TCP/TLS、可插拔第三方

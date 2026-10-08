@@ -20,9 +20,15 @@
         "resolved": "9.10.0.77988",
         "contentHash": "R1ks7yLAq7A9n9nYKCVzvzvGH7JM92ZmcOQFC3a7z0QqqLpdnOV7a2Qm+jM3f85SthrahLptSjg20YVqxSo6/Q=="
       },
-      "client": {
+      "Microsoft.Extensions.DependencyInjection.Abstractions": {
+        "type": "Transitive",
+        "resolved": "8.0.2",
+        "contentHash": "3iE7UF7MQkCv1cxzCahz+Y/guQbTqieyxyaWKhrRO91itI9cOKO76OHeQDahqG4MmW5umr3CcCvGmK92lWNlbg=="
+      },
+      "core": {
         "type": "Project",
         "dependencies": {
+          "Microsoft.Extensions.Logging.Abstractions": "[8.0.2, )",
           "Shared": "[1.0.0, )"
         }
       },
@@ -30,6 +36,15 @@
         "type": "Project",
         "dependencies": {
           "Google.Protobuf": "[3.33.0, )"
+        }
+      },
+      "Microsoft.Extensions.Logging.Abstractions": {
+        "type": "CentralTransitive",
+        "requested": "[8.0.2, )",
+        "resolved": "8.0.2",
+        "contentHash": "nroMDjS7hNBPtkZqVBbSiQaQjWRDxITI8Y7XnDs97rqG3EbzVTNLZQf7bIeUJcaHOV8bca47s1Uxq94+2oGdxA==",
+        "dependencies": {
+          "Microsoft.Extensions.DependencyInjection.Abstractions": "8.0.2"
         }
       }
     }

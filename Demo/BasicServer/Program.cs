@@ -21,6 +21,7 @@ await GameServerHost.RunAsync(args, new GameServerDefinition
         context.ServerOptions,
         context.AuthenticationOptions,
         context.ClientHeartbeatOptions,
+        Path.Combine(context.ContentRootPath, "plugins"),
         context.Services.GetService<Core.Persistence.IGameDatabase>()),
     ConfigureEndpoints = app => app.MapGet("/", () => Results.Ok(new
     {

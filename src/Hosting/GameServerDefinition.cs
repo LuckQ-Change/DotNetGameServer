@@ -48,4 +48,5 @@ public sealed class HostServerContext
     public required AuthenticationOptions AuthenticationOptions { get; init; }
     public required ClientHeartbeatOptions ClientHeartbeatOptions { get; init; }
     public required int Port { get; init; }
+    public required string ContentRootPath { get; init; }
 }

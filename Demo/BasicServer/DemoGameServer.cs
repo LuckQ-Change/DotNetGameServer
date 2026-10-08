@@ -11,6 +11,7 @@ public sealed class DemoGameServer : BaseGameServer
         ServerOptions serverOptions,
         AuthenticationOptions authenticationOptions,
         ClientHeartbeatOptions clientHeartbeatOptions,
+        string pluginDirectory,
         IGameDatabase? database = null)
         : base(
             nameof(DemoGameServer),
@@ -20,6 +21,7 @@ public sealed class DemoGameServer : BaseGameServer
             clientHeartbeat: clientHeartbeatOptions)
     {
         AddComponent(new DemoLifecycleComponent());
+        AddComponent(new HotReloadDirectory(this, pluginDirectory));
         RegisterClientMessageHandler(new PingHandler());
         RegisterAnonymousClientMessageHandler(new GuestLoginHandler());
         RegisterAnonymousClientMessageHandler(new RefreshSessionHandler());

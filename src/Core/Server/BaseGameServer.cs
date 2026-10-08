@@ -7,6 +7,7 @@ using Core.Configuration;
 using Core.Logging;
 using Core.MessagePipeline;
 using Core.Networking;
+using Core.Plugins;
 
 using DotNetGameServer;
 
@@ -43,6 +44,8 @@ public abstract class BaseGameServer : IServerContext
     private TcpServerTransport? _transport;
     private readonly ClientSessionRegistry _sessions = new();
     private readonly ConcurrentDictionary<string, byte> _anonymousClientMessages = new(StringComparer.Ordinal);
+    private PluginSession? _activePlugin;
+    private readonly List<PluginSession> _retainedPlugins = [];
 
     /// <summary>服务器名称，用于日志分类、遥测标签和运行实例标识。</summary>
     public string ServerName { get; }
@@ -173,6 +176,75 @@ public abstract class BaseGameServer : IServerContext
     internal bool AllowsAnonymousClient(string? messageType) =>
         !string.IsNullOrWhiteSpace(messageType)
         && _anonymousClientMessages.ContainsKey(messageType);
+
+    /// <summary>
+    /// 在服务器保持监听时替换客户端处理器。已接上的连接不会断开，
+    /// 正在执行的请求仍使用被替换的实例，之后的请求使用新实例。
+    /// </summary>
+    public void ReplaceClientMessageHandler<TRequest, TResponse>(
+        IMessageHandler<TRequest, TResponse> handler)
+        where TRequest : class, IMessage<TRequest>, new()
+        where TResponse : class, IMessage<TResponse>, new() =>
+        ReplaceHandler(handler, CommunicationChannel.Client);
+
+    /// <summary>在服务器保持监听时替换内部通道处理器。</summary>
+    public void ReplaceInternalMessageHandler<TRequest, TResponse>(
+        IMessageHandler<TRequest, TResponse> handler)
+        where TRequest : class, IMessage<TRequest>, new()
+        where TResponse : class, IMessage<TResponse>, new() =>
+        ReplaceHandler(handler, CommunicationChannel.Internal);
+
+    /// <summary>
+    /// 装入插件程序集并替换它声明的处理器。监听端口和已有连接保持不变。
+    /// </summary>
+    public async Task<PluginLoadResult> LoadPluginAsync(
+        string assemblyPath,
+        CancellationToken cancellationToken = default)
+    {
+        if (_cts is null)
+            throw new InvalidOperationException("服务器尚未启动，不能装入插件。");
+
+        var session = PluginLoader.Load(assemblyPath);
+        var previous = _activePlugin;
+        session.Apply(this);
+        _activePlugin = session;
+        Log($"已装入插件 {session.Name}");
+
+        var released = previous is null
+            || await previous.TryReleaseAsync(
+                TimeSpan.FromMilliseconds(_options.ShutdownTimeoutMs),
+                cancellationToken);
+        if (previous is not null && !released)
+        {
+            _retainedPlugins.Add(previous);
+            Log($"插件 {previous.Name} 仍有进行中的请求，程序集稍后卸载。", LogLevel.Warning);
+        }
+
+        await ReleaseRetainedPluginsAsync(cancellationToken);
+        return new PluginLoadResult(session.Name, released);
+    }
+
+    internal HandlerReplacement ReplaceHandler<TRequest, TResponse>(
+        IMessageHandler<TRequest, TResponse> handler,
+        CommunicationChannel channel)
+        where TRequest : class, IMessage<TRequest>, new()
+        where TResponse : class, IMessage<TResponse>, new() =>
+        _handlerRegistry.Replace(handler, channel);
+
+    private async Task ReleaseRetainedPluginsAsync(CancellationToken cancellationToken)
+    {
+        for (var index = _retainedPlugins.Count - 1; index >= 0; index--)
+        {
+            var retained = _retainedPlugins[index];
+            if (!await retained.TryReleaseAsync(
+                    TimeSpan.FromMilliseconds(_options.ShutdownTimeoutMs),
+                    cancellationToken))
+                continue;
+
+            _retainedPlugins.RemoveAt(index);
+            Log($"已卸载插件 {retained.Name}");
+        }
+    }
 
     /// <summary>注册只允许可信服务器内部通道调用的强类型消息处理器。</summary>
     protected void RegisterInternalMessageHandler<TRequest, TResponse>(
@@ -408,6 +480,12 @@ public abstract class BaseGameServer : IServerContext
         string messageType,
         out IHandlerInvoker? invoker) =>
         _handlerRegistry.TryGet(channel, messageType, out invoker);
+
+    internal bool TryLeaseHandler(
+        CommunicationChannel channel,
+        string messageType,
+        out HandlerLease lease) =>
+        _handlerRegistry.TryLease(channel, messageType, out lease);
 
     internal bool TryResolveChannel(
         CommunicationChannel requested,

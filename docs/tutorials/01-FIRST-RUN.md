@@ -1,6 +1,6 @@
 # 第一课：五分钟跑通服务器
 
-这一课只做一件事：启动服务器，并从客户端收到一次 `pong`。
+这一课只做一件事：启动服务器，并在不重启的情况下装入一份新的 Ping 逻辑。
 
 ## 1. 准备环境
 
@@ -24,29 +24,27 @@ dotnet run --project Demo/BasicServer/BasicServer.csproj
 - `http://127.0.0.1:8080/health`：进程和 TCP 监听是否存活；
 - `http://127.0.0.1:8080/ready`：依赖组件是否已经就绪。
 
-## 3. 运行客户端
+## 3. 不停服装入插件
 
-打开第二个终端：
+服务器启动后会监视 `Demo/BasicServer/plugins`。另开一个终端，在仓库根目录执行：
 
 ```powershell
-dotnet run --project Demo/BasicClient/BasicClient.csproj -- 127.0.0.1 5500 hello
+dotnet build Demo/HotReloadPlugin/HotReloadPlugin.csproj -o Demo/BasicServer/plugins
 ```
 
-正确结果包含：
+第一个终端出现 `热更新已生效: hot-reload-1` 即表示插件已经替换 `Ping`，进程和端口都没有重启。
 
-```text
-服务端响应: pong: hello
-```
+把 `Demo/HotReloadPlugin/PingHotPlugin.cs` 里的 `Version` 改成 `2`，再执行同一条 `dotnet build`。服务器仍在运行，日志变为 `热更新已生效: hot-reload-2`。
 
-参数依次是服务器地址、TCP 端口和要发送的文本。客户端完整代码在 `Demo/BasicClient/Program.cs`。
+Unity 示例连上之后，Ping 响应会变成 `hot:2:...`。客户端示例在 `unity/com.dotnetgameserver.client`。
 
 ## 4. 刚才发生了什么
 
-客户端把 `PingRequest` 序列化成 Protobuf，放进通用 `envelope`，并标记为 `CLIENT` 通道。服务器按 Protobuf 完整类型名找到 `PingHandler`，处理后把 `PingResponse` 放回响应信封。长度前缀、完整读写、请求 ID 和错误字段由框架统一约定。
+插件实现 `IServerPlugin`，用同一条 Protobuf 消息替换 `PingHandler`。服务器把新的 dll 复制到临时目录再调用 `LoadPluginAsync`，所以正在监听的连接不会断开，源文件也不会被锁死。
 
 现在只需记住三个位置：
 
 - `Protos/demo.proto`：定义网络数据；
-- `PingHandler.cs`：编写业务逻辑；
-- `DemoGameServer.cs`：注册处理器和长期运行组件。
+- `PingHandler.cs`：插件还没装入时的默认逻辑；
+- `Demo/HotReloadPlugin/PingHotPlugin.cs`：运行中可以替换的逻辑。
 

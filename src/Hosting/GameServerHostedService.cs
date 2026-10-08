@@ -39,7 +39,8 @@ internal sealed class GameServerHostedService(
             ServerOptions = serverOptions.Value,
             AuthenticationOptions = authenticationOptions.Value,
             ClientHeartbeatOptions = clientHeartbeatOptions.Value,
-            Port = port
+            Port = port,
+            ContentRootPath = environment.ContentRootPath
         };
 
         _server = definition.CreateServer(context);

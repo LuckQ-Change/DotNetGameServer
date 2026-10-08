@@ -13,6 +13,12 @@ public interface IMessageHandler<TReq, TResp>
 
 internal interface IHandlerInvoker
 {
+    public void Enter();
+
+    public void Release();
+
+    public Task WaitForIdleAsync(CancellationToken cancellationToken);
+
     public Task<(string responseType, byte[] payload, int errorCode, string errorMessage)?> Invoke(ByteString payload, IServerContext context);
 }
 
@@ -23,10 +29,26 @@ internal sealed class HandlerInvoker<TReq, TResp> : IHandlerInvoker
     private readonly IMessageHandler<TReq, TResp> _handler;
     private static readonly MessageParser<TReq> _reqParser = (MessageParser<TReq>)new TReq().Descriptor.Parser;
     private static readonly string _respTypeName = new TResp().Descriptor.FullName;
+    private readonly TaskCompletionSource _idle = new(TaskCreationOptions.RunContinuationsAsynchronously);
+    private int _inFlight;
 
     public HandlerInvoker(IMessageHandler<TReq, TResp> handler)
     {
         _handler = handler;
+    }
+
+    public void Enter() => Interlocked.Increment(ref _inFlight);
+
+    public void Release()
+    {
+        if (Interlocked.Decrement(ref _inFlight) == 0)
+            _idle.TrySetResult();
+    }
+
+    public Task WaitForIdleAsync(CancellationToken cancellationToken)
+    {
+        if (Volatile.Read(ref _inFlight) == 0) return Task.CompletedTask;
+        return _idle.Task.WaitAsync(cancellationToken);
     }
 
     public async Task<(string responseType, byte[] payload, int errorCode, string errorMessage)?> Invoke(ByteString payload, IServerContext context)

@@ -94,5 +94,5 @@ if (!result.Response.Success)
 
 `envelope.type` 必须是 Protobuf 完整名，例如 `DotNetGameServer.Demo.GetPlayerRequest`。错误码使用 `ProtocolError`，不要手写数字。
 
-.NET 客户端引用 `src/Client`，不要引用 `Core`。主动推送用 `client.On(Foo.Parser, handler)`。把 `GuestLoginResponse` 交给 `client.ApplyAccessToken`，并设置 `TokenRefreshHandler`；信封返回 `401` 时 SDK 会刷新一次再重试原请求。
+Unity 客户端主动推送用 `client.On(Foo.Parser, handler)`。把 `GuestLoginResponse` 交给 `client.ApplyAccessToken`，并设置 `TokenRefreshHandler`；信封返回 `401` 时 SDK 会刷新一次再重试原请求。
 

@@ -9,16 +9,19 @@ public static class HandlerMiddleware
         return pipeline.Use(next => async ctx =>
         {
             var env = ctx.Envelope;
-            if (ctx.Server.TryGetHandler(ctx.EffectiveChannel, env.Type, out var invoker) && invoker is not null)
+            if (ctx.Server.TryLeaseHandler(ctx.EffectiveChannel, env.Type, out var lease))
             {
-                var context = ctx.RequestContext as IServerContext ?? ctx.Server;
-                var result = await invoker.Invoke(env.Payload, context);
-                if (result.HasValue)
+                using (lease)
                 {
-                    ctx.ResponseType = result.Value.responseType;
-                    ctx.ResponsePayload = result.Value.payload;
-                    ctx.ResponseErrorCode = result.Value.errorCode;
-                    ctx.ResponseErrorMessage = result.Value.errorMessage;
+                    var context = ctx.RequestContext as IServerContext ?? ctx.Server;
+                    var result = await lease.Invoker.Invoke(env.Payload, context);
+                    if (result.HasValue)
+                    {
+                        ctx.ResponseType = result.Value.responseType;
+                        ctx.ResponsePayload = result.Value.payload;
+                        ctx.ResponseErrorCode = result.Value.errorCode;
+                        ctx.ResponseErrorMessage = result.Value.errorMessage;
+                    }
                 }
             }
             else

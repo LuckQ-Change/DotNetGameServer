@@ -37,7 +37,11 @@ public sealed class GameServerHostIntegrationTests
     {
         protected override async Task ExecuteAsync(CancellationToken stoppingToken)
         {
-            await Task.Delay(250, stoppingToken);
+            var started = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+            await using var registration = lifetime.ApplicationStarted.Register(() => started.TrySetResult());
+            if (lifetime.ApplicationStarted.IsCancellationRequested)
+                started.TrySetResult();
+            await started.Task.WaitAsync(stoppingToken);
             lifetime.StopApplication();
         }
     }

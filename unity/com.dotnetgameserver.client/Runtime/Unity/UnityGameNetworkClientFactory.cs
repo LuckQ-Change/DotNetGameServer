@@ -20,6 +20,10 @@ namespace DotNetGameServer.UnityClient.Unity
             return new GameNetworkClient(transport, discovery, eventDispatcher: eventDispatcher)
             {
                 ClientVersion = settings.ClientVersion,
+                RequireCompatibleVersion = settings.RequireCompatibleVersion,
+                AutoHeartbeat = settings.AutoHeartbeat,
+                AutoReconnect = settings.AutoReconnect,
+                MaxReconnectAttempts = Math.Max(1, settings.MaxReconnectAttempts),
                 RequestTimeout = TimeSpan.FromSeconds(Math.Max(1, settings.RequestTimeoutSeconds))
             };
         }

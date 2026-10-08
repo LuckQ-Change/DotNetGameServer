@@ -29,7 +29,8 @@ public static class TokenSigner
     /// userId 不再作为输入参数，而是从 token payload 中解析后再参与签名校验。
     /// </summary>
     public static bool TryVerify(string signedToken, string serverId, string secret, out string tokenId,
-        out string userId, out long expireUnixSec, int allowedClockSkewSeconds = 30)
+        out string userId, out long expireUnixSec, int allowedClockSkewSeconds = 30,
+        int allowExpiredWithinSeconds = 0)
     {
         tokenId = string.Empty;
         userId = string.Empty;
@@ -46,14 +47,48 @@ public static class TokenSigner
         // 先检查是否过期（UTC时间，单位秒），允许有限的时钟偏差容忍窗口
         var nowUnix = DateTimeOffset.UtcNow.ToUnixTimeSeconds();
         var skew = Math.Max(0, allowedClockSkewSeconds);
-        if (expireUnixSec + skew < nowUnix) return false;
+        if (expireUnixSec + skew + Math.Max(0, allowExpiredWithinSeconds) < nowUnix) return false;
 
         var expected = ComputeSignature(tokenId, expireUnixSec, userId, serverId, secret);
         return CryptographicOperations.FixedTimeEquals(Encoding.UTF8.GetBytes(expected),
             Encoding.UTF8.GetBytes(sigHex));
     }
 
-    /// <summary>签发服务器内部调用令牌。</summary>
+    /// <summary>签发游戏客户端访问令牌。</summary>
+    public static string ComposeUserToken(
+        string userId,
+        string audience,
+        string secret,
+        int ttlSeconds = 3600)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(userId);
+        ArgumentException.ThrowIfNullOrWhiteSpace(audience);
+        ArgumentException.ThrowIfNullOrWhiteSpace(secret);
+        var tokenId = $"usr-{Guid.NewGuid():N}";
+        var expireUnix = DateTimeOffset.UtcNow.ToUnixTimeSeconds() + Math.Max(1, ttlSeconds);
+        var signature = ComputeSignature(tokenId, expireUnix, userId, audience, secret);
+        return ComposeSigned(tokenId, expireUnix, userId, signature);
+    }
+
+    /// <summary>读取令牌声明，不校验签名。客户端用它决定何时刷新。</summary>
+    public static bool TryReadToken(
+        string? signedToken,
+        out string tokenId,
+        out string userId,
+        out long expireUnixSec)
+    {
+        tokenId = string.Empty;
+        userId = string.Empty;
+        expireUnixSec = 0;
+        if (string.IsNullOrWhiteSpace(signedToken)) return false;
+        var parts = signedToken.Split(':');
+        if (parts.Length != 4) return false;
+        if (!long.TryParse(parts[1], out expireUnixSec)) return false;
+        tokenId = parts[0];
+        userId = parts[2];
+        return !string.IsNullOrWhiteSpace(tokenId) && !string.IsNullOrWhiteSpace(userId);
+    }
+
     public static string ComposeServiceToken(
         string sourceServerId,
         string targetAudience,

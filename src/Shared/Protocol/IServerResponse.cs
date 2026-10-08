@@ -1,4 +1,4 @@
-namespace Core;
+namespace Shared;
 
 /// <summary>
 /// 服务器响应契约，用于消除反射依赖

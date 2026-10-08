@@ -1,6 +1,6 @@
 # 客户端接入协议
 
-可运行的 .NET 参考实现位于 `Demo/BasicClient/Program.cs`。第一次接入建议先运行该项目确认服务端环境正常，再把相同的帧协议移植到 Unity 或其他客户端。
+可运行的 .NET 客户端库位于 `src/Client`，示例在 `Demo/BasicClient/Program.cs`。该库只引用 `Shared`，不引用服务器 `Core`。第一次接入建议先运行该项目确认服务端环境正常，再使用 Unity UPM 或其他引擎接入。
 
 ## Unity UPM（推荐）
 
@@ -41,6 +41,15 @@ TCP 流由连续帧组成：
 
 `type` 必须使用 Protobuf 完整类型名。Demo 的请求类型为 `DotNetGameServer.Demo.PingRequest`，`payload` 为 `Demo/BasicServer/Protos/demo.proto` 中的消息。成功响应类型为 `DotNetGameServer.Demo.PingResponse`。连接应设置超时并处理服务端主动关闭；遇到非法长度、协议解析失败、空闲超时或限流时，服务端可能直接断开连接。
 
-客户端心跳不是全局强制协议。只有目标服务器启用了 `clientHeartbeat` 时，客户端才发送 `DotNetGameServer.ClientHeartbeatRequest`；未启用时该消息会返回未知消息错误。服务器之间的服务发现心跳属于 `INTERNAL` 通道，客户端不得调用。
+业务失败时信封会带 `error_code`，载荷仍是业务响应。客户端应使用 `RequestResultAsync`：有载荷时先读 `response.Success`，没有载荷再按信封错误处理。`GameProtocolException` 也携带原始载荷。
+
+客户端心跳不是全局强制协议。服务目录的 `heartbeatIntervalSeconds` 大于 0 时，Unity 与 `src/Client` 会按该间隔自动发送 `DotNetGameServer.ClientHeartbeatRequest`。未启用时不要发送，否则会返回未知消息错误。服务器之间的服务发现心跳属于 `INTERNAL` 通道，客户端不得调用。
+
+服务器主动推送不带 `request_id`。使用 `client.On(Foo.Parser, handler)` 按类型订阅；未订阅的消息仍会进入 `NotificationReceived`。
+
+目录中的 `version` 与客户端 `ClientVersion` 比较主版本。主版本不同时连接失败，错误码为 `426`。
+
+Demo 的 `GuestLoginRequest` / `RefreshSessionRequest` 即使开启客户端鉴权也可以匿名调用。拿到 `access_token` 后调用 `ApplyAccessToken`，并把 `TokenRefreshHandler` 指到刷新或再次游客登录。令牌接近过期或业务请求返回 `401` 时，`src/Client` 与 Unity SDK 会自动刷新并重试一次。不要在心跳循环里自己实现第二套刷新。
 
 生产环境建议启用 `server:tls`，为每个服务设置独立 `authentication:audience`，并使用至少 32 个随机字符的密钥。
+开启 `authentication:requireClientAuthentication` 后，除匿名入口外的客户端消息都必须携带有效令牌。

@@ -28,6 +28,8 @@ public sealed class UnityClientProtocolTests
     {
         Assert.Equal("DotNetGameServer.Demo.PingRequest", PingRequest.Descriptor.FullName);
         Assert.Equal("DotNetGameServer.Demo.PingResponse", PingResponse.Descriptor.FullName);
+        Assert.Equal("DotNetGameServer.Demo.GuestLoginRequest", GuestLoginRequest.Descriptor.FullName);
+        Assert.Equal("DotNetGameServer.Demo.RefreshSessionRequest", RefreshSessionRequest.Descriptor.FullName);
     }
 
     [Fact]
@@ -178,6 +180,84 @@ public sealed class UnityClientProtocolTests
         }
     }
 
+    [Fact]
+    public async Task RequestAsync_ReturnsBusinessPayloadWhenEnvelopeHasError()
+    {
+        var server = new RejectingServer();
+        await server.StartAsync(0);
+        try
+        {
+            var endpoint = new ServiceEndpoint
+            {
+                ServiceId = "reject",
+                Role = "reject",
+                Host = "127.0.0.1",
+                Port = server.ListeningPort!.Value,
+                Responsibilities = ["reject"]
+            };
+            using var client = new GameNetworkClient(
+                new TcpNetworkTransport(),
+                new StaticServiceDiscoveryProvider([endpoint]));
+            await client.ConnectAsync(new ServiceQuery { Responsibility = "reject" }, CancellationToken.None);
+
+            var result = await client.RequestResultAsync(
+                new ClientHeartbeatRequest(),
+                ClientHeartbeatResponse.Parser,
+                CancellationToken.None);
+
+            Assert.False(result.Success);
+            Assert.Equal(400, result.ErrorCode);
+            Assert.True(result.HasResponse);
+            Assert.Equal("message_required", result.Response.Message);
+        }
+        finally
+        {
+            await server.StopAsync();
+        }
+    }
+
+    [Fact]
+    public async Task On_DispatchesTypedPushWithoutRequestId()
+    {
+        var codec = new ProtobufEnvelopeCodec();
+        using var transport = new EchoTransport(codec);
+        var endpoint = new ServiceEndpoint
+        {
+            ServiceId = "demo-1",
+            Role = "demo",
+            Host = "127.0.0.1",
+            Port = 5500,
+            Responsibilities = ["gameplay"]
+        };
+        using var client = new GameNetworkClient(
+            transport,
+            new StaticServiceDiscoveryProvider([endpoint]),
+            codec);
+        PingResponse received = null;
+        using var subscription = client.On(PingResponse.Parser, message => received = message);
+
+        await client.ConnectAsync(new ServiceQuery { Responsibility = "gameplay" }, CancellationToken.None);
+        await transport.PushAsync(new NetworkEnvelope
+        {
+            Type = PingResponse.Descriptor.FullName,
+            Payload = new PingResponse { Message = "push" }.ToByteArray(),
+            Channel = DotNetGameServer.UnityClient.Protocol.CommunicationChannel.Client
+        });
+        await Task.Delay(50);
+
+        Assert.NotNull(received);
+        Assert.Equal("push", received.Message);
+    }
+
+    [Fact]
+    public void ProtocolCompatibility_ComparesMajorVersion()
+    {
+        Assert.True(ProtocolCompatibility.AreCompatible("1.0.0", "1.2.3"));
+        Assert.False(ProtocolCompatibility.AreCompatible("1.0.0", "2.0.0"));
+        Assert.Equal(400, DotNetGameServer.UnityClient.Protocol.ProtocolError.InvalidRequest);
+        Assert.Equal(426, DotNetGameServer.UnityClient.Protocol.ProtocolError.VersionMismatch);
+    }
+
     private sealed class EchoTransport : INetworkTransport
     {
         private readonly IEnvelopeCodec _codec;
@@ -245,6 +325,29 @@ public sealed class UnityClientProtocolTests
         {
             while (_callbacks.TryDequeue(out var callback)) callback();
         }
+    }
+
+    private sealed class RejectingServer : BaseGameServer
+    {
+        public RejectingServer()
+            : base("unity-reject-test", null, new ServerOptions(), new AuthenticationOptions())
+        {
+            RegisterClientMessageHandler(new RejectHeartbeatHandler());
+        }
+    }
+
+    private sealed class RejectHeartbeatHandler
+        : IMessageHandler<ClientHeartbeatRequest, ClientHeartbeatResponse>
+    {
+        public Task<ClientHeartbeatResponse> HandleAsync(
+            ClientHeartbeatRequest request,
+            IServerContext context) =>
+            Task.FromResult(new ClientHeartbeatResponse
+            {
+                Success = false,
+                Code = 400,
+                Message = "message_required"
+            });
     }
 
     private sealed class HeartbeatServer() : BaseGameServer(

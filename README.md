@@ -8,10 +8,11 @@
 src/
   Shared/   通用信封协议、服务发现协议、令牌与时间转换工具
   Core/     TCP 服务器、消息管线、组件、鉴权、数据库和分流接口
+  Client/   不依赖 Core 的 .NET 客户端：发现、请求、推送订阅、心跳、重连与令牌刷新
   Hosting/  .NET Host 集成、配置、健康检查与 OpenTelemetry
 Demo/
   BasicServer/  最小可运行示例
-  BasicClient/  可直接调用 Ping 的 .NET 客户端
+  BasicClient/  游客登录后调用 Ping 的 .NET 客户端
 unity/
   com.dotnetgameserver.client/  可直接安装的 Unity UPM 客户端、Editor 工具与示例
 tests/

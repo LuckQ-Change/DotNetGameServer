@@ -1,5 +1,6 @@
 using Core;
 using Core.Configuration;
+using Core.Persistence;
 
 namespace BasicServer;
 
@@ -9,7 +10,8 @@ public sealed class DemoGameServer : BaseGameServer
         ILogger<DemoGameServer> logger,
         ServerOptions serverOptions,
         AuthenticationOptions authenticationOptions,
-        ClientHeartbeatOptions clientHeartbeatOptions)
+        ClientHeartbeatOptions clientHeartbeatOptions,
+        IGameDatabase? database = null)
         : base(
             nameof(DemoGameServer),
             logger,
@@ -19,5 +21,12 @@ public sealed class DemoGameServer : BaseGameServer
     {
         AddComponent(new DemoLifecycleComponent());
         RegisterClientMessageHandler(new PingHandler());
+        RegisterAnonymousClientMessageHandler(new GuestLoginHandler());
+        RegisterAnonymousClientMessageHandler(new RefreshSessionHandler());
+        if (database is null) return;
+
+        AddComponent(new NoteSchemaComponent(database));
+        RegisterClientMessageHandler(new SaveNoteHandler(database));
+        RegisterClientMessageHandler(new LoadNoteHandler(database));
     }
 }

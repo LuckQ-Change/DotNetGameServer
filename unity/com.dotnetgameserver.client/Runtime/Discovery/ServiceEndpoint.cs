@@ -17,6 +17,7 @@ namespace DotNetGameServer.UnityClient.Discovery
         public bool TlsEnabled;
         public string TlsServerName = string.Empty;
         public string[] Responsibilities = Array.Empty<string>();
+        public int HeartbeatIntervalSeconds;
 
         public float Load
         {

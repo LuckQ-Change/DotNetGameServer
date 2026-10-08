@@ -3,7 +3,7 @@
 面向 Unity 2022.3 LTS 及以上版本的客户端 UPM 包。它负责：
 
 - 自动从服务器 HTTP 目录发现可用服务；
-- TCP/TLS 长连接、长度帧、请求关联、超时和错误映射；
+- TCP/TLS 长连接、长度帧、请求关联、超时、失败载荷、按类型推送、心跳、重连与令牌刷新；
 - Protobuf Envelope 与业务 Protobuf 的双向转换；
 - 允许项目现有网络框架通过 `INetworkTransport` 接入；
 - Editor 中生成 Proto C#、检查服务目录和查看独立 Network Console；

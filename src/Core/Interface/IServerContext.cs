@@ -27,6 +27,18 @@ public interface IServerContext
     /// </summary>
     public string RemoteAddress { get; }
 
+    /// <summary>当前连接的稳定标识。服务器级上下文没有连接时为空字符串。</summary>
+    public string ConnectionId { get; }
+
+    /// <summary>令牌校验使用的受众，签发客户端令牌时必须与此一致。</summary>
+    public string TokenAudience { get; }
+
+    /// <summary>签发客户端访问令牌时使用的有效期，单位秒。</summary>
+    public int ClientTokenTtlSeconds { get; }
+
+    /// <summary>刷新会话时允许令牌过期后继续使用的宽限秒数。</summary>
+    public int ClientTokenRefreshGraceSeconds { get; }
+
     /// <summary>
     /// 请求级身份信息（若令牌可校验则填充）。
     /// </summary>

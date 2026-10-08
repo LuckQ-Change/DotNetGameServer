@@ -1,3 +1,4 @@
+using Core.Configuration;
 using Core.Directory;
 
 using Microsoft.AspNetCore.Builder;
@@ -5,6 +6,7 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Options;
 
 namespace Hosting;
 
@@ -34,6 +36,7 @@ public static class ClientServiceCatalogEndpoints
         endpoints.MapGet("/.well-known/dotnet-game-server/services", async (
             HttpContext http,
             CurrentServerAccessor accessor,
+            IOptions<ClientHeartbeatOptions> heartbeatOptions,
             string? responsibility,
             string? region,
             int? limit,
@@ -43,6 +46,9 @@ public static class ClientServiceCatalogEndpoints
             if (server is null || !server.IsRunning)
                 return Results.StatusCode(StatusCodes.Status503ServiceUnavailable);
 
+            var heartbeatSeconds = heartbeatOptions.Value.Enabled
+                ? Math.Max(1, heartbeatOptions.Value.RecommendedIntervalSeconds)
+                : 0;
             var maximum = Math.Clamp(limit ?? 16, 1, 100);
             var registry = server.GetComponent<IServerRegistry>();
             if (registry is not null)
@@ -66,7 +72,8 @@ public static class ClientServiceCatalogEndpoints
                         item.Capacity,
                         item.TlsEnabled,
                         item.TlsServerName,
-                        [item.ServerType]))
+                        [item.ServerType],
+                        heartbeatSeconds))
                     .ToArray();
                 return Results.Ok(new ClientServiceCatalog(1, services));
             }
@@ -100,7 +107,8 @@ public static class ClientServiceCatalogEndpoints
                 snapshot.Capacity,
                 serverOptions.Tls.Enabled,
                 configuredTlsServerName,
-                responsibilities);
+                responsibilities,
+                heartbeatSeconds);
             return Results.Ok(new ClientServiceCatalog(1, [entry]));
         });
 
@@ -125,5 +133,6 @@ public static class ClientServiceCatalogEndpoints
         int Capacity,
         bool TlsEnabled,
         string TlsServerName,
-        IReadOnlyList<string> Responsibilities);
+        IReadOnlyList<string> Responsibilities,
+        int HeartbeatIntervalSeconds);
 }

@@ -16,7 +16,7 @@ using OpenTelemetry.Metrics;
 using OpenTelemetry.Resources;
 using OpenTelemetry.Trace;
 
-using Shared.Constants;
+using Shared.Configuration;
 
 namespace Hosting;
 
@@ -73,6 +73,10 @@ public static class GameServerHost
             .Validate(options => !options.RequireClientAuthentication
                 || !string.IsNullOrWhiteSpace(options.TokenSecret),
                 "启用客户端消息鉴权时 authentication:tokenSecret 不能为空。")
+            .Validate(options => options.ClientTokenTtlSeconds >= 60,
+                "authentication:clientTokenTtlSeconds 不能小于 60。")
+            .Validate(options => options.ClientTokenRefreshGraceSeconds >= 0,
+                "authentication:clientTokenRefreshGraceSeconds 不能小于 0。")
             .ValidateOnStart();
         builder.Services.AddOptions<ClientHeartbeatOptions>()
             .Bind(builder.Configuration.GetSection("clientHeartbeat"))

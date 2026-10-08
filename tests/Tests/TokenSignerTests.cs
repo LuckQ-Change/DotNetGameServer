@@ -117,4 +117,53 @@ public class TokenSignerTests
         Assert.Equal(sourceServerId, parsedSourceServerId);
     }
 
+    [Fact]
+    public void ComposeUserToken_CanBeVerifiedAndReadWithoutSecret()
+    {
+        var token = TokenSigner.ComposeUserToken(
+            "player-1",
+            "game-server",
+            "test-secret-at-least-32-characters",
+            ttlSeconds: 600);
+
+        Assert.True(TokenSigner.TryVerify(
+            token,
+            "game-server",
+            "test-secret-at-least-32-characters",
+            out var tokenId,
+            out var userId,
+            out var expireUnix));
+        Assert.StartsWith("usr-", tokenId);
+        Assert.Equal("player-1", userId);
+        Assert.True(expireUnix > DateTimeOffset.UtcNow.ToUnixTimeSeconds());
+
+        Assert.True(TokenSigner.TryReadToken(token, out _, out var readUserId, out var readExpire));
+        Assert.Equal(userId, readUserId);
+        Assert.Equal(expireUnix, readExpire);
+    }
+
+    [Fact]
+    public void TryVerify_AllowExpiredWithinWindow_AcceptsRecentlyExpiredToken()
+    {
+        var expireUnix = DateTimeOffset.UtcNow.AddSeconds(-120).ToUnixTimeSeconds();
+        var signature = TokenSigner.ComputeSignature(
+            "tok",
+            expireUnix,
+            "player-1",
+            "game-server",
+            "test-secret");
+        var token = TokenSigner.ComposeSigned("tok", expireUnix, "player-1", signature);
+
+        Assert.False(TokenSigner.TryVerify(token, "game-server", "test-secret", out _, out _, out _));
+        Assert.True(TokenSigner.TryVerify(
+            token,
+            "game-server",
+            "test-secret",
+            out _,
+            out var userId,
+            out _,
+            allowedClockSkewSeconds: 0,
+            allowExpiredWithinSeconds: 180));
+        Assert.Equal("player-1", userId);
+    }
 }

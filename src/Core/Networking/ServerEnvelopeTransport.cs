@@ -1,3 +1,4 @@
+using System.Buffers;
 using System.Buffers.Binary;
 
 using DotNetGameServer;
@@ -69,12 +70,19 @@ internal static class ServerEnvelopeTransport
             bytes = response.ToByteArray();
         }
 
-        var lengthBuffer = new byte[sizeof(int)];
-        BinaryPrimitives.WriteInt32LittleEndian(lengthBuffer, bytes.Length);
-        using var writeCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
-        if (timeoutMs > 0) writeCts.CancelAfter(timeoutMs);
-        await stream.WriteAsync(lengthBuffer, writeCts.Token);
-        await stream.WriteAsync(bytes, writeCts.Token);
-        await stream.FlushAsync(writeCts.Token);
+        var lengthBuffer = ArrayPool<byte>.Shared.Rent(sizeof(int));
+        try
+        {
+            BinaryPrimitives.WriteInt32LittleEndian(lengthBuffer.AsSpan(0, sizeof(int)), bytes.Length);
+            using var writeCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+            if (timeoutMs > 0) writeCts.CancelAfter(timeoutMs);
+            await stream.WriteAsync(lengthBuffer.AsMemory(0, sizeof(int)), writeCts.Token);
+            await stream.WriteAsync(bytes, writeCts.Token);
+            await stream.FlushAsync(writeCts.Token);
+        }
+        finally
+        {
+            ArrayPool<byte>.Shared.Return(lengthBuffer);
+        }
     }
 }

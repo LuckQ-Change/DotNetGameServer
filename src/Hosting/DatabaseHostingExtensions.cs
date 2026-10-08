@@ -46,7 +46,9 @@ public static class DatabaseHostingExtensions
                 factory,
                 current.ConnectionString,
                 current.CommandTimeoutSeconds,
-                current.RollbackTimeoutSeconds);
+                current.RollbackTimeoutSeconds,
+                current.HealthCheckCommand,
+                current.HealthCheckTimeoutSeconds);
         });
         services.AddSingleton<IGameDatabase>(sp => sp.GetRequiredService<AdoNetGameDatabase>());
         services.AddSingleton<IGameDatabaseHealthProbe>(sp => sp.GetRequiredService<AdoNetGameDatabase>());

@@ -16,6 +16,7 @@ public static class AuthMiddleware
                 token,
                 ctx.RemoteAddress,
                 ctx.RequestId,
+                ctx.ConnectionId,
                 ctx.Token);
             ctx.RequestContext = reqContext;
             var authenticated = false;
@@ -58,7 +59,8 @@ public static class AuthMiddleware
             var authenticationRequired = ctx.EffectiveChannel switch
             {
                 DotNetGameServer.CommunicationChannel.Internal => ctx.Server.RequireInternalAuthentication,
-                DotNetGameServer.CommunicationChannel.Client => ctx.Server.RequireClientAuthentication,
+                DotNetGameServer.CommunicationChannel.Client => ctx.Server.RequireClientAuthentication
+                    && !ctx.Server.AllowsAnonymousClient(ctx.Envelope.Type),
                 _ => true
             };
             var validIdentity = ctx.EffectiveChannel != DotNetGameServer.CommunicationChannel.Internal

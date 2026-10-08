@@ -136,6 +136,9 @@ namespace DotNetGameServer.UnityClient.Unity
             [DataMember(Name = "responsibilities")]
             public string[] Responsibilities;
 
+            [DataMember(Name = "heartbeatIntervalSeconds")]
+            public int HeartbeatIntervalSeconds;
+
             public ServiceEndpoint ToEndpoint(string fallbackHost)
             {
                 return new ServiceEndpoint
@@ -150,7 +153,8 @@ namespace DotNetGameServer.UnityClient.Unity
                     Capacity = Capacity,
                     TlsEnabled = TlsEnabled,
                     TlsServerName = TlsServerName ?? string.Empty,
-                    Responsibilities = Responsibilities ?? Array.Empty<string>()
+                    Responsibilities = Responsibilities ?? Array.Empty<string>(),
+                    HeartbeatIntervalSeconds = HeartbeatIntervalSeconds
                 };
             }
         }

@@ -29,7 +29,24 @@ public sealed class DatabaseReliabilityTests
 
         Assert.NotNull(factory.LastConnection);
         Assert.True(factory.LastConnection!.Opened);
+        Assert.True(factory.LastConnection.ScalarExecuted);
+        Assert.Equal("SELECT 1", factory.LastConnection.LastCommandText);
         Assert.True(factory.LastConnection.WasDisposed);
+    }
+
+    [Fact]
+    public async Task Execute_CopiesOutputParameterValueBack()
+    {
+        var database = new AdoNetGameDatabase(new ProbeFactory(), "Data Source=fake", healthCheckCommand: string.Empty);
+        var output = new DatabaseParameter("@result", null, DbType.Int32, ParameterDirection.Output);
+
+        var affected = await database.ExecuteAsync(new DatabaseCommand(
+            "CALL demo",
+            [output],
+            CommandType.StoredProcedure));
+
+        Assert.Equal(1, affected);
+        Assert.Equal(42, output.Value);
     }
 
     [Fact]
@@ -96,6 +113,8 @@ public sealed class DatabaseReliabilityTests
         private string _connectionString;
         public bool Opened { get; private set; }
         public bool WasDisposed { get; private set; }
+        public bool ScalarExecuted { get; set; }
+        public string? LastCommandText { get; set; }
         public ProbeTransaction? Transaction { get; private set; }
 
         public ProbeConnection(bool hangingRollback)
@@ -134,7 +153,7 @@ public sealed class DatabaseReliabilityTests
         protected override DbTransaction BeginDbTransaction(IsolationLevel isolationLevel) =>
             Transaction = new ProbeTransaction(this, isolationLevel, _hangingRollback);
 
-        protected override DbCommand CreateDbCommand() => throw new NotSupportedException();
+        protected override DbCommand CreateDbCommand() => new ProbeCommand(this);
 
         protected override void Dispose(bool disposing)
         {
@@ -161,5 +180,102 @@ public sealed class DatabaseReliabilityTests
             cancellationToken.Register(() => CancellationObserved = true);
             return Task.Delay(Timeout.InfiniteTimeSpan, cancellationToken);
         }
+    }
+
+    private sealed class ProbeCommand : DbCommand
+    {
+        private readonly ProbeConnection _connection;
+        private readonly ProbeParameterCollection _parameters = new();
+
+        public ProbeCommand(ProbeConnection connection) => _connection = connection;
+
+        [System.Diagnostics.CodeAnalysis.AllowNull]
+        public override string CommandText { get; set; } = string.Empty;
+        public override int CommandTimeout { get; set; }
+        public override CommandType CommandType { get; set; }
+        public override bool DesignTimeVisible { get; set; }
+        public override UpdateRowSource UpdatedRowSource { get; set; }
+        protected override DbConnection? DbConnection { get; set; }
+        protected override DbParameterCollection DbParameterCollection => _parameters;
+        protected override DbTransaction? DbTransaction { get; set; }
+
+        public override void Cancel() { }
+        public override void Prepare() { }
+        public override int ExecuteNonQuery()
+        {
+            foreach (DbParameter parameter in _parameters)
+            {
+                if (parameter.Direction is ParameterDirection.Output
+                    or ParameterDirection.InputOutput
+                    or ParameterDirection.ReturnValue)
+                    parameter.Value = 42;
+            }
+
+            return 1;
+        }
+
+        public override object? ExecuteScalar()
+        {
+            _connection.ScalarExecuted = true;
+            _connection.LastCommandText = CommandText;
+            return 1;
+        }
+
+        protected override DbParameter CreateDbParameter() => new ProbeParameter();
+        protected override DbDataReader ExecuteDbDataReader(CommandBehavior behavior) =>
+            throw new NotSupportedException();
+    }
+
+    private sealed class ProbeParameter : DbParameter
+    {
+        public override DbType DbType { get; set; }
+        public override ParameterDirection Direction { get; set; }
+        public override bool IsNullable { get; set; }
+        [System.Diagnostics.CodeAnalysis.AllowNull]
+        public override string ParameterName { get; set; } = string.Empty;
+        [System.Diagnostics.CodeAnalysis.AllowNull]
+        public override string SourceColumn { get; set; } = string.Empty;
+        public override object? Value { get; set; }
+        public override bool SourceColumnNullMapping { get; set; }
+        public override int Size { get; set; }
+        public override void ResetDbType() => DbType = DbType.String;
+    }
+
+    private sealed class ProbeParameterCollection : DbParameterCollection
+    {
+        private readonly List<DbParameter> _items = [];
+
+        public override int Count => _items.Count;
+        public override object SyncRoot => _items;
+
+        public override int Add(object value)
+        {
+            _items.Add((DbParameter)value);
+            return _items.Count - 1;
+        }
+
+        public override void AddRange(Array values)
+        {
+            foreach (var value in values) Add(value!);
+        }
+
+        public override void Clear() => _items.Clear();
+        public override bool Contains(object value) => _items.Contains((DbParameter)value);
+        public override bool Contains(string value) => IndexOf(value) >= 0;
+        public override void CopyTo(Array array, int index) => _items.CopyTo((DbParameter[])array, index);
+        public override System.Collections.IEnumerator GetEnumerator() => _items.GetEnumerator();
+        public override int IndexOf(object value) => _items.IndexOf((DbParameter)value);
+        public override int IndexOf(string parameterName) =>
+            _items.FindIndex(item => string.Equals(item.ParameterName, parameterName, StringComparison.Ordinal));
+        public override void Insert(int index, object value) => _items.Insert(index, (DbParameter)value);
+        public override void Remove(object value) => _items.Remove((DbParameter)value);
+        public override void RemoveAt(int index) => _items.RemoveAt(index);
+        public override void RemoveAt(string parameterName) => _items.RemoveAt(IndexOf(parameterName));
+
+        protected override DbParameter GetParameter(int index) => _items[index];
+        protected override DbParameter GetParameter(string parameterName) => _items[IndexOf(parameterName)];
+        protected override void SetParameter(int index, DbParameter value) => _items[index] = value;
+        protected override void SetParameter(string parameterName, DbParameter value) =>
+            _items[IndexOf(parameterName)] = value;
     }
 }

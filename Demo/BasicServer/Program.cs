@@ -1,5 +1,13 @@
+using System.Data.Common;
+
 using BasicServer;
+
 using Hosting;
+
+using Microsoft.Data.Sqlite;
+
+if (!DbProviderFactories.TryGetFactory("Microsoft.Data.Sqlite", out _))
+    DbProviderFactories.RegisterFactory("Microsoft.Data.Sqlite", SqliteFactory.Instance);
 
 await GameServerHost.RunAsync(args, new GameServerDefinition
 {
@@ -12,7 +20,8 @@ await GameServerHost.RunAsync(args, new GameServerDefinition
         context.Services.GetRequiredService<ILogger<DemoGameServer>>(),
         context.ServerOptions,
         context.AuthenticationOptions,
-        context.ClientHeartbeatOptions),
+        context.ClientHeartbeatOptions,
+        context.Services.GetService<Core.Persistence.IGameDatabase>()),
     ConfigureEndpoints = app => app.MapGet("/", () => Results.Ok(new
     {
         service = "DotNetGameServer.BasicDemo",

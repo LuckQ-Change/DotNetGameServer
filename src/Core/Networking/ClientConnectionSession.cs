@@ -1,3 +1,4 @@
+using System.Buffers;
 using System.Buffers.Binary;
 using System.Net;
 using System.Net.Security;
@@ -65,6 +66,22 @@ internal sealed class ClientConnectionSession
             var rateLimiter = _accessGuard.CreateConnectionLimiter(remoteEndpoint, remoteIp);
             var requestChannel = CreateRequestChannel();
             using var responseWriteGate = new SemaphoreSlim(1, 1);
+            var connectionId = Guid.NewGuid().ToString("N");
+            var session = new ClientSession(
+                connectionId,
+                remoteEndpoint,
+                () => connectionCts.Cancel(),
+                (type, payload, channel, cancellationToken) => new ValueTask(WriteResponseAsync(
+                    stream,
+                    responseWriteGate,
+                    type,
+                    payload,
+                    null,
+                    0,
+                    null,
+                    channel,
+                    cancellationToken)));
+            _server.Sessions.Add(session);
 
             // 多个处理任务允许同一连接并行业务计算；响应写锁保证帧不会交叉写入。
             var requestProcessors = Enumerable
@@ -74,20 +91,29 @@ internal sealed class ClientConnectionSession
                         requestChannel.Reader,
                         stream,
                         responseWriteGate,
+                        session,
                         remoteEndpoint,
                         connectionToken),
                     connectionToken))
                 .ToArray();
 
-            await ReceiveRequestsAsync(
-                stream,
-                requestChannel.Writer,
-                rateLimiter,
-                remoteEndpoint,
-                connectionToken);
+            try
+            {
+                await ReceiveRequestsAsync(
+                    stream,
+                    requestChannel.Writer,
+                    rateLimiter,
+                    remoteEndpoint,
+                    connectionToken);
+                requestChannel.Writer.TryComplete();
+                await CancelRequestProcessorsAsync(connectionCts, requestProcessors, remoteEndpoint, connectionToken);
+            }
+            finally
+            {
+                requestChannel.Writer.TryComplete();
+                _server.Sessions.Remove(connectionId);
+            }
 
-            requestChannel.Writer.TryComplete();
-            await CancelRequestProcessorsAsync(connectionCts, requestProcessors, remoteEndpoint, connectionToken);
             _server.Log($"客户端断开: {remoteEndpoint}", LogLevel.Debug);
         }
     }
@@ -168,52 +194,61 @@ internal sealed class ClientConnectionSession
         string remoteEndpoint,
         CancellationToken cancellationToken)
     {
+        var lengthBuffer = ArrayPool<byte>.Shared.Rent(sizeof(int));
         try
         {
+            var lengthMemory = lengthBuffer.AsMemory(0, sizeof(int));
             while (!cancellationToken.IsCancellationRequested)
             {
-                var lengthBuffer = new byte[sizeof(int)];
                 var lengthBytes = await ServerEnvelopeTransport.ReadExactlyAsync(
                     stream,
-                    lengthBuffer,
+                    lengthMemory,
                     cancellationToken,
                     _options.IdleTimeoutMs);
                 if (lengthBytes == 0) break;
                 if (!rateLimiter.TryAddBytes(lengthBytes)) break;
 
-                var frameLength = BinaryPrimitives.ReadInt32LittleEndian(lengthBuffer);
+                var frameLength = BinaryPrimitives.ReadInt32LittleEndian(lengthMemory.Span);
                 if (frameLength <= 0 || frameLength > _options.MaxMessageSizeBytes)
                 {
                     _server.Log($"非法或过大消息长度: {frameLength}，断开连接");
                     break;
                 }
 
-                var payload = new byte[frameLength];
-                var payloadBytes = await ServerEnvelopeTransport.ReadExactlyAsync(
-                    stream,
-                    payload,
-                    cancellationToken,
-                    _options.ReceiveTimeoutMs);
-                if (payloadBytes != frameLength)
-                {
-                    _server.Log($"消息体未完整读取: expected={frameLength} actual={payloadBytes}，断开连接");
-                    break;
-                }
-                if (!rateLimiter.TryAddBytes(frameLength)) break;
-
-                envelope request;
+                var payload = ArrayPool<byte>.Shared.Rent(frameLength);
                 try
                 {
-                    request = envelope.Parser.ParseFrom(payload);
-                }
-                catch (InvalidProtocolBufferException exception)
-                {
-                    _server.Log($"协议解析异常(envelope): {exception.Message}，断开");
-                    break;
-                }
+                    var payloadMemory = payload.AsMemory(0, frameLength);
+                    var payloadBytes = await ServerEnvelopeTransport.ReadExactlyAsync(
+                        stream,
+                        payloadMemory,
+                        cancellationToken,
+                        _options.ReceiveTimeoutMs);
+                    if (payloadBytes != frameLength)
+                    {
+                        _server.Log($"消息体未完整读取: expected={frameLength} actual={payloadBytes}，断开连接");
+                        break;
+                    }
+                    if (!rateLimiter.TryAddBytes(frameLength)) break;
 
-                if (!rateLimiter.TryAddMessage()) break;
-                await requestWriter.WriteAsync(request, cancellationToken);
+                    envelope request;
+                    try
+                    {
+                        request = envelope.Parser.ParseFrom(payload, 0, frameLength);
+                    }
+                    catch (InvalidProtocolBufferException exception)
+                    {
+                        _server.Log($"协议解析异常(envelope): {exception.Message}，断开");
+                        break;
+                    }
+
+                    if (!rateLimiter.TryAddMessage()) break;
+                    await requestWriter.WriteAsync(request, cancellationToken);
+                }
+                finally
+                {
+                    ArrayPool<byte>.Shared.Return(payload);
+                }
             }
         }
         catch (OperationCanceledException)
@@ -232,6 +267,10 @@ internal sealed class ClientConnectionSession
         {
             _server.Log($"客户端异常: {exception}", LogLevel.Error);
         }
+        finally
+        {
+            ArrayPool<byte>.Shared.Return(lengthBuffer);
+        }
     }
 
     /// <summary>消费一条连接上的业务请求；同一方法可由多个任务并行运行。</summary>
@@ -239,6 +278,7 @@ internal sealed class ClientConnectionSession
         ChannelReader<envelope> requestReader,
         Stream stream,
         SemaphoreSlim responseWriteGate,
+        ClientSession session,
         string remoteEndpoint,
         CancellationToken connectionToken)
     {
@@ -250,6 +290,7 @@ internal sealed class ClientConnectionSession
                     request,
                     stream,
                     responseWriteGate,
+                    session,
                     remoteEndpoint,
                     connectionToken);
             }
@@ -268,12 +309,14 @@ internal sealed class ClientConnectionSession
         envelope request,
         Stream stream,
         SemaphoreSlim responseWriteGate,
+        ClientSession session,
         string remoteEndpoint,
         CancellationToken connectionToken)
     {
         var requestId = string.IsNullOrWhiteSpace(request.RequestId)
             ? Guid.NewGuid().ToString("N")
             : request.RequestId;
+        session.ObserveChannel(request.Channel);
         _server.Log($"recv route={request.Type} req_id={requestId} ip={remoteEndpoint}", LogLevel.Debug);
 
         if (!TryValidateMetadata(request, out var metadataError))
@@ -301,6 +344,7 @@ internal sealed class ClientConnectionSession
             Server = _server,
             RemoteAddress = remoteEndpoint,
             RequestId = requestId,
+            ConnectionId = session.ConnectionId,
             Token = requestCts.Token
         };
 

@@ -19,7 +19,11 @@ namespace DotNetGameServer.UnityClient.Unity
         public string RoutingKey = string.Empty;
 
         [Header("Protocol")]
-        public string ClientVersion = "0.1.0";
+        public string ClientVersion = "1.0.0";
+        public bool RequireCompatibleVersion = true;
+        public bool AutoHeartbeat = true;
+        public bool AutoReconnect = true;
+        [Min(1)] public int MaxReconnectAttempts = 3;
         [Min(1024)] public int MaxFrameBytes = 1024 * 1024;
         [Min(1)] public int RequestTimeoutSeconds = 10;
 

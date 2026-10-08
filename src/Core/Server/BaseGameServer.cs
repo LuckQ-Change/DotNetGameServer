@@ -41,6 +41,8 @@ public abstract class BaseGameServer : IServerContext
     private readonly SemaphoreSlim _lifecycleGate = new(1, 1);
     private CancellationTokenSource? _cts;
     private TcpServerTransport? _transport;
+    private readonly ClientSessionRegistry _sessions = new();
+    private readonly ConcurrentDictionary<string, byte> _anonymousClientMessages = new(StringComparer.Ordinal);
 
     /// <summary>服务器名称，用于日志分类、遥测标签和运行实例标识。</summary>
     public string ServerName { get; }
@@ -54,6 +56,8 @@ public abstract class BaseGameServer : IServerContext
     public string RemoteAddress => string.Empty;
 
     public string RequestId => string.Empty;
+
+    public string ConnectionId => string.Empty;
 
     public AuthInfo? Auth => null;
 
@@ -74,6 +78,12 @@ public abstract class BaseGameServer : IServerContext
 
     /// <summary>客户端通信通道是否强制鉴权。</summary>
     public bool RequireClientAuthentication { get; }
+
+    /// <summary>签发客户端令牌时使用的有效期。</summary>
+    public int ClientTokenTtlSeconds { get; }
+
+    /// <summary>刷新会话时允许令牌过期后继续使用的宽限秒数。</summary>
+    public int ClientTokenRefreshGraceSeconds { get; }
 
     /// <summary>服务器内部通信通道是否强制鉴权。</summary>
     public bool RequireInternalAuthentication { get; }
@@ -101,6 +111,8 @@ public abstract class BaseGameServer : IServerContext
             : authSettings.Audience;
         TokenClockSkewSeconds = Math.Max(0, authSettings.ClockSkewSeconds);
         RequireClientAuthentication = authSettings.RequireClientAuthentication;
+        ClientTokenTtlSeconds = Math.Max(60, authSettings.ClientTokenTtlSeconds);
+        ClientTokenRefreshGraceSeconds = Math.Max(0, authSettings.ClientTokenRefreshGraceSeconds);
         RequireInternalAuthentication = authSettings.RequireInternalAuthentication;
 
         // 基础鉴权组件始终存在，业务服务器可通过相同接口替换默认实现。
@@ -144,6 +156,23 @@ public abstract class BaseGameServer : IServerContext
         where TRequest : class, IMessage<TRequest>, new()
         where TResponse : class, IMessage<TResponse>, new() =>
         _handlerRegistry.Register(handler, CommunicationChannel.Client);
+
+    /// <summary>
+    /// 注册客户端通道处理器，且在强制鉴权开启时仍允许未登录调用。
+    /// 用于 GuestLogin、RefreshSession 等入口消息。
+    /// </summary>
+    protected void RegisterAnonymousClientMessageHandler<TRequest, TResponse>(
+        IMessageHandler<TRequest, TResponse> handler)
+        where TRequest : class, IMessage<TRequest>, new()
+        where TResponse : class, IMessage<TResponse>, new()
+    {
+        RegisterClientMessageHandler(handler);
+        _anonymousClientMessages.TryAdd(new TRequest().Descriptor.FullName, 0);
+    }
+
+    internal bool AllowsAnonymousClient(string? messageType) =>
+        !string.IsNullOrWhiteSpace(messageType)
+        && _anonymousClientMessages.ContainsKey(messageType);
 
     /// <summary>注册只允许可信服务器内部通道调用的强类型消息处理器。</summary>
     protected void RegisterInternalMessageHandler<TRequest, TResponse>(
@@ -384,6 +413,64 @@ public abstract class BaseGameServer : IServerContext
         CommunicationChannel requested,
         out CommunicationChannel resolved) =>
         _handlerRegistry.TryResolveChannel(requested, out resolved);
+
+    /// <summary>当前活动连接表，供传输层登记和主动推送使用。</summary>
+    internal ClientSessionRegistry Sessions => _sessions;
+
+    /// <summary>
+    /// 向一条仍在线的连接写入服务器主动消息。连接不存在或写入失败时返回 false。
+    /// </summary>
+    public async ValueTask<bool> TryPushAsync<TMessage>(
+        string connectionId,
+        TMessage message,
+        CancellationToken cancellationToken = default)
+        where TMessage : class, IMessage<TMessage>, new()
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(connectionId);
+        ArgumentNullException.ThrowIfNull(message);
+        if (!_sessions.TryGet(connectionId, out var session) || session is null) return false;
+
+        try
+        {
+            var payload = message.ToByteArray();
+            await session.SendAsync(message.Descriptor.FullName, payload, session.Channel, cancellationToken);
+            return true;
+        }
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+        {
+            throw;
+        }
+        catch (Exception exception) when (exception is IOException or ObjectDisposedException or OperationCanceledException)
+        {
+            Log($"主动推送失败: {connectionId} {exception.Message}", LogLevel.Debug);
+            return false;
+        }
+    }
+
+    /// <summary>向当前全部连接写入同一条主动消息，返回成功写入的连接数。</summary>
+    public async ValueTask<int> BroadcastAsync<TMessage>(
+        TMessage message,
+        CancellationToken cancellationToken = default)
+        where TMessage : class, IMessage<TMessage>, new()
+    {
+        ArgumentNullException.ThrowIfNull(message);
+        var sent = 0;
+        foreach (var session in _sessions.Snapshot())
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            if (await TryPushAsync(session.ConnectionId, message, cancellationToken))
+                sent++;
+        }
+
+        return sent;
+    }
+
+    /// <summary>请求关闭一条连接。连接不存在时返回 false。</summary>
+    public bool TryDisconnect(string connectionId)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(connectionId);
+        return _sessions.TryDisconnect(connectionId);
+    }
 
     /// <summary>获取供健康检查和服务发现使用的轻量运行快照。</summary>
     public ServerRuntimeSnapshot GetRuntimeSnapshot()

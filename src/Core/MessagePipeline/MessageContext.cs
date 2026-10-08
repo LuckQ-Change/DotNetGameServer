@@ -8,6 +8,7 @@ public class MessageContext
     public required BaseGameServer Server { get; init; }
     public required string RemoteAddress { get; init; }
     public required string RequestId { get; init; }
+    public required string ConnectionId { get; init; }
     public CancellationToken Token { get; init; }
     public CommunicationChannel EffectiveChannel { get; set; }
 

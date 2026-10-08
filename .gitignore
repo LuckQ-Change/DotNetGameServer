@@ -82,6 +82,9 @@ lcov.info
 ###############################################
 appsettings.Local.json
 *.local.json
+demo.db
+demo.db-wal
+demo.db-shm
 
 ###############################################
 # Compiled binaries (defensive)

@@ -25,7 +25,7 @@ public sealed class DatabaseHealthCheck(
         try
         {
             await probe.CheckHealthAsync(timeout.Token);
-            return HealthCheckResult.Healthy("connection opened");
+            return HealthCheckResult.Healthy("database responded");
         }
         catch (OperationCanceledException) when (timeout.IsCancellationRequested)
         {

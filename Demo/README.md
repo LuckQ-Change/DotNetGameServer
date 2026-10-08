@@ -6,9 +6,10 @@
 - 注册强类型 Protobuf 客户端消息处理器；
 - 通过 `IServerResponse` 返回统一错误；
 - 通过 `IServerComponent` 管理资源生命周期；
-- 使用公共宿主提供 `/health` 和 `/ready` 健康检查。
+- 使用公共宿主提供 `/health` 和 `/ready` 健康检查；
+- 游客登录签发访问令牌，客户端 SDK 在 `401` 时自动刷新。
 
-客户端心跳在示例配置中保持关闭，说明该能力由每个服务器按需选择，而不是框架强制产生的流量。
+客户端心跳在示例配置中已开启，目录会下发 `heartbeatIntervalSeconds`，由 SDK 自动发送。
 
 在仓库根目录运行：
 

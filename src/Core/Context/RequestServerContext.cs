@@ -17,12 +17,14 @@ internal class RequestServerContext : IServerContext
         string? token,
         string remote,
         string requestId,
+        string connectionId,
         CancellationToken cancellationToken)
     {
         _server = server;
         _token = token ?? string.Empty;
         RemoteAddress = remote;
         _requestId = string.IsNullOrWhiteSpace(requestId) ? Guid.NewGuid().ToString("N") : requestId;
+        ConnectionId = connectionId ?? string.Empty;
         CancellationToken = cancellationToken;
     }
 
@@ -30,6 +32,10 @@ internal class RequestServerContext : IServerContext
     public string AccessToken => _token;
     public string RemoteAddress { get; }
     public string RequestId => _requestId;
+    public string ConnectionId { get; }
+    public string TokenAudience => _server.TokenAudience;
+    public int ClientTokenTtlSeconds => _server.ClientTokenTtlSeconds;
+    public int ClientTokenRefreshGraceSeconds => _server.ClientTokenRefreshGraceSeconds;
     public AuthInfo? Auth => _auth;
     public CancellationToken CancellationToken { get; }
 

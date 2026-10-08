@@ -9,4 +9,10 @@ public sealed class DatabaseOptions
     public int CommandTimeoutSeconds { get; set; } = 30;
     public int RollbackTimeoutSeconds { get; set; } = 5;
     public int HealthCheckTimeoutSeconds { get; set; } = 3;
+
+    /// <summary>
+    /// 就绪探针执行的语句。默认 <c>SELECT 1</c>，SQLite、SQL Server、MySQL 和 PostgreSQL 都可用。
+    /// 置空时只打开连接。
+    /// </summary>
+    public string HealthCheckCommand { get; set; } = "SELECT 1";
 }

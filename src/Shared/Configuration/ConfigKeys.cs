@@ -1,4 +1,4 @@
-namespace Shared.Constants;
+namespace Shared.Configuration;
 
 public static class ConfigKeys
 {

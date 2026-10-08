@@ -9,6 +9,7 @@
   <ItemGroup>
     <ProjectReference Include="..\..\src\Hosting\Hosting.csproj" />
     <PackageReference Include="Google.Protobuf" />
+    <PackageReference Include="Microsoft.Data.Sqlite" />
     <PackageReference Include="Grpc.Tools" PrivateAssets="All" />
   </ItemGroup>
 

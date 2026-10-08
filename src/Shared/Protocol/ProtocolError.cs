@@ -1,6 +1,6 @@
-namespace Core;
+namespace Shared;
 
-/// <summary>框架保留的传输与消息处理错误码。</summary>
+/// <summary>框架保留的传输与消息处理错误码，服务端和客户端共用。</summary>
 public static class ProtocolError
 {
     public const int InvalidRequest = 400;
@@ -8,6 +8,7 @@ public static class ProtocolError
     public const int ChannelForbidden = 403;
     public const int UnknownMessageType = 404;
     public const int RequestTimeout = 408;
+    public const int VersionMismatch = 426;
     public const int ResponseTooLarge = 500;
     public const int InternalError = 500;
 }

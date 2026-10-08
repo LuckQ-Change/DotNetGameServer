@@ -18,6 +18,12 @@ public sealed class AuthenticationOptions
     /// <summary>客户端通道是否必须携带有效令牌。</summary>
     public bool RequireClientAuthentication { get; set; }
 
+    /// <summary>GuestLogin 等接口签发的客户端令牌有效期，单位秒。</summary>
+    public int ClientTokenTtlSeconds { get; set; } = 3600;
+
+    /// <summary>刷新接口允许过期令牌再使用的宽限秒数。</summary>
+    public int ClientTokenRefreshGraceSeconds { get; set; } = 86_400;
+
     /// <summary>服务器内部通道是否必须携带有效的服务令牌。</summary>
     public bool RequireInternalAuthentication { get; set; } = true;
 }

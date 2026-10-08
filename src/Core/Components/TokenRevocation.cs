@@ -33,41 +33,65 @@ public interface ITokenRevocationStore : IServerComponent
 /// </summary>
 public sealed class InMemoryTokenRevocationStore : ITokenRevocationStore
 {
+    private static readonly TimeSpan CleanupInterval = TimeSpan.FromSeconds(30);
     private readonly ConcurrentDictionary<string, DateTimeOffset> _revoked = new();
+    private PeriodicTimer? _cleanupTimer;
+    private Task? _cleanupTask;
 
     public string Name => "InMemoryTokenRevocation";
 
-    public Task InitializeAsync() => Task.CompletedTask;
-
-    public Task DestroyAsync() => Task.CompletedTask;
-
-    public void Revoke(string tokenId, DateTimeOffset expireAt)
+    public Task InitializeAsync()
     {
-        _revoked[tokenId] = expireAt;
-        CleanupExpired();
+        _cleanupTimer = new PeriodicTimer(CleanupInterval);
+        _cleanupTask = RunCleanupAsync(_cleanupTimer);
+        return Task.CompletedTask;
     }
+
+    public async Task DestroyAsync()
+    {
+        if (_cleanupTimer is null) return;
+        _cleanupTimer.Dispose();
+        if (_cleanupTask is null) return;
+        try
+        {
+            await _cleanupTask;
+        }
+        catch (ObjectDisposedException)
+        {
+            // 定时器释放后，等待中的清理循环会结束。
+        }
+    }
+
+    public void Revoke(string tokenId, DateTimeOffset expireAt) => _revoked[tokenId] = expireAt;
 
     public bool IsRevoked(string tokenId)
     {
-        CleanupExpired();
-        if (_revoked.TryGetValue(tokenId, out var expireAt))
-        {
-            if (DateTime.UtcNow <= expireAt.UtcDateTime) return true;
-            _revoked.TryRemove(tokenId, out _);
-        }
-
+        if (!_revoked.TryGetValue(tokenId, out var expireAt)) return false;
+        if (DateTime.UtcNow <= expireAt.UtcDateTime) return true;
+        _revoked.TryRemove(tokenId, out _);
         return false;
     }
 
-    private void CleanupExpired()
+    private async Task RunCleanupAsync(PeriodicTimer timer)
+    {
+        try
+        {
+            while (await timer.WaitForNextTickAsync())
+                RemoveExpired();
+        }
+        catch (ObjectDisposedException)
+        {
+            // 服务器停止时释放定时器。
+        }
+    }
+
+    private void RemoveExpired()
     {
         var now = DateTime.UtcNow;
         foreach (var item in _revoked)
         {
             if (item.Value.UtcDateTime < now)
-            {
                 _revoked.TryRemove(item.Key, out _);
-            }
         }
     }
 }

@@ -60,7 +60,9 @@ public sealed class GetPlayerHandler
 RegisterClientMessageHandler(new GetPlayerHandler());
 ```
 
-客户端消息使用 `RegisterClientMessageHandler`；只有可信服务器之间的消息才使用 `RegisterInternalMessageHandler`。两者不能混用。
+客户端消息使用 `RegisterClientMessageHandler`；只有可信服务器之间的消息才使用 `RegisterInternalMessageHandler`。两者不能混用。登录、刷新会话等入口消息使用 `RegisterAnonymousClientMessageHandler`，这样即使开启 `requireClientAuthentication` 也可以在未持有令牌时调用。
+
+签发客户端令牌时使用 `context.TokenAudience` 与 `TokenSigner.ComposeUserToken`，不要手写令牌格式。
 
 ## 4. 错误约定
 
@@ -72,4 +74,25 @@ RegisterClientMessageHandler(new GetPlayerHandler());
 - 处理器未捕获异常：框架记录完整异常，对外只返回 `500 / internal_error`。
 
 不要把异常堆栈、数据库错误或密钥写入响应消息。
+
+## 5. 客户端跟上同一条消息
+
+响应必须实现 `IServerResponse`（或带 `success` / `code` / `message` 字段并由 partial class 接入），业务失败时信封和载荷会一起带上错误码。
+
+Unity 在 Proto Generator 中重新生成 C# 后调用：
+
+```csharp
+var result = await client.RequestResultAsync(
+    new GetPlayerRequest { PlayerId = id },
+    GetPlayerResponse.Parser,
+    token);
+if (!result.HasResponse)
+    throw new InvalidOperationException(result.ErrorMessage);
+if (!result.Response.Success)
+    Debug.LogWarning(result.Response.Message);
+```
+
+`envelope.type` 必须是 Protobuf 完整名，例如 `DotNetGameServer.Demo.GetPlayerRequest`。错误码使用 `ProtocolError`，不要手写数字。
+
+.NET 客户端引用 `src/Client`，不要引用 `Core`。主动推送用 `client.On(Foo.Parser, handler)`。把 `GuestLoginResponse` 交给 `client.ApplyAccessToken`，并设置 `TokenRefreshHandler`；信封返回 `401` 时 SDK 会刷新一次再重试原请求。
 

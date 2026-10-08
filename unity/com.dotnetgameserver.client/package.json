@@ -1,6 +1,6 @@
 {
   "name": "com.dotnetgameserver.client",
-  "version": "0.1.2",
+  "version": "0.1.3",
   "displayName": "DotNet Game Server Client",
   "description": "Unity client SDK for DotNetGameServer: transport adapters, service discovery, protobuf workflow and a dedicated network console.",
   "unity": "2022.3",
@@ -20,7 +20,7 @@
   "samples": [
     {
       "displayName": "Basic Client",
-      "description": "Connects to BasicServer through discovery and sends a Ping request.",
+      "description": "Connects to BasicServer, logs in as a guest, and sends a Ping request.",
       "path": "Samples~/BasicClient"
     },
     {
